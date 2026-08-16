@@ -40,6 +40,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -178,7 +179,9 @@ private fun LayoutEditorScreen() {
                                     value = ACTION_CHOICES.firstOrNull { it.type == currentType }?.label ?: currentType,
                                     onValueChange = {}, readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = actionExpanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                    modifier = Modifier
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                        .fillMaxWidth(),
                                     textStyle = MaterialTheme.typography.bodySmall,
                                 )
                                 ExposedDropdownMenu(expanded = actionExpanded, onDismissRequest = { actionExpanded = false }) {

@@ -29,3 +29,7 @@ android {
         jniLibs.useLegacyPackaging = false
     }
 }
+
+dependencies {
+    testImplementation(libs.junit)
+}

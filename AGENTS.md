@@ -1,0 +1,44 @@
+# Komorebi IME: AI作業用リリース手順
+
+このファイルは、今後このリポジトリを扱うAIエージェントが同じ品質ゲートを再現するための
+永続的な作業メモである。公開リリースを依頼された場合は、READMEと
+`docs/release-readiness.md`も読み、次を省略しない。
+
+## リリース前
+
+1. `app/build.gradle.kts` の `versionCode` と `versionName` を更新する。
+2. `README.md`、`PRIVACY.md`、`NOTICE`、`app/src/main/assets/legal/` の内容を確認する。
+   プライバシー本文を変えた場合、公開版とアプリ内版を一致させる。
+3. JDK 17以上を使い、次を実行する。
+
+```bash
+./gradlew :app:clean :app:testDebugUnitTest :karukan:testDebugUnitTest \
+  :app:lintDebug :app:lintRelease :app:assembleDebug :app:assembleRelease \
+  :app:bundleRelease
+```
+
+4. ABI別APKはAABと同じGradle呼び出しで作らず、別に実行する。
+
+```bash
+./gradlew -PenableAbiSplits=true :app:assembleDebug
+./gradlew -PenableAbiSplits=true :app:assembleRelease
+```
+
+## 成果物の確認
+
+- `aapt dump badging` で全APKのapplication ID、versionCode、versionNameを確認する。
+- `zipalign -c -P 16 -v 4` でrelease APKの16 KBページ境界対応を確認する。
+- APK内の `libmozc.so`、arm64版の `libkarukan_android.so` / `libc++_shared.so`、
+  `assets/mozc.data`、`assets/legal/` を確認する。
+- R8 mappingで `MozcJNI` と `KarukanNative` のJNIメソッド名が保持されていることを確認する。
+- API 24 / 29 / 34 / 35 / 36、3ボタン / ジェスチャーナビ、背景・濃さ変更直後、
+  複数行 / 検索 / 送信 / 端末欄のEnterを実機またはエミュレータで確認する。
+
+## 署名とGitHub公開
+
+- `release`成果物は署名設定がない限り未署名であり、そのまま利用者向けAPKとして公開しない。
+- 正式署名鍵はリポジトリへ置かない。CIまたは管理された外部環境で署名する。
+- RCでdebug署名APKを配る場合は、テスト用でapplication IDが `.debug` になることを
+  リリースノートに明記する。
+- 差分と生成物を再確認し、コミット、`v<versionName>`タグ、`main`とタグのpush、
+  GitHub Release作成の順で行う。公開後にタグ、リリースURL、添付ファイルを再取得して確認する。

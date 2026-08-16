@@ -130,4 +130,55 @@ class EnterRoutingTest {
             ),
         )
     }
+
+    @Test
+    fun `rejected editor action falls back to newline in multiline field`() {
+        assertEquals(
+            EnterRouting.Target.NEWLINE,
+            EnterRouting.fallbackAfterFailure(
+                EnterRouting.Target.EDITOR_ACTION,
+                EditorInfo.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE,
+            ),
+        )
+    }
+
+    @Test
+    fun `rejected editor action falls back to raw enter in single line field`() {
+        assertEquals(
+            EnterRouting.Target.RAW_KEY_EVENT,
+            EnterRouting.fallbackAfterFailure(
+                EnterRouting.Target.EDITOR_ACTION,
+                EditorInfo.TYPE_CLASS_TEXT,
+            ),
+        )
+    }
+
+    @Test
+    fun `rejected newline falls back to raw enter`() {
+        assertEquals(
+            EnterRouting.Target.RAW_KEY_EVENT,
+            EnterRouting.fallbackAfterFailure(
+                EnterRouting.Target.NEWLINE,
+                EditorInfo.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE,
+            ),
+        )
+    }
+
+    @Test
+    fun `successful terminal routes have no fallback`() {
+        assertEquals(
+            null,
+            EnterRouting.fallbackAfterFailure(
+                EnterRouting.Target.SUBMIT_COMPOSITION,
+                EditorInfo.TYPE_CLASS_TEXT,
+            ),
+        )
+        assertEquals(
+            null,
+            EnterRouting.fallbackAfterFailure(
+                EnterRouting.Target.RAW_KEY_EVENT,
+                EditorInfo.TYPE_CLASS_TEXT,
+            ),
+        )
+    }
 }

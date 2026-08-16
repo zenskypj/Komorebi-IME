@@ -8,6 +8,7 @@ import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import me.zssu.ime.theme.KeyboardTheme
@@ -167,12 +168,18 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        labelPaint.textSize = theme.labelSizeSp * resources.displayMetrics.scaledDensity
-        longPressPaint.textSize =
-            theme.labelSizeSp * 0.55f * resources.displayMetrics.scaledDensity
-        guideLabelPaint.textSize = theme.labelSizeSp * resources.displayMetrics.scaledDensity
+        labelPaint.textSize = spToPx(theme.labelSizeSp)
+        longPressPaint.textSize = spToPx(theme.labelSizeSp * 0.55f)
+        guideLabelPaint.textSize = spToPx(theme.labelSizeSp)
         refreshPlacement()
     }
+
+    /** Applies Android 14+'s non-linear accessibility font scaling, with legacy compatibility. */
+    private fun spToPx(value: Float): Float = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_SP,
+        value,
+        resources.displayMetrics,
+    )
 
     private fun refreshPlacement() {
         placedKeys = if (width > 0 && height > 0) {

@@ -3,6 +3,7 @@ package me.zssu.ime.settings
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import me.zssu.ime.karukan.KarukanModelFiles
 import me.zssu.ime.karukan.KarukanModelStore
 import java.io.File
 import java.io.FileOutputStream
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * No input text is involved in this network path: it downloads two immutable public model files.
  * A partial file survives Activity recreation and is resumed with HTTP Range on the next attempt.
  */
-class KarukanModelManager private constructor(private val context: Context) {
+class KarukanModelManager private constructor(private val files: KarukanModelFiles) {
     sealed interface State {
         data object NotInstalled : State
         data class Downloading(val downloadedBytes: Long, val totalBytes: Long) : State
@@ -30,7 +31,7 @@ class KarukanModelManager private constructor(private val context: Context) {
     private val listeners = CopyOnWriteArraySet<(State) -> Unit>()
     private val cancelled = AtomicBoolean(false)
     @Volatile private var state: State =
-        if (KarukanModelStore.files(context).ready) State.Installed else State.NotInstalled
+        if (files.ready) State.Installed else State.NotInstalled
     @Volatile private var worker: Thread? = null
 
     fun currentState(): State = state
@@ -46,7 +47,6 @@ class KarukanModelManager private constructor(private val context: Context) {
         cancelled.set(false)
         worker = Thread({
             runCatching {
-                val files = KarukanModelStore.files(context)
                 files.directory.mkdirs()
                 download(
                     KarukanModelStore.TOKENIZER_URL,
@@ -92,7 +92,7 @@ class KarukanModelManager private constructor(private val context: Context) {
 
     fun delete() {
         cancel()
-        KarukanModelStore.files(context).directory.deleteRecursively()
+        files.directory.deleteRecursively()
         publish(State.NotInstalled)
     }
 
@@ -180,7 +180,9 @@ class KarukanModelManager private constructor(private val context: Context) {
 
         fun get(context: Context): KarukanModelManager =
             instance ?: synchronized(this) {
-                instance ?: KarukanModelManager(context.applicationContext).also { instance = it }
+                instance ?: KarukanModelManager(
+                    KarukanModelStore.files(context.applicationContext)
+                ).also { instance = it }
             }
     }
 }

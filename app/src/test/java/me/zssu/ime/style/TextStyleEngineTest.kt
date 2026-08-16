@@ -225,4 +225,40 @@ class TextStyleEngineTest {
             ),
         )
     }
+
+    @Test
+    fun protectedLiteralsRemainByteForByteWhileSurroundingProseChanges() {
+        assertEquals(
+            "「ありがとうございます」と言いました。`return false`です。" +
+                "https://example.com/ありがとうございます を見ます。dev@example.comです。",
+            TextStyleEngine.apply(
+                "「ありがとうございます」と言った。`return false`だ。" +
+                    "https://example.com/ありがとうございます を見る。dev@example.comだ。",
+                TextStyle.NORMAL_KEIGO,
+            ),
+        )
+    }
+
+    @Test
+    fun additionalCommonVerbsUseDictionaryBackedConjugation() {
+        assertEquals(
+            "資料を直します。人数が増えました。席が減りません。",
+            TextStyleEngine.apply(
+                "資料を直す。人数が増えた。席が減らない。",
+                TextStyle.NORMAL_KEIGO,
+            ),
+        )
+    }
+
+    @Test
+    fun businessAndSoftRequestsStayDistinct() {
+        assertEquals(
+            "資料をお送りください。",
+            TextStyleEngine.apply("資料を送ってください。", TextStyle.HARD_KEIGO),
+        )
+        assertEquals(
+            "資料を送っていただけると助かります。",
+            TextStyleEngine.apply("資料を送ってください。", TextStyle.SOFT_KEIGO),
+        )
+    }
 }

@@ -4,8 +4,12 @@ package me.zssu.ime.ime
  * Insets applied inside the IME content view.
  *
  * Modern Android and vendor IME windows disagree on whether the input view is pre-positioned above
- * the navigation/keyboard-switcher area. Insets are the only per-device authority: keep the panel
- * background edge-to-edge, but pad interactive keyboard content away from every reported edge.
+ * the navigation/keyboard-switcher area. The *intersecting* insets are the per-device authority:
+ * keep the panel background edge-to-edge, but pad interactive content away from reported overlap.
+ *
+ * Ignoring-visibility/stable insets must not be used here. On API 24–34 they can describe a
+ * navigation bar that the window manager has already placed outside the IME window, which would
+ * count the same space twice. API 35+ edge-to-edge windows report the actual overlap directly.
  */
 internal object KeyboardInsetPolicy {
     data class Padding(
@@ -14,9 +18,25 @@ internal object KeyboardInsetPolicy {
         val bottom: Int,
     )
 
-    fun contentPadding(left: Int, right: Int, bottom: Int): Padding = Padding(
-        left = left.coerceAtLeast(0),
-        right = right.coerceAtLeast(0),
-        bottom = bottom.coerceAtLeast(0),
+    fun contentPadding(
+        left: Int,
+        right: Int,
+        bottom: Int,
+        navigationVisible: Boolean,
+        previous: Padding = Padding(0, 0, 0),
+    ): Padding = Padding(
+        left = resolveEdge(left, navigationVisible, previous.left),
+        right = resolveEdge(right, navigationVisible, previous.right),
+        bottom = resolveEdge(bottom, navigationVisible, previous.bottom),
     )
+
+    /**
+     * A hidden navigation bar can produce one transient all-zero dispatch while returning from a
+     * settings Activity. Retain the last intersection for that frame. Once the bar is visible, a
+     * reported zero is meaningful: the old window manager already kept it outside our window.
+     */
+    private fun resolveEdge(reported: Int, navigationVisible: Boolean, previous: Int): Int {
+        val safeReported = reported.coerceAtLeast(0)
+        return if (safeReported > 0 || navigationVisible) safeReported else previous.coerceAtLeast(0)
+    }
 }

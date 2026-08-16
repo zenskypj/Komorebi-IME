@@ -17,8 +17,8 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 24
-        versionName = "0.2.0-komorebi.10"
+        versionCode = 25
+        versionName = "0.3.0-rc.1"
     }
 
     buildTypes {
@@ -54,12 +54,14 @@ android {
         jniLibs.useLegacyPackaging = false
     }
 
-    // libmozc.so is 13-16 MB per ABI, so a universal APK lands near 83 MB. Splitting drops each
-    // device's download to roughly a third of that; the universal APK stays available for
-    // sideloading and CI.
+    // App Bundles already split by ABI at install time and AGP cannot combine an AAB with multiple
+    // shrunk APK outputs in one invocation. Keep normal/Play builds single-output; GitHub release
+    // jobs opt in with -PenableAbiSplits=true and run assemble in a separate invocation.
     splits {
         abi {
-            isEnable = true
+            isEnable = providers.gradleProperty("enableAbiSplits")
+                .orNull
+                ?.toBooleanStrictOrNull() == true
             reset()
             include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
             isUniversalApk = true

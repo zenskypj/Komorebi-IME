@@ -42,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,10 +68,10 @@ private fun AppearanceScreen() {
     val context = LocalContext.current
     val settings = remember { ImeSettings(context) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack) }
-    var opacity by remember { mutableStateOf(settings.backgroundOpacity) }
+    var opacity by remember { mutableFloatStateOf(settings.backgroundOpacity) }
     var hasImage by remember { mutableStateOf(settings.backgroundImage != null) }
     var selectedPreset by remember { mutableStateOf(settings.backgroundPresetId) }
-    var heightScale by remember { mutableStateOf(settings.keyHeightScale) }
+    var heightScale by remember { mutableFloatStateOf(settings.keyHeightScale) }
     var oneHandMode by remember { mutableStateOf(settings.oneHandMode) }
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->

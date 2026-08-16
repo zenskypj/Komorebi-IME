@@ -1,11 +1,13 @@
 package me.zssu.ime.karukan
 
+import android.app.ActivityManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import java.io.Closeable
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -27,6 +29,12 @@ class KarukanEngine(context: Context) : Closeable {
     }
     private val mainHandler = Handler(Looper.getMainLooper())
     private val latestGeneration = AtomicLong(0)
+    private val closed = AtomicBoolean(false)
+    private val inferenceThreads = recommendedThreadCount(
+        availableProcessors = Runtime.getRuntime().availableProcessors(),
+        lowRamDevice = appContext.getSystemService(ActivityManager::class.java)?.isLowRamDevice
+            == true,
+    )
     private var handle = 0L
     private var loadedFingerprint: String? = null
 
@@ -54,11 +62,10 @@ class KarukanEngine(context: Context) : Closeable {
                         loadedFingerprint = null
                         KarukanNative.nativeDestroy(old)
                     }
-                    val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 6)
                     handle = KarukanNative.nativeCreate(
                         files.model.absolutePath,
                         files.tokenizer.absolutePath,
-                        threads,
+                        inferenceThreads,
                     )
                     check(handle != 0L) { "Karukanモデルを読み込めませんでした" }
                     loadedFingerprint = fingerprint
@@ -86,29 +93,39 @@ class KarukanEngine(context: Context) : Closeable {
 
     fun unload() {
         invalidate()
+        if (closed.get()) return
         executor.execute {
-            if (handle != 0L) {
-                KarukanNative.nativeDestroy(handle)
-                handle = 0L
-                loadedFingerprint = null
-            }
+            destroyHandle()
         }
     }
 
     override fun close() {
-        unload()
+        if (!closed.compareAndSet(false, true)) return
+        invalidate()
+        // Destruction stays ordered after any running inference, but InputMethodService.onDestroy
+        // must never wait for a neural generation. The daemon worker owns native cleanup and can
+        // finish without blocking Android's main thread.
+        executor.execute(::destroyHandle)
         executor.shutdown()
-        try {
-            if (!executor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
-                executor.shutdownNow()
-            }
-        } catch (_: InterruptedException) {
-            executor.shutdownNow()
+    }
+
+    private fun destroyHandle() {
+        if (handle != 0L) {
+            KarukanNative.nativeDestroy(handle)
+            handle = 0L
+            loadedFingerprint = null
         }
     }
 
     companion object {
-        private const val MAX_CONTEXT_CHARS = 160
+        private const val MAX_CONTEXT_CHARS = 192
+
+        internal fun recommendedThreadCount(availableProcessors: Int, lowRamDevice: Boolean): Int {
+            if (lowRamDevice) return availableProcessors.coerceIn(1, 2)
+            // Leave one core for the editor/UI and cap parallelism: the x-small model stops gaining
+            // useful latency beyond four workers but continues increasing power and memory traffic.
+            return (availableProcessors - 1).coerceIn(1, 4)
+        }
     }
 }
 
