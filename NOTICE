@@ -94,7 +94,8 @@ model card and MIT runtime license are included in app/src/main/assets/legal/.
 Model is downloaded on user request from https://huggingface.co/soichi1208/zenzai-plus.
 
 Optional proofreading models: Qwen3.5 0.8B and Qwen3 1.7B by Qwen (Alibaba Cloud),
-Apache License 2.0; GGUF quantizations by Unsloth.
-https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF   (Qwen3.5-0.8B-Q4_K_M.gguf)
-https://huggingface.co/unsloth/Qwen3-1.7B-GGUF     (Qwen3-1.7B-Q4_K_M.gguf)
+and Gemma 4 E2B by Google DeepMind, all Apache License 2.0; GGUF quantizations by Unsloth.
+https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF    (Qwen3.5-0.8B-Q4_K_M.gguf)
+https://huggingface.co/unsloth/Qwen3-1.7B-GGUF      (Qwen3-1.7B-Q4_K_M.gguf)
+https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF  (gemma-4-E2B-it-Q4_K_M.gguf)
 Proofreading runtime uses llama.cpp (MIT), source revision 66afb885a8ddcc0511798aec9fb5a01017941018.

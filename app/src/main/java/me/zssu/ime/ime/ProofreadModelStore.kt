@@ -36,6 +36,9 @@ internal object ProofreadModelStore {
         val filename: String,
         val bytes: Long,
         val sha256: String,
+        val license: String,
+        /** How this model family wants its chat turns framed. */
+        val format: ProofreadPrompt.Format,
     ) {
         val source get() = "https://huggingface.co/$repository"
         val downloadUrl get() = "$source/resolve/$revision/$filename"
@@ -51,6 +54,8 @@ internal object ProofreadModelStore {
             filename = "Qwen3.5-0.8B-Q4_K_M.gguf",
             bytes = 532517120L,
             sha256 = "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+            license = "Apache-2.0",
+            format = ProofreadPrompt.Format.CHATML,
         ),
         Spec(
             id = "qwen3-1.7b-q4_k_m",
@@ -60,6 +65,19 @@ internal object ProofreadModelStore {
             filename = "Qwen3-1.7B-Q4_K_M.gguf",
             bytes = 1107409472L,
             sha256 = "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
+            license = "Apache-2.0",
+            format = ProofreadPrompt.Format.CHATML,
+        ),
+        Spec(
+            id = "gemma-4-e2b-it-q4_k_m",
+            label = "Gemma 4 E2B（約3.11 GB・多言語）",
+            repository = "unsloth/gemma-4-E2B-it-GGUF",
+            revision = "0314792d7f1f7e229411f620751375812bb9faf2",
+            filename = "gemma-4-E2B-it-Q4_K_M.gguf",
+            bytes = 3106738272L,
+            sha256 = "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+            license = "Apache-2.0",
+            format = ProofreadPrompt.Format.GEMMA,
         ),
     )
 

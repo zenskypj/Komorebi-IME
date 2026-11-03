@@ -19,6 +19,15 @@
       "bytes": 1107409472,
       "sha256": "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
       "source": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF"
+    },
+    {
+      "id": "gemma-4-e2b-it-q4_k_m",
+      "repository": "unsloth/gemma-4-E2B-it-GGUF",
+      "revision": "0314792d7f1f7e229411f620751375812bb9faf2",
+      "filename": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "bytes": 3106738272,
+      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+      "source": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF"
     }
   ]
 }

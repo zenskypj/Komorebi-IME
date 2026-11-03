@@ -51,4 +51,25 @@ class ProofreadPromptTest {
         assertTrue(ProofreadPrompt.instructionWithinLimit("あ".repeat(ProofreadPrompt.MAX_INSTRUCTION)))
         assertFalse(ProofreadPrompt.instructionWithinLimit("あ".repeat(ProofreadPrompt.MAX_INSTRUCTION + 1)))
     }
+
+    @Test fun gemmaPromptUsesTurnMarkers() {
+        val prompt = ProofreadPrompt.prompt("本文", ProofreadPrompt.Style.NATURAL, format = ProofreadPrompt.Format.GEMMA)
+        assertTrue(prompt.startsWith("<start_of_turn>system\n"))
+        assertTrue(prompt.contains("<end_of_turn>\n<start_of_turn>user\n本文<end_of_turn>\n<start_of_turn>model\n"))
+        assertFalse(prompt.contains("<|im_start|>"))
+        assertFalse(prompt.contains("/no_think"))
+    }
+
+    @Test fun systemInstructionForbidsExplanations() {
+        val instruction = ProofreadPrompt.systemInstruction(ProofreadPrompt.Style.FIX, "")
+        assertTrue(instruction.contains("書き換え後の本文だけ"))
+        assertTrue(instruction.contains("翻訳しません"))
+    }
+
+    @Test fun extractDropsThinkingBlocksAndControlTokens() {
+        assertEquals("校正後の文", ProofreadPrompt.extract("<|channel>thought\n考えたこと<channel|>校正後の文"))
+        assertEquals("校正後の文", ProofreadPrompt.extract("long reasoning</think>校正後の文"))
+        assertEquals("校正後の文", ProofreadPrompt.extract("<|im_start|>校正後の文<|im_end|>"))
+        assertEquals("本文", ProofreadPrompt.extract("本文"))
+    }
 }

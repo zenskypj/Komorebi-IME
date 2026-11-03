@@ -342,13 +342,13 @@ class ProofreadActivity : Activity() {
         val modelFile = ProofreadModelStore.file(this, spec)
         busy = true; cancelled = false; error = null; output = null; outputHighlight = null; generatedFrom = null
         progress = "端末内で校正中…"; refresh()
-        val prompt = ProofreadPrompt.prompt(snapshot.text, snapshot.style, snapshot.instruction)
+        val prompt = ProofreadPrompt.prompt(snapshot.text, snapshot.style, snapshot.instruction, spec.format)
         val ticket = if (ProofreadNative.available) ProofreadNative.cancel() else 0L
         Thread({
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
             try {
                 val raw = ProofreadNative.generate(modelFile.absolutePath, prompt.toByteArray(Charsets.UTF_8), ticket)?.toString(Charsets.UTF_8)
-                val cleaned = ProofreadPrompt.sanitize(raw?.substringAfter("</think>", raw).orEmpty())
+                val cleaned = ProofreadPrompt.extract(raw.orEmpty())
                 check(cleaned.isNotBlank() && cleaned.length <= 1800 && !cleaned.contains('\uFFFD')) { "校正結果を取得できませんでした" }
                 post {
                     busy = false; progress = null; output = cleaned

@@ -204,7 +204,7 @@ private fun ProofreadModelScreen() {
                             }
                         }
                         Text(
-                            "${spec.repository} · Apache-2.0 · Unsloth による GGUF 量子化",
+                            "${spec.repository} · ${spec.license} · Unsloth による GGUF 量子化",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -214,7 +214,7 @@ private fun ProofreadModelScreen() {
 
             Spacer(Modifier.height(4.dp))
             Text(
-                "Qwen3.5 / Qwen3 は Qwen（Alibaba Cloud）による Apache License 2.0 のモデルで、GGUF 量子化は Unsloth によるものです。実行部は llama.cpp（MIT）を使用します。",
+                "Qwen3.5 / Qwen3 は Qwen（Alibaba Cloud）、Gemma 4 は Google DeepMind による Apache-2.0 のモデルで、GGUF 量子化は Unsloth によるものです。実行部は llama.cpp（MIT）を使用します。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
