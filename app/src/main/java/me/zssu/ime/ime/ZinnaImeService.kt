@@ -467,7 +467,7 @@ class ZinnaImeService : InputMethodService() {
         loaded?.let { session.applyInputStyle(it.inputStyle) }
         candidates.showTools()
         val onboarding = getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
-        if (ZenzPlusModel.ready(this) && !onboarding.getBoolean("flick_onboarding_done", false)) {
+        if (!onboarding.getBoolean("flick_onboarding_done", false)) {
             val chooser = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setBackgroundColor(android.graphics.Color.rgb(35, 35, 40))
