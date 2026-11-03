@@ -1,5 +1,9 @@
 # Komorebi IME
 
+> [!TIP]
+> **最新版をダウンロード**: [GitHub Releases（latest）](https://github.com/zenskypj/Komorebi-IME/releases/latest)
+> 最新のテスト用APK（ユニバーサル debug 署名版・`me.zssu.ime.debug`）を掲載しています。
+
 言葉を木漏れ日のようにそっと照らす、Android向けオープンソース日本語IMEです。
 入力内容を端末の外へ送らずに使えます。
 [Mozc](https://github.com/google/mozc) をネイティブ組み込みし、フリック入力と QWERTY
@@ -13,11 +17,11 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate（`0.3.0-rc.21-dev`）です。自動テストを通過した
+> 現在は正式版に向けた Release Candidate（`0.3.0-rc.23-dev`）です。自動テストを通過した
 > ビルドでも、公開前に複数Android世代・ナビゲーション方式・実機での確認が必要です。
 > 変更点と入手方法は [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、
 > 正式版までに必要な人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
-> 現在公開しているテスト用APKはすべて pre-release（debug 署名）です。
+> 最新の `0.3.0-rc.23-dev` のみ Latest、それ以前のテスト版は pre-release（debug 署名）です。
 
 ## 特長
 
