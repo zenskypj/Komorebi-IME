@@ -123,6 +123,22 @@ class ImeSettings(context: Context) {
             bumpRevision()
         }
 
+    var oneHandWidth: Float
+        get() = prefs.getFloat("one_hand_width", 0.82f).coerceIn(0.6f, 1f)
+        set(value) { prefs.edit().putFloat("one_hand_width", value.coerceIn(0.6f, 1f)).apply(); bumpRevision() }
+    var candidateRows: Int
+        get() = prefs.getInt("candidate_rows", 1).coerceIn(1, 2)
+        set(value) { prefs.edit().putInt("candidate_rows", value.coerceIn(1, 2)).apply(); bumpRevision() }
+    var candidateTextScale: Float
+        get() = prefs.getFloat("candidate_text_scale", 1f).coerceIn(0.8f, 1.5f)
+        set(value) { prefs.edit().putFloat("candidate_text_scale", value.coerceIn(0.8f, 1.5f)).apply(); bumpRevision() }
+    var clipboardRetentionMinutes: Int
+        get() = prefs.getInt("clipboard_retention_minutes", 60).coerceIn(1, 1440)
+        set(value) { prefs.edit().putInt("clipboard_retention_minutes", value.coerceIn(1, 1440)).apply(); bumpRevision() }
+    var clipboardHistoryEnabled: Boolean
+        get() = prefs.getBoolean("clipboard_history_enabled", true)
+        set(value) { prefs.edit().putBoolean("clipboard_history_enabled", value).apply(); bumpRevision() }
+
     var oneHandMode: OneHandMode
         get() = runCatching {
             OneHandMode.valueOf(prefs.getString(KEY_ONE_HAND_MODE, OneHandMode.OFF.name)!!)

@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
@@ -37,6 +38,9 @@ internal fun BackupCard() {
     var passphrase by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     var restorePending by remember { mutableStateOf(ProfileBackup.hasStagedRestore(context)) }
+    val backupPrefs = remember { context.getSharedPreferences(ImeSettings.NAME, 0) }
+    var lastBackup by remember { mutableStateOf(backupPrefs.getLong("backup_last_export_ms", 0L)) }
+    var remindBackup by remember { mutableStateOf(backupPrefs.getBoolean("backup_reminder_enabled", true)) }
 
     val save = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(BACKUP_MIME)
@@ -54,6 +58,10 @@ internal fun BackupCard() {
                         ?: error("no stream")
                     "書き出しました"
                 }.getOrElse { "保存できませんでした: ${it.message}" } }
+            }
+            if (message == "書き出しました") {
+                lastBackup = System.currentTimeMillis()
+                backupPrefs.edit().putLong("backup_last_export_ms", lastBackup).apply()
             }
             phrase.fill('\u0000')
         }
@@ -102,6 +110,15 @@ internal fun BackupCard() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("バックアップ", style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("バックアップ時期を表示", modifier = Modifier.weight(1f))
+                Switch(checked = remindBackup, onCheckedChange = {
+                    remindBackup = it; backupPrefs.edit().putBoolean("backup_reminder_enabled", it).apply()
+                })
+            }
+            if (remindBackup && (lastBackup == 0L || System.currentTimeMillis() - lastBackup >= 30L * 24 * 60 * 60 * 1000)) {
+                Text(if (lastBackup == 0L) "バックアップを作成しておくと、機種変更時に復元できます。" else "前回のバックアップから30日以上経ちました。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
             Text(
                 "ユーザー辞書・変換の学習内容・キーボードの設定を1つのファイルにまとめます。" +
                     "打った内容そのものを含むので、パスフレーズで暗号化します。忘れると復元できません",

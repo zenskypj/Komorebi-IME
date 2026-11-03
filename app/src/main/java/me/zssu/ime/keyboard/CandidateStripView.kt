@@ -7,7 +7,11 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.View
 import android.widget.HorizontalScrollView
+import android.widget.GridView
+import android.widget.BaseAdapter
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -65,6 +69,20 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         gravity = Gravity.CENTER_VERTICAL
     }
     private var currentEmojiPage = EmojiPage.RECENT
+    private var currentEmojiGroup: String? = null
+    private var normalHeight = 0
+
+    private fun paletteHeight(expanded: Boolean) {
+        val params = layoutParams ?: return
+        if (expanded) {
+            if (normalHeight == 0) normalHeight = params.height
+            params.height = (210 * resources.displayMetrics.density).toInt()
+        } else if (normalHeight != 0) {
+            params.height = normalHeight
+            normalHeight = 0
+        } else return
+        layoutParams = params
+    }
 
     init {
         isHorizontalScrollBarEnabled = false
@@ -88,8 +106,13 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
      * invalidate unconditionally, so assigning the same value still costs a layout pass.
      */
     fun setCandidates(candidates: List<MozcSession.Candidate>, focusedIndex: Int) {
+        paletteHeight(false)
         if (candidates.isEmpty()) {
             showTools()
+            return
+        }
+        if (me.zssu.ime.settings.ImeSettings(context).candidateRows == 2) {
+            showTwoRows(candidates, focusedIndex)
             return
         }
         setContainerFillWidth(false)
@@ -139,6 +162,36 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         }
     }
 
+    private fun showTwoRows(candidates: List<MozcSession.Candidate>, focusedIndex: Int) {
+        setContainerFillWidth(false)
+        container.removeAllViews()
+        focusedChild = -1
+        candidates.chunked(2).forEachIndexed { columnIndex, group ->
+            val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+            group.forEachIndexed { row, candidate ->
+                val chip = newChip()
+                chip.tag = candidate
+                val label = if (candidate.correction) "補正 ${candidate.text}" else candidate.text
+                chip.text = label
+                if (candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE) {
+                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()?.apply {
+                        setTint(theme.candidateTextColor)
+                        val size = (18 * resources.displayMetrics.density).toInt()
+                        setBounds(0, 0, size, size)
+                    }
+                    chip.setCompoundDrawablesRelative(star, null, null, null)
+                    chip.contentDescription = "最優先 ${candidate.text}"
+                } else chip.contentDescription = label
+                if (columnIndex * 2 + row == focusedIndex) chip.setBackgroundColor(theme.keyPressedColor)
+                column.addView(chip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            }
+            if (group.size == 1) column.addView(View(context), LinearLayout.LayoutParams(1, 0, 1f))
+            container.addView(column, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+        }
+        val texts = candidates.map { it.text }
+        if (texts != lastCandidateTexts) { scrollTo(0, 0); lastCandidateTexts = texts }
+    }
+
     private fun highlight(index: Int, on: Boolean) {
         if (index < 0 || index >= container.childCount) return
         val view = container.getChildAt(index) ?: return
@@ -169,7 +222,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     private fun applyTheme(view: TextView) {
         val padding = (12 * resources.displayMetrics.density).toInt()
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, theme.labelSizeSp)
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, theme.labelSizeSp * me.zssu.ime.settings.ImeSettings(context).candidateTextScale)
         view.setTextColor(theme.candidateTextColor)
         view.setPadding(padding, padding / 2, padding, padding / 2)
     }
@@ -177,6 +230,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     fun clear() = setCandidates(emptyList(), -1)
 
     fun showTools() {
+        paletteHeight(false)
         focusedChild = -1
         lastCandidateTexts = emptyList()
         container.removeAllViews()
@@ -290,63 +344,72 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     ) {
         val selectedPage = page ?: currentEmojiPage
         currentEmojiPage = selectedPage
+        paletteHeight(true)
         container.removeAllViews()
         setContainerFillWidth(false)
         scrollTo(0, 0)
-        val padding = (12 * resources.displayMetrics.density).toInt()
-        val pages = listOf(
-            EmojiPage.RECENT to "最近",
-            EmojiPage.EMOJI to "絵文字",
-            EmojiPage.KAOMOJI to "顔文字",
-            EmojiPage.FAVORITE to "お気に入り",
-        )
-        pages.forEach { (target, label) ->
-            container.addView(TextView(context).apply {
-                text = if (target == EmojiPage.FAVORITE) "" else label
-                contentDescription = label
-                if (target == EmojiPage.FAVORITE) {
-                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()
-                    star?.setTint(theme.candidateTextColor)
-                    star?.setBounds(0, 0, (20 * resources.displayMetrics.density).toInt(), (20 * resources.displayMetrics.density).toInt())
-                    setCompoundDrawablesRelative(star, null, null, null)
-                }
-                if (target == selectedPage) setBackgroundColor(theme.keyPressedColor)
+        val density = resources.displayMetrics.density
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val header = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        val headings = listOf(EmojiPage.RECENT to "最近", EmojiPage.EMOJI to "絵文字", EmojiPage.KAOMOJI to "顔文字", EmojiPage.FAVORITE to "お気に入り")
+        headings.forEach { (target, label) ->
+            header.addView(TextView(context).apply {
+                text = label; contentDescription = label; gravity = Gravity.CENTER
                 setTextColor(theme.candidateTextColor)
-                setPadding(padding, padding / 2, padding, padding / 2)
-                gravity = Gravity.CENTER
+                setPadding((10 * density).toInt(), 0, (10 * density).toInt(), 0)
+                if (target == selectedPage) setBackgroundColor(theme.keyPressedColor)
                 setOnClickListener { showEmoji(recents, favorites, target) }
-            })
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+        }
+        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
+        panel.addView(HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false; addView(header)
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (42 * density).toInt()))
+        val groups = if (selectedPage == EmojiPage.EMOJI) EmojiRepository(context).unicodeEmoji() else emptyMap()
+        if (groups.isNotEmpty()) {
+            if (currentEmojiGroup !in groups) currentEmojiGroup = groups.keys.first()
+            val labels = mapOf("Smileys & Emotion" to "表情", "People & Body" to "人", "Animals & Nature" to "自然", "Food & Drink" to "食べ物", "Travel & Places" to "場所", "Activities" to "活動", "Objects" to "物", "Symbols" to "記号", "Flags" to "旗")
+            val tabs = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            groups.keys.forEach { group -> tabs.addView(TextView(context).apply {
+                text = labels[group] ?: group; contentDescription = text; gravity = Gravity.CENTER
+                setTextColor(theme.candidateTextColor); setPadding((10 * density).toInt(), 0, (10 * density).toInt(), 0)
+                if (group == currentEmojiGroup) setBackgroundColor(theme.keyPressedColor)
+                setOnClickListener { currentEmojiGroup = group; showEmoji(recents, favorites, EmojiPage.EMOJI) }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT)) }
+            panel.addView(HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(tabs) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (36 * density).toInt()))
         }
         val values = when (selectedPage) {
             EmojiPage.RECENT -> recents.ifEmpty { EmojiRepository.EMOJI.take(10) }
-            EmojiPage.EMOJI -> EmojiRepository.EMOJI
+            EmojiPage.EMOJI -> groups[currentEmojiGroup] ?: EmojiRepository.EMOJI
             EmojiPage.KAOMOJI -> EmojiRepository.KAOMOJI
             EmojiPage.FAVORITE -> favorites
         }
-        values.forEach { emoji ->
-            container.addView(TextView(context).apply {
-                text = emoji
-                contentDescription = if (emoji in favorites) "$emoji お気に入り" else emoji
-                if (emoji in favorites) {
-                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()
-                    star?.setTint(theme.candidateTextColor)
-                    star?.setBounds(0, 0, (14 * resources.displayMetrics.density).toInt(), (14 * resources.displayMetrics.density).toInt())
-                    setCompoundDrawablesRelative(null, null, star, null)
+        val grid = GridView(context).apply {
+            numColumns = if (selectedPage == EmojiPage.KAOMOJI) 2 else 6
+            stretchMode = GridView.STRETCH_COLUMN_WIDTH
+            adapter = object : BaseAdapter() {
+                override fun getCount() = values.size
+                override fun getItem(position: Int) = values[position]
+                override fun getItemId(position: Int) = position.toLong()
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val value = getItem(position)
+                    val cell = (convertView as? TextView) ?: TextView(context).apply {
+                        gravity = Gravity.CENTER
+                        setPadding((4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
+                    }
+                    cell.text = value; cell.contentDescription = if (value in favorites) "$value お気に入り" else value
+                    cell.setTextColor(theme.candidateTextColor)
+                    cell.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (selectedPage == EmojiPage.KAOMOJI) theme.labelSizeSp else theme.labelSizeSp + 6f)
+                    cell.setOnClickListener { onEmojiSelected?.invoke(value) }
+                    cell.setOnLongClickListener { onEmojiFavoriteToggled?.invoke(value); true }
+                    return cell
                 }
-                setTextColor(theme.candidateTextColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, theme.labelSizeSp + 4f)
-                setPadding(padding, padding / 2, padding, padding / 2)
-                gravity = Gravity.CENTER
-                setOnClickListener { onEmojiSelected?.invoke(emoji) }
-                setOnLongClickListener {
-                    onEmojiFavoriteToggled?.invoke(emoji)
-                    true
-                }
-            })
+            }
         }
-        container.addView(
-            iconButton(R.drawable.ic_material_arrow_back, "ツールバーに戻る") { showTools() }
-        )
+        panel.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
     }
 
     var onEmojiSelected: ((String) -> Unit)? = null

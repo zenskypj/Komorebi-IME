@@ -40,18 +40,27 @@ internal fun ZenzaiControls() {
             when (val current = state) {
                 Zenz32Model.State.Missing -> {
                     Text(if (Zenz32Native.available) "zenz v3.2 モデルを Hugging Face から取得します。入力内容は送信されません。" else "この端末では zenz v3.2 ランタイムを利用できません。")
-                    Button(onClick = { Zenz32Model.install(context) }, enabled = Zenz32Native.available) { Text("モデルをダウンロード（約 70 MB）") }
+                    Button(onClick = { Zenz32Model.install(context) }, enabled = Zenz32Native.available) { Text(if (Zenz32Model.storedBytes(context) > 0) "ダウンロードを再開" else "モデルをダウンロード（約 70 MiB）") }
+                    if (Zenz32Model.storedBytes(context) > 0) {
+                        Text("保存済み: ${Zenz32Model.storedBytes(context) / (1024 * 1024)} MiB")
+                        OutlinedButton(onClick = { Zenz32Model.delete(context) }) { Text("途中のデータを削除") }
+                    }
                 }
                 is Zenz32Model.State.Downloading -> {
                     val progress = (current.bytes.toFloat() / 73871936f).coerceIn(0f, 1f)
                     LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                     Text("ダウンロード中 ${(progress * 100).toInt()}%")
+                    OutlinedButton(onClick = { Zenz32Model.cancel() }) { Text("中断") }
                 }
                 is Zenz32Model.State.Error -> {
                     Text(current.message, color = MaterialTheme.colorScheme.error)
                     Button(onClick = { Zenz32Model.install(context) }, enabled = Zenz32Native.available) { Text("再試行") }
                 }
-                Zenz32Model.State.Ready -> Text("zenz v3.2 を端末内で使用します。学習には対応していません。")
+                Zenz32Model.State.Ready -> {
+                    Text("zenz v3.2 を端末内で使用します。学習には対応していません。保存容量: ${Zenz32Model.storedBytes(context) / (1024 * 1024)} MiB")
+                    OutlinedButton(onClick = { Zenz32Model.delete(context) }, enabled = !enabled) { Text("モデルを削除") }
+                    if (enabled) Text("削除するには先に zenz 変換をオフにしてください。", style = MaterialTheme.typography.bodySmall)
+                }
             }
             Text("zenz 変換を使用")
             Switch(checked = enabled && available, enabled = available, onCheckedChange = {

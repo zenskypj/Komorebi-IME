@@ -75,6 +75,9 @@ private fun AppearanceScreen() {
     var selectedPreset by remember { mutableStateOf(settings.backgroundPresetId) }
     var heightScale by remember { mutableFloatStateOf(settings.keyHeightScale) }
     var oneHandMode by remember { mutableStateOf(settings.oneHandMode) }
+    var oneHandWidth by remember { mutableFloatStateOf(settings.oneHandWidth) }
+    var candidateScale by remember { mutableFloatStateOf(settings.candidateTextScale) }
+    var candidateRows by remember { mutableStateOf(settings.candidateRows) }
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -124,6 +127,9 @@ private fun AppearanceScreen() {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("片手モード", style = MaterialTheme.typography.titleMedium)
                     Text("候補がないときのツールバーからも切り替えられます", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("片手モードの幅 ${(oneHandWidth * 100).toInt()}%")
+                    Slider(value = oneHandWidth, onValueChange = { oneHandWidth = it },
+                        onValueChangeFinished = { settings.oneHandWidth = oneHandWidth }, valueRange = 0.6f..1f)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(selected = oneHandMode == ImeSettings.OneHandMode.LEFT, onClick = {
                             oneHandMode = ImeSettings.OneHandMode.LEFT; settings.oneHandMode = ImeSettings.OneHandMode.LEFT
@@ -141,6 +147,20 @@ private fun AppearanceScreen() {
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer))
                     }
+                }
+            }
+
+            Card(shape = RoundedCornerShape(14.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("候補の行数")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        (1..2).forEach { count ->
+                            FilterChip(selected = candidateRows == count, onClick = { candidateRows = count; settings.candidateRows = count }, label = { Text("${count}行") })
+                        }
+                    }
+                    Text("候補の文字サイズ ${(candidateScale * 100).toInt()}%")
+                    Slider(value = candidateScale, onValueChange = { candidateScale = it },
+                        onValueChangeFinished = { settings.candidateTextScale = candidateScale }, valueRange = 0.8f..1.5f)
                 }
             }
 

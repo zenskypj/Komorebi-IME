@@ -58,6 +58,7 @@ private val DOCUMENTS = listOf(
     LegalDocument("Karukan付属データ", "KARUKAN_UPSTREAM_NOTICES.txt"),
     LegalDocument("llama.cpp", "LLAMA_CPP_LICENSE.txt"),
     LegalDocument("zenz v3.2 ランタイム / MIT", "ZENZ32_LLAMA_LICENSE.txt"),
+    LegalDocument("Unicode", "UNICODE_LICENSE.txt"),
     LegalDocument("Tokenizers", "TOKENIZERS_LICENSE.txt"),
     LegalDocument("Rust Onig", "ONIG_LICENSE.txt"),
     LegalDocument("Oniguruma本体", "ONIGURUMA_LICENSE.txt"),

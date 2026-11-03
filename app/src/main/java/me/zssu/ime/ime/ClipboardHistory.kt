@@ -10,15 +10,23 @@ import android.content.Context
  * by their source are deliberately ignored, and clipboard access failures are treated as an empty
  * clipboard because OEM clipboard providers are outside our control.
  */
-internal class ClipboardHistory(private val limit: Int = DEFAULT_LIMIT) {
+internal class ClipboardHistory(
+    private val limit: Int = DEFAULT_LIMIT,
+    private val now: () -> Long = System::currentTimeMillis,
+) {
 
-    private val entries = ArrayDeque<String>()
+    private data class Entry(val text: String, val addedAt: Long)
+    private val entries = ArrayDeque<Entry>()
 
     init {
         require(limit > 0) { "limit must be positive" }
     }
 
-    fun items(): List<String> = entries.toList()
+    fun items(retentionMillis: Long = Long.MAX_VALUE): List<String> {
+        val currentTime = now()
+        entries.removeAll { currentTime - it.addedAt > retentionMillis }
+        return entries.map { it.text }
+    }
 
     fun clear() = entries.clear()
 
@@ -42,8 +50,8 @@ internal class ClipboardHistory(private val limit: Int = DEFAULT_LIMIT) {
 
     internal fun add(text: String) {
         if (text.isBlank()) return
-        entries.remove(text)
-        entries.addFirst(text)
+        entries.removeAll { it.text == text }
+        entries.addFirst(Entry(text, now()))
         while (entries.size > limit) entries.removeLast()
     }
 

@@ -64,7 +64,9 @@ class ZinnaImeService : InputMethodService() {
     private var clipboardManager: ClipboardManager? = null
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         // Capture copy events without polling while the IME is hidden.
-        clipboardHistory.record(this, clipboardManager)
+        if (::settings.isInitialized && settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
+            clipboardHistory.record(this, clipboardManager)
+        }
     }
     private lateinit var session: ConversionSession
     private lateinit var zenzai: ZenzaiEngine
@@ -346,7 +348,7 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         val stripHeight = if (fieldPolicy.showCandidates) {
-            (theme.keyHeightDp * 0.8f * resources.displayMetrics.density).toInt()
+            (theme.keyHeightDp * 0.8f * settings.candidateRows * resources.displayMetrics.density).toInt()
         } else {
             0
         }
@@ -375,7 +377,7 @@ class ZinnaImeService : InputMethodService() {
             ImeSettings.OneHandMode.OFF -> Gravity.CENTER_HORIZONTAL
         }
         val oneHandWidth =
-            (resources.displayMetrics.widthPixels * ONE_HAND_WIDTH).toInt()
+            (resources.displayMetrics.widthPixels * settings.oneHandWidth).toInt()
         val contentWidth = if (effectiveOneHandMode() == ImeSettings.OneHandMode.OFF) {
             LinearLayout.LayoutParams.MATCH_PARENT
         } else {
@@ -424,14 +426,23 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleToolAction(action: CandidateStripView.ToolAction) {
+        if (!fieldPolicy.incognito &&
+            (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
+            val stats = getSharedPreferences("input_statistics", Context.MODE_PRIVATE)
+            if (stats.getBoolean("enabled", false)) {
+                val key = "tool_${action.name}"
+                stats.edit().putLong(key, stats.getLong(key, 0L) + 1).apply()
+            }
+        }
         when (action) {
             CandidateStripView.ToolAction.AI_STYLE -> candidateView?.showStyleSelector()
             CandidateStripView.ToolAction.CLIPBOARD -> {
-                clipboardHistory.record(
-                    this,
-                    getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager,
-                )
-                candidateView?.showClipboardHistory(clipboardHistory.items())
+                if (settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
+                    clipboardHistory.record(this, getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                    candidateView?.showClipboardHistory(clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L))
+                } else {
+                    candidateView?.showClipboardHistory(emptyList())
+                }
             }
             CandidateStripView.ToolAction.EMOJI -> candidateView?.showEmoji(
                 emojiRepository.recents(),
@@ -534,7 +545,7 @@ class ZinnaImeService : InputMethodService() {
             lp.width = if (mode == ImeSettings.OneHandMode.OFF) {
                 LinearLayout.LayoutParams.MATCH_PARENT
             } else {
-                (resources.displayMetrics.widthPixels * ONE_HAND_WIDTH).toInt()
+                (resources.displayMetrics.widthPixels * settings.oneHandWidth).toInt()
             }
             content.layoutParams = lp
         }
@@ -1042,7 +1053,15 @@ class ZinnaImeService : InputMethodService() {
         ic.beginBatchEdit()
         try {
             if (state.committedText.isNotEmpty()) {
-                ic.commitText(state.committedText, 1)
+                val committed = ic.commitText(state.committedText, 1)
+                if (committed && !fieldPolicy.incognito &&
+                    (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
+                    val stats = getSharedPreferences("input_statistics", Context.MODE_PRIVATE)
+                    if (stats.getBoolean("enabled", false)) {
+                        val length = state.committedText.codePointCount(0, state.committedText.length)
+                        stats.edit().putLong("converted_codepoints", stats.getLong("converted_codepoints", 0L) + length).apply()
+                    }
+                }
             }
             if (state.preedit.isEmpty()) {
                 if (removeOldEditorComposition) {
@@ -1366,6 +1385,9 @@ class ZinnaImeService : InputMethodService() {
         settings.activeThemeId,
         settings.activeLayoutId,
         settings.oneHandMode,
+        settings.oneHandWidth,
+        settings.candidateRows,
+        settings.candidateTextScale,
         settings.flickGuideStyle,
         settings.hapticFeedbackEnabled,
     ).hashCode()
@@ -1378,7 +1400,6 @@ class ZinnaImeService : InputMethodService() {
 
         /** U+3000 IDEOGRAPHIC SPACE, what a Japanese input mode types for the space key. */
         private const val FULL_WIDTH_SPACE = "　"
-        private const val ONE_HAND_WIDTH = 0.82f
         private const val MAX_STYLE_CORRECTION_LENGTH = 500
         private const val KARUKAN_CONTEXT_CHARS = 320
         private const val KARUKAN_CONTEXT_WINDOW_CHARS = 192

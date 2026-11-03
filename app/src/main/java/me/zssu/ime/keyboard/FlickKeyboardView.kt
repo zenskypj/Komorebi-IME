@@ -124,6 +124,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val keyPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val boundaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val modifierPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val longPressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -152,6 +153,9 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun applyTheme() {
         keyPaint.color = theme.keyColor
         keyPressedPaint.color = theme.keyPressedColor
+        boundaryPaint.color = theme.labelColor
+        boundaryPaint.alpha = 95
+        boundaryPaint.strokeWidth = resources.displayMetrics.density
         modifierPaint.color = theme.modifierKeyColor
         labelPaint.color = theme.labelColor
         longPressPaint.color = theme.labelColor
@@ -239,6 +243,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                 else -> modifierPaint
             }
             if (paint != null) canvas.drawRoundRect(placed.bounds, radius, radius, paint)
+            canvas.drawRoundRect(placed.bounds, radius, radius, boundaryPaint)
             drawOutput(canvas, placed.spec.center.action, faceLabel(placed.spec), placed.bounds.centerX(), placed.bounds.centerY(), labelPaint)
             placed.spec.longPress?.let { output ->
                 val inset = 5f * resources.displayMetrics.density

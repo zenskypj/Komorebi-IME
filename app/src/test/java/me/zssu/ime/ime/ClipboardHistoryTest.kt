@@ -38,6 +38,17 @@ class ClipboardHistoryTest {
     }
 
     @Test
+    fun expiredEntriesAreRemovedWithoutDiscardingRecentOnes() {
+        var time = 1000L
+        val history = ClipboardHistory(now = { time })
+        history.add("old")
+        time += 61_000
+        history.add("new")
+        assertEquals(listOf("new"), history.items(60_000))
+        assertEquals(listOf("new"), history.items())
+    }
+
+    @Test
     fun clearRemovesEveryEntry() {
         val history = ClipboardHistory()
         history.add("one")

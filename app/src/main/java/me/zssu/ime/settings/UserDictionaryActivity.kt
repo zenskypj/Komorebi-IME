@@ -122,7 +122,7 @@ private fun UserDictionaryScreen() {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "登録された単語はありません。\n右下の + から追加できます。",
+                    "登録された単語・定型文はありません。\n右下の + から追加できます。",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -192,7 +192,7 @@ private fun EntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "単語を追加" else "単語を編集") },
+        title = { Text(if (initial == null) "単語・定型文を追加" else "単語・定型文を編集") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -206,7 +206,8 @@ private fun EntryDialog(
                 OutlinedTextField(
                     value = word,
                     onValueChange = { word = it },
-                    label = { Text("単語") },
+                    label = { Text("単語・定型文") },
+                    placeholder = { Text("例: いつもお世話になっております") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

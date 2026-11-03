@@ -84,3 +84,6 @@ zenz v3.2 inference uses azooKey's llama.cpp fork (MIT License).
 The corresponding license is in app/src/main/assets/legal/ZENZ32_LLAMA_LICENSE.txt.
 The optional zenz-v3.2-small GGUF model is downloaded separately from Miwa-Keita
 under Apache License 2.0: https://huggingface.co/Miwa-Keita/zenz-v3.2-small-gguf
+
+Unicode emoji-test.txt Copyright © 1991-2026 Unicode, Inc.; Unicode License v3.
+License: assets/legal/UNICODE_LICENSE.txt. https://www.unicode.org/license.txt
