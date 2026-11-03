@@ -27,8 +27,12 @@ class NfcMigrationSessionTest {
 
     @Test fun encryptedHandshakeAndChunkedTransfer() {
         val archive = ByteArray(601) { it.toByte() }
-        NfcMigrationSession.prepare(archive, "test-secret")
+        var completed = 0
+        NfcMigrationSession.prepare(archive, "test-secret", onComplete = { completed++ })
         try {
+            val ack = byteArrayOf(0x80.toByte(), 0x30, 0, 0, 0)
+            assertEquals(0x6F.toByte(), NfcMigrationSession.handle(ack)[0])
+            assertEquals(0, completed)
             val pair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
             val client = pair.public.encoded
             val result = NfcMigrationSession.handle(byteArrayOf(0x80.toByte(), 0x10, 0, 0, client.size.toByte()) + client)
@@ -48,6 +52,9 @@ class NfcMigrationSessionTest {
             }.toByteArray()
             assertArrayEquals(archive, chunks)
             assertEquals(0x6F.toByte(), NfcMigrationSession.handle(byteArrayOf(0x80.toByte(), 0x20, 0, 0, 4) + ByteBuffer.allocate(4).putInt(archive.size).array())[0])
+            assertEquals(0x90.toByte(), NfcMigrationSession.handle(ack)[0])
+            assertEquals(1, completed)
+            assertEquals(0x6F.toByte(), NfcMigrationSession.handle(ack)[0])
         } finally { NfcMigrationSession.clear() }
     }
 }

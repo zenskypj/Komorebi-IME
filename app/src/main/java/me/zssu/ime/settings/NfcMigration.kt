@@ -45,14 +45,14 @@ internal object NfcMigrationSession {
     const val MAX_ARCHIVE = 32 * 1024 * 1024
     private val ok = byteArrayOf(0x90.toByte(), 0)
     private val failure = byteArrayOf(0x6F, 0)
-    private data class Ready(val archive: ByteArray, val password: String, val keyPair: KeyPair, val aid: ByteArray)
+    private data class Ready(val archive: ByteArray, val password: String, val keyPair: KeyPair, val aid: ByteArray, val onDetected: (() -> Unit)?, val onComplete: (() -> Unit)?, var servedBytes: Int = 0, var detected: Boolean = false)
     @Volatile private var ready: Ready? = null
     private val random = SecureRandom()
 
     fun newPassword(): String = ByteArray(32).also(random::nextBytes).let { Base64.encodeToString(it, Base64.NO_WRAP) }
-    fun prepare(archive: ByteArray, password: String, selectedAid: ByteArray = aid) {
+    fun prepare(archive: ByteArray, password: String, selectedAid: ByteArray = aid, onDetected: (() -> Unit)? = null, onComplete: (() -> Unit)? = null) {
         require(archive.size in 1..MAX_ARCHIVE)
-        ready = Ready(archive, password, keys(), selectedAid.copyOf())
+        ready = Ready(archive, password, keys(), selectedAid.copyOf(), onDetected, onComplete)
     }
     fun clear() { ready = null }
     private fun keys(): KeyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
@@ -62,12 +62,13 @@ internal object NfcMigrationSession {
             init(pair.private); doPhase(other, true); generateSecret()
         })
     }
-    fun handle(command: ByteArray, selectedAid: ByteArray = aid): ByteArray = runCatching {
+    @Synchronized fun handle(command: ByteArray, selectedAid: ByteArray = aid): ByteArray = runCatching {
         val data = ready ?: return failure
         if (!data.aid.contentEquals(selectedAid)) return failure
         if (command.size >= 5 && command[0] == 0.toByte() && command[1] == 0xA4.toByte()) {
             val length = command[4].toInt() and 0xff
             if (command.size < 5 + length || !command.copyOfRange(5, 5 + length).contentEquals(selectedAid)) return failure
+            if (!data.detected) { data.detected = true; data.onDetected?.invoke() }
             return ok
         }
         if (command.size < 5 || command[0] != 0x80.toByte()) return failure
@@ -88,13 +89,21 @@ internal object NfcMigrationSession {
                 if (length != 4) return failure
                 val offset = ByteBuffer.wrap(command, 5, 4).int
                 if (offset < 0 || offset >= data.archive.size) return failure
-                data.archive.copyOfRange(offset, minOf(offset + 240, data.archive.size)) + ok
+                val end = minOf(offset + 240, data.archive.size)
+                if (offset <= data.servedBytes) data.servedBytes = maxOf(data.servedBytes, end)
+                data.archive.copyOfRange(offset, end) + ok
+            }
+            0x30 -> {
+                if (length != 0 || data.servedBytes != data.archive.size) return failure
+                ready = null
+                data.onComplete?.invoke()
+                ok
             }
             else -> failure
         }
     }.getOrElse { failure }
 
-    fun receive(tag: Tag, selectedAid: ByteArray = aid, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
+    fun receive(tag: Tag, selectedAid: ByteArray = aid, verify: ((ByteArray, CharArray) -> Unit)? = null, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
         val iso = IsoDep.get(tag) ?: error("相手が NFC カードエミュレーションに対応していません")
         iso.use {
             iso.timeout = 20000
@@ -127,7 +136,13 @@ internal object NfcMigrationSession {
                 out.write(chunk)
                 if (offset % 24000 == 0 || out.size() == archiveSize) report(out.size(), archiveSize)
             }
-            return out.toByteArray() to password
+            val bytes = out.toByteArray()
+            if (verify != null) {
+                try { verify(bytes, password) } catch (e: Exception) { password.fill('\u0000'); throw e }
+                // A lost acknowledgement must not discard data already verified by the receiver.
+                runCatching { exchange(byteArrayOf(0x80.toByte(), 0x30, 0, 0, 0)) }
+            }
+            return bytes to password
         }
     }
 }
