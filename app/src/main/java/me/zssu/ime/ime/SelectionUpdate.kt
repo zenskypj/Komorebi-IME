@@ -11,23 +11,9 @@ internal object SelectionUpdate {
         actualStart >= 0 && actualEnd >= 0 && (callbackStart != actualStart || callbackEnd != actualEnd)
 
     /**
-     * Resolves Mozc's cursor offset to an absolute editor position after [setComposingText] has
-     * temporarily placed the caret at the end of the composing span.
-     */
-    fun absolutePreeditCursor(
-        composingEnd: Int,
-        preeditLength: Int,
-        preeditCursor: Int,
-    ): Int {
-        val length = preeditLength.coerceAtLeast(0)
-        val cursor = preeditCursor.coerceIn(0, length)
-        return composingEnd - length + cursor
-    }
-
-    /**
-     * A composing editor normally reports a collapsed selection at Mozc's cursor inside its
-     * composing span. A different caret, a range selection, or a missing span means the editor
-     * changed independently.
+     * Reading edits expect the restored caret. During conversion, any collapsed caret inside
+     * the composing span is harmless: native clause focus is independent of that caret.
+     * Outside/range selections and missing spans remain external changes.
      */
     fun invalidatesComposition(
         isComposing: Boolean,
@@ -36,12 +22,14 @@ internal object SelectionUpdate {
         composingStart: Int,
         composingEnd: Int,
         preeditCursor: Int,
+        converting: Boolean = false,
     ): Boolean =
         isComposing &&
             (
                 composingStart < 0 ||
-                    composingEnd < composingStart ||
+                    composingEnd <= composingStart ||
                     newSelectionStart != newSelectionEnd ||
-                    newSelectionStart != composingStart + preeditCursor
+                    newSelectionStart < composingStart || newSelectionStart > composingEnd ||
+                    (!converting && newSelectionStart != composingStart + preeditCursor)
                 )
 }

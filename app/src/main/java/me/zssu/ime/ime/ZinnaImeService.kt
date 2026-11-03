@@ -126,20 +126,9 @@ class ZinnaImeService : InputMethodService() {
     private var currentSegmentCount = 0
     private var suppressPartialLearning = false
     private var renderedPreeditCursor = 0
+    private var renderedPreedit = ""
 
-    /**
-     * Set while a state we rendered is still settling in the editor.
-     *
-     * commitText + setComposingText inside one batch edit make the editor post a selection
-     * callback whose composing-span coordinates can lag the text we just wrote. Comparing that
-     * stale span against the new caret made the callback look like an external edit, so the
-     * continuation candidates a conversion just produced were cleared and the toolbar flashed
-     * back over them. A collapsed-caret update that arrives while this is set is our own echo and
-     * is ignored; a range selection is still the user grabbing the text, so it is honoured.
-     */
-    private var ownSelectionUpdatePending = false
     private var editorStateUpdateInProgress = false
-    private var editorSelectionUpdateObserved = false
 
     /** Used to retry applying a proofreading result once the editor connection comes back up. */
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
@@ -662,6 +651,8 @@ class ZinnaImeService : InputMethodService() {
                 session.resetContext()
                 isComposing = false
                 isConverting = false
+                segmentBar?.visibility = View.GONE
+                currentSegmentCount = 0
                 renderedPreeditCursor = 0
                 keyboardView?.isConversionAvailable = false
                 ic.commitText(corrected, 1)
@@ -813,7 +804,6 @@ class ZinnaImeService : InputMethodService() {
         }
         session.setIncognitoMode(nextPolicy.incognito)
         session.setTypingCorrectionEnabled(activeProfile?.typingCorrection ?: true)
-        ownSelectionUpdatePending = false
         when (InputRestartRouting.target(restarting, isComposing)) {
             InputRestartRouting.Target.PRESERVE_COMPOSITION -> {
                 // Android is restarting the same editor with its composing span intact. Keep both
@@ -829,6 +819,8 @@ class ZinnaImeService : InputMethodService() {
                 session.resetContext()
                 isComposing = false
                 isConverting = false
+                segmentBar?.visibility = View.GONE
+                currentSegmentCount = 0
                 renderedPreeditCursor = 0
                 keyboardView?.isConversionAvailable = false
                 lastCandidates = emptyList()
@@ -866,9 +858,10 @@ class ZinnaImeService : InputMethodService() {
         session.resetContext()
         isComposing = false
         isConverting = false
+        segmentBar?.visibility = View.GONE
+        currentSegmentCount = 0
         renderedPreeditCursor = 0
         keyboardView?.isConversionAvailable = false
-        ownSelectionUpdatePending = false
         currentInputConnection?.finishComposingText()
         candidateView?.clear()
     }
@@ -880,9 +873,9 @@ class ZinnaImeService : InputMethodService() {
      * clear button is a common example: without this callback, the underline disappears from the
      * editor but the old reading remains inside mozc and is prepended to the next word.
      *
-     * Updates produced by our own [render] leave the selection collapsed at Mozc's cursor inside
-     * the composing span, so they are ignored. Any other selection means the editor is now
-     * authoritative and retaining the native composition would make the two sides disagree.
+     * Reading edits restore a verified interior caret. Conversion keeps the editor caret at the
+     * composing end and shows clause focus with spans. Delayed in-span notifications must not
+     * cancel that conversion; actual outside selections or removed spans reset the session.
      */
     override fun onUpdateSelection(
         oldSelStart: Int,
@@ -904,13 +897,7 @@ class ZinnaImeService : InputMethodService() {
         // the middle. Some editors report that temporary position synchronously, even inside a
         // batch edit; it is an implementation detail of our render, not an external edit.
         if (editorStateUpdateInProgress) {
-            editorSelectionUpdateObserved = true
             return
-        }
-        if (ownSelectionUpdatePending) {
-            ownSelectionUpdatePending = false
-            // Our render leaves the caret collapsed; a range selection means the user intervened.
-            if (newSelStart == newSelEnd) return
         }
         if (!SelectionUpdate.invalidatesComposition(
                 isComposing = isComposing,
@@ -919,6 +906,7 @@ class ZinnaImeService : InputMethodService() {
                 composingStart = candidatesStart,
                 composingEnd = candidatesEnd,
                 preeditCursor = renderedPreeditCursor,
+                converting = isConverting,
             )
         ) {
             return
@@ -926,19 +914,25 @@ class ZinnaImeService : InputMethodService() {
 
         // Rapid edits can queue several callbacks. A callback for an older render must not
         // finish the newer composing span and silently commit its kana.
-        val extracted = currentInputConnection?.getExtractedText(
-            android.view.inputmethod.ExtractedTextRequest(), 0,
-        )
-        if (extracted != null && SelectionUpdate.isStale(
-                newSelStart, newSelEnd,
-                extracted.startOffset + extracted.selectionStart,
-                extracted.startOffset + extracted.selectionEnd,
-            )) return
+        val request = android.view.inputmethod.ExtractedTextRequest().apply { flags = InputConnection.GET_TEXT_WITH_STYLES }
+        val extracted = runCatching { currentInputConnection?.getExtractedText(request, 0) }.getOrNull()
+        if (extracted != null) {
+            if (SelectionUpdate.isStale(newSelStart, newSelEnd,
+                    extracted.startOffset + extracted.selectionStart,
+                    extracted.startOffset + extracted.selectionEnd)) return
+            // Some editors combine the new caret with old composing coordinates. A verified
+            // live span is stronger evidence than those delayed coordinates.
+            val liveStart = if (isConverting) CompositionCursor.verifiedStart(renderedPreedit, compositionSnapshot(extracted)) else null
+            if (liveStart != null && newSelStart == newSelEnd &&
+                newSelStart.toLong() in liveStart.toLong()..(liveStart.toLong() + renderedPreedit.length)) return
+        }
 
         // Clear the guard first: finishComposingText can synchronously cause another selection
         // callback in some editors.
         isComposing = false
         isConverting = false
+        segmentBar?.visibility = View.GONE
+        currentSegmentCount = 0
         renderedPreeditCursor = 0
         keyboardView?.isConversionAvailable = false
         cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -1182,6 +1176,8 @@ class ZinnaImeService : InputMethodService() {
             session.resetContext()
             isComposing = false
             isConverting = false
+            segmentBar?.visibility = View.GONE
+            currentSegmentCount = 0
             renderedPreeditCursor = 0
             segmentBar?.visibility = View.GONE
             candidateView?.clear()
@@ -1446,6 +1442,14 @@ class ZinnaImeService : InputMethodService() {
         }
     }
 
+    private fun compositionSnapshot(extracted: android.view.inputmethod.ExtractedText): CompositionCursor.Snapshot? {
+        val text = extracted.text as? Spanned ?: return null
+        val composing = text.getSpans(0, text.length, Any::class.java).filter { text.getSpanFlags(it) and Spanned.SPAN_COMPOSING != 0 }
+        if (composing.isEmpty()) return null
+        return CompositionCursor.Snapshot(text.toString(), extracted.startOffset,
+            composing.minOf { text.getSpanStart(it) }, composing.maxOf { text.getSpanEnd(it) })
+    }
+
     private fun render(state: MozcSession.State?, requestNeural: Boolean = true) {
         val ic = currentInputConnection ?: return
         if (state == null) {
@@ -1502,22 +1506,26 @@ class ZinnaImeService : InputMethodService() {
             controls?.getChildAt(0)?.isEnabled = focusedSegment > 0
             controls?.getChildAt(3)?.isEnabled = focusedSegment >= 0 && focusedSegment < state.segments.lastIndex
         }
-        val displayCursor = if (state.isConverting && focusedSegment >= 0)
-            state.segments.take(focusedSegment + 1).sumOf { it.text.length }.coerceAtMost(state.preedit.length)
-        else state.preeditCursor
-        renderedPreeditCursor = displayCursor
+        val cursorBefore = if (!state.isConverting && hadComposition && state.preeditCursor < state.preedit.length &&
+            state.committedText.isEmpty() && state.deleteBeforeCodePoints == 0) {
+            val request = android.view.inputmethod.ExtractedTextRequest().apply { flags = InputConnection.GET_TEXT_WITH_STYLES }
+            runCatching { ic.getExtractedText(request, 0) }.getOrNull()?.let(::compositionSnapshot)
+        } else null
+        val cursorPlan = CompositionCursor.plan(state.preedit, state.preeditCursor, state.isConverting, renderedPreedit, cursorBefore)
+        renderedPreeditCursor = cursorPlan.displayOffset
+        renderedPreedit = state.preedit
         keyboardView?.isConversionAvailable =
             state.hasComposition && layout?.inputStyle?.fullWidthSpace == true
         editorStateUpdateInProgress = true
-        editorSelectionUpdateObserved = false
         ic.beginBatchEdit()
         try {
             if (state.deleteBeforeCodePoints > 0 && !ic.deleteSurroundingTextInCodePoints(state.deleteBeforeCodePoints, 0)) {
                 session.resetContext()
                 isComposing = false
                 isConverting = false
-                renderedPreeditCursor = 0
                 segmentBar?.visibility = View.GONE
+                currentSegmentCount = 0
+                renderedPreeditCursor = 0
                 candidateView?.clear()
                 return
             }
@@ -1576,34 +1584,21 @@ class ZinnaImeService : InputMethodService() {
                     }
                 }
 
-                // Android can place newly supplied composing text only at/beyond its edges. Put it
-                // down with the caret at the end, then explicitly restore Mozc's character offset.
-                // Without this second step every interior offset collapses to the beginning or end,
-                // leaving the editor and Mozc at different positions.
-                ic.setComposingText(styled, 1)
-                if (displayCursor != state.preedit.length) {
-                    val extracted = ic.getExtractedText(
-                        android.view.inputmethod.ExtractedTextRequest(),
-                        0,
-                    )
-                    if (extracted != null) {
-                        val composingEnd = extracted.startOffset + extracted.selectionEnd
-                        val target = SelectionUpdate.absolutePreeditCursor(
-                            composingEnd = composingEnd,
-                            preeditLength = state.preedit.length,
-                            preeditCursor = displayCursor,
-                        )
-                        ic.setSelection(target, target)
+                // In conversion the caret stays at the end. Interior reading edits use a
+                // verified composing span captured BEFORE replacement, never a stale end caret.
+                val written = ic.setComposingText(styled, 1)
+                if (written && cursorPlan.absoluteSelection != null) {
+                    if (!ic.setSelection(cursorPlan.absoluteSelection, cursorPlan.absoluteSelection)) {
+                        renderedPreeditCursor = state.preedit.length
                     }
+                } else if (!written) {
+                    recoverFromLostSession(ic)
+                    return
                 }
             }
         } finally {
             ic.endBatchEdit()
             editorStateUpdateInProgress = false
-            // If endBatchEdit already delivered the selection callback synchronously, there is no
-            // future self-update to ignore. Otherwise one collapsed asynchronous callback is
-            // expected from this composition render.
-            ownSelectionUpdatePending = state.hasComposition && !editorSelectionUpdateObserved
         }
 
         lastCandidates = state.candidates
@@ -1708,9 +1703,9 @@ class ZinnaImeService : InputMethodService() {
         session.resetContext()
         isComposing = false
         isConverting = false
+        segmentBar?.visibility = View.GONE
         currentSegmentCount = 0
         renderedPreeditCursor = 0
-        ownSelectionUpdatePending = false
         keyboardView?.isConversionAvailable = false
         lastCandidates = emptyList()
         lastFocusedCandidateIndex = -1

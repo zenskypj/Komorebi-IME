@@ -14,34 +14,6 @@ class SelectionUpdateTest {
 
 
     @Test
-    fun `preedit cursor is restored relative to composing span start`() {
-        assertEquals(
-            12,
-            SelectionUpdate.absolutePreeditCursor(
-                composingEnd = 15,
-                preeditLength = 5,
-                preeditCursor = 2,
-            )
-        )
-        assertEquals(
-            10,
-            SelectionUpdate.absolutePreeditCursor(
-                composingEnd = 15,
-                preeditLength = 5,
-                preeditCursor = 0,
-            )
-        )
-        assertEquals(
-            15,
-            SelectionUpdate.absolutePreeditCursor(
-                composingEnd = 15,
-                preeditLength = 5,
-                preeditCursor = 5,
-            )
-        )
-    }
-
-    @Test
     fun `own composing update keeps native composition`() {
         assertFalse(
             SelectionUpdate.invalidatesComposition(
@@ -119,5 +91,15 @@ class SelectionUpdateTest {
                 preeditCursor = 2,
             )
         )
+    }
+    @Test fun `conversion clause focus notifications inside the span do not cancel conversion`() {
+        for (caret in 10..20) {
+            assertFalse(SelectionUpdate.invalidatesComposition(true, caret, caret, 10, 20, 10, converting = true))
+        }
+        assertTrue(SelectionUpdate.invalidatesComposition(true, 9, 9, 10, 20, 10, converting = true))
+        assertTrue(SelectionUpdate.invalidatesComposition(true, 21, 21, 10, 20, 10, converting = true))
+        assertTrue(SelectionUpdate.invalidatesComposition(true, 10, 12, 10, 20, 10, converting = true))
+        assertTrue(SelectionUpdate.invalidatesComposition(true, 20, 20, -1, -1, 10, converting = true))
+        assertTrue(SelectionUpdate.invalidatesComposition(true, 10, 10, 10, 10, 10, converting = true))
     }
 }
