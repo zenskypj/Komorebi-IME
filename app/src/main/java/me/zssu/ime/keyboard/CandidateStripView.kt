@@ -244,6 +244,28 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     fun clear() = setCandidates(emptyList(), -1)
 
+    private val toolPrefs get() = context.getSharedPreferences("keyboard_toolbar", Context.MODE_PRIVATE)
+    private fun toolOrder(): List<ToolAction> {
+        val saved = toolPrefs.getString("order", "").orEmpty().split(",")
+            .mapNotNull { name -> ToolAction.entries.firstOrNull { it.name == name } }.distinct()
+        return saved + ToolAction.entries.filterNot { it in saved }
+    }
+    private fun toolLabel(action: ToolAction): String = when (action) {
+        ToolAction.AI_STYLE -> "文体補正"
+        ToolAction.CLIPBOARD -> "クリップボード"
+        ToolAction.EMOJI -> "絵文字"
+        ToolAction.ONE_HAND_CYCLE -> "片手モード"
+        ToolAction.SETTINGS -> "設定"
+        ToolAction.MEETS_BEAM -> "Meets Beam"
+    }
+    private fun toolIcon(action: ToolAction): Int = when (action) {
+        ToolAction.AI_STYLE -> R.drawable.ic_ai_style
+        ToolAction.CLIPBOARD -> R.drawable.ic_material_content_paste
+        ToolAction.EMOJI -> R.drawable.ic_material_face
+        ToolAction.ONE_HAND_CYCLE -> R.drawable.ic_material_settings
+        ToolAction.SETTINGS -> R.drawable.ic_material_settings
+        ToolAction.MEETS_BEAM -> R.drawable.ic_meets_beam
+    }
     fun showTools() {
         paletteHeight(false)
         focusedChild = -1
@@ -251,31 +273,60 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         container.removeAllViews()
         setContainerFillWidth(true)
         scrollTo(0, 0)
-        container.addView(
-            iconButton(R.drawable.ic_ai_style, "文体補正", true) {
-                onToolAction?.invoke(ToolAction.AI_STYLE)
+        container.addView(iconButton(R.drawable.ic_tool_menu, "ツールメニュー", true) { showToolMenu() })
+        for (action in toolOrder()) {
+            if (!toolPrefs.getBoolean("visible_" + action.name, true)) continue
+            if (action == ToolAction.MEETS_BEAM && !me.zssu.ime.settings.MeetsBeamSettings.enabled(context)) continue
+            val button = if (action == ToolAction.ONE_HAND_CYCLE) oneHandButton(expand = true) { onToolAction?.invoke(action) }
+                else iconButton(toolIcon(action), toolLabel(action), true) { onToolAction?.invoke(action) }
+            container.addView(button)
+        }
+    }
+
+    private fun showToolMenu() {
+        paletteHeight(true)
+        container.removeAllViews()
+        setContainerFillWidth(false)
+        scrollTo(0, 0)
+        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val header = LinearLayout(context)
+        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
+        header.addView(TextView(context).apply { text = "ツールをタップして開く／表示と順番を変更"; setTextColor(theme.candidateTextColor); textSize = 13f })
+        panel.addView(header)
+        val scroller = android.widget.ScrollView(context)
+        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val order = toolOrder()
+        order.forEachIndexed { index, action ->
+            val row = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+            row.addView(TextView(context).apply {
+                text = toolLabel(action); setTextColor(theme.candidateTextColor); textSize = 15f
+                setPadding(12, 10, 12, 10)
+                setOnClickListener { showTools(); onToolAction?.invoke(action) }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(android.widget.Switch(context).apply {
+                contentDescription = toolLabel(action) + "をツールバーに表示"
+                isChecked = toolPrefs.getBoolean("visible_" + action.name, true)
+                setOnCheckedChangeListener { _, checked -> toolPrefs.edit().putBoolean("visible_" + action.name, checked).apply() }
+            })
+            fun move(delta: Int) {
+                val next = index + delta
+                if (next !in order.indices) return
+                val changed = order.toMutableList()
+                java.util.Collections.swap(changed, index, next)
+                toolPrefs.edit().putString("order", changed.joinToString(",") { it.name }).apply()
+                showToolMenu()
             }
-        )
-        container.addView(
-            iconButton(R.drawable.ic_material_content_paste, "クリップボードを貼り付け", true) {
-                onToolAction?.invoke(ToolAction.CLIPBOARD)
-            }
-        )
-        container.addView(
-            iconButton(R.drawable.ic_material_face, "絵文字", true) {
-                onToolAction?.invoke(ToolAction.EMOJI)
-            }
-        )
-        container.addView(
-            oneHandButton(expand = true) {
-                onToolAction?.invoke(ToolAction.ONE_HAND_CYCLE)
-            }
-        )
-        container.addView(
-            iconButton(R.drawable.ic_material_settings, "設定", true) {
-                onToolAction?.invoke(ToolAction.SETTINGS)
-            }
-        )
+            for ((label, delta) in listOf("↑" to -1, "↓" to 1)) row.addView(TextView(context).apply {
+                text = label; textSize = 22f; setTextColor(theme.candidateTextColor); setPadding(18, 4, 18, 4)
+                contentDescription = toolLabel(action) + if (delta < 0) "を上へ" else "を下へ"
+                setOnClickListener { move(delta) }
+            })
+            list.addView(row)
+        }
+        scroller.addView(list)
+        panel.addView(scroller, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        emojiPanel = panel
+        container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
     }
 
     fun showStyleSelector() {

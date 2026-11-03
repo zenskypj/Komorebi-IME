@@ -419,15 +419,6 @@ class ZinnaImeService : InputMethodService() {
         }
         val candidateRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            if (me.zssu.ime.settings.MeetsBeamSettings.enabled(this@ZinnaImeService) && stripHeight > 0) {
-                addView(android.widget.ImageButton(this@ZinnaImeService).apply {
-                    setImageResource(R.drawable.ic_meets_beam)
-                    setColorFilter(theme.candidateTextColor)
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    contentDescription = "Meets Beam"
-                    setOnClickListener { handleToolAction(CandidateStripView.ToolAction.MEETS_BEAM) }
-                }, LinearLayout.LayoutParams((44 * resources.displayMetrics.density).toInt(), stripHeight))
-            }
             addView(candidates, LinearLayout.LayoutParams(0, stripHeight, 1f))
         }
         content.addView(candidateRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -512,7 +503,7 @@ class ZinnaImeService : InputMethodService() {
                 val pkg = currentInputEditorInfo?.packageName.orEmpty()
                 val url = me.zssu.ime.settings.BeamAccessibilityService.browserUrl(pkg)
                 val intent = Intent(this, me.zssu.ime.settings.MeetsBeamActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
                     .putExtra("beam_package", pkg)
                 if (url != null) intent.putExtra("beam_url", url)
                 startActivity(intent)
