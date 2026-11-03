@@ -1071,7 +1071,7 @@ class ZinnaImeService : InputMethodService() {
         // Shift+Arrow, Mozc's standard command for shrinking/expanding that clause boundary.
         val state = session.sendSpecialKey(special, shift = adjustSegment)
         if (state != null && state.hasComposition) {
-            render(state)
+            render(state, requestNeural = false)
             return
         }
         // Outside a composition, move the editor caret instead.
@@ -1113,7 +1113,7 @@ class ZinnaImeService : InputMethodService() {
         }
     }
 
-    private fun render(state: MozcSession.State?) {
+    private fun render(state: MozcSession.State?, requestNeural: Boolean = true) {
         val ic = currentInputConnection ?: return
         if (state == null) {
             recoverFromLostSession(ic)
@@ -1138,7 +1138,11 @@ class ZinnaImeService : InputMethodService() {
         isComposing = state.hasComposition
         isConverting = state.isConverting
         currentSegmentCount = if (state.isConverting) state.segments.size else 0
-        renderedPreeditCursor = state.preeditCursor
+        val focusedSegment = state.segments.indexOfFirst { it.highlighted }
+        val displayCursor = if (state.isConverting && focusedSegment >= 0)
+            state.segments.take(focusedSegment + 1).sumOf { it.text.length }.coerceAtMost(state.preedit.length)
+        else state.preeditCursor
+        renderedPreeditCursor = displayCursor
         keyboardView?.isConversionAvailable =
             state.hasComposition && layout?.inputStyle?.fullWidthSpace == true
         editorStateUpdateInProgress = true
@@ -1205,7 +1209,7 @@ class ZinnaImeService : InputMethodService() {
                 // Without this second step every interior offset collapses to the beginning or end,
                 // leaving the editor and Mozc at different positions.
                 ic.setComposingText(styled, 1)
-                if (state.preeditCursor != state.preedit.length) {
+                if (displayCursor != state.preedit.length) {
                     val extracted = ic.getExtractedText(
                         android.view.inputmethod.ExtractedTextRequest(),
                         0,
@@ -1215,7 +1219,7 @@ class ZinnaImeService : InputMethodService() {
                         val target = SelectionUpdate.absolutePreeditCursor(
                             composingEnd = composingEnd,
                             preeditLength = state.preedit.length,
-                            preeditCursor = state.preeditCursor,
+                            preeditCursor = displayCursor,
                         )
                         ic.setSelection(target, target)
                     }
@@ -1233,7 +1237,7 @@ class ZinnaImeService : InputMethodService() {
         lastCandidates = state.candidates
         lastFocusedCandidateIndex = state.focusedCandidateIndex
         candidateView?.setCandidates(state.candidates, state.focusedCandidateIndex)
-        requestZenzai(state)
+        if (requestNeural) requestZenzai(state)
     }
 
     private fun refreshZenzai() {
