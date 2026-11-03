@@ -87,3 +87,8 @@ under Apache License 2.0: https://huggingface.co/Miwa-Keita/zenz-v3.2-small-gguf
 
 Unicode emoji-test.txt Copyright © 1991-2026 Unicode, Inc.; Unicode License v3.
 License: assets/legal/UNICODE_LICENSE.txt. https://www.unicode.org/license.txt
+
+zenzai-plus: soichi1208, based on Miwa-Keita's zenz-v2.5-small and Kyoto University
+language media laboratory's gpt2-small-japanese-char. Model CC BY-SA 4.0;
+model card and MIT runtime license are included in app/src/main/assets/legal/.
+Model is downloaded on user request from https://huggingface.co/soichi1208/zenzai-plus.

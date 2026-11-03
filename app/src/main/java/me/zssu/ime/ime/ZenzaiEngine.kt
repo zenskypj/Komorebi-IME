@@ -38,7 +38,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
         failed = false
         cancel()
         if (value) {
-            useZenz32 = Zenz32Model.ready(app) && Zenz32Native.available
+            useZenz32 = !(ZenzPlusModel.ready(app) && ZenzaiNative.available) && Zenz32Model.ready(app) && Zenz32Native.available
             nativeReady = useZenz32 || ZenzaiNative.available
             if (!nativeReady) { failed = true; onError() }
         } else {
@@ -126,6 +126,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     }
 
     @Synchronized private fun modelFile(): File {
+        if (ZenzPlusModel.ready(app)) return ZenzPlusModel.file(app)
         val metadata = app.assets.open("zenzai/model.json").bufferedReader().use { JSONObject(it.readText()) }
         val hash = metadata.getString("sha256")
         require(hash.matches(Regex("[0-9a-f]{64}")))
@@ -156,7 +157,8 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
 
     companion object {
         fun isBundled(context: Context): Boolean =
-            (Zenz32Model.ready(context) && Zenz32Native.available) || runCatching { context.assets.open("zenzai/model.json").use { } }.isSuccess
+            (Zenz32Model.ready(context) && Zenz32Native.available) ||
+                (ZenzPlusModel.ready(context) && ZenzaiNative.available) || runCatching { context.assets.open("zenzai/model.json").use { } }.isSuccess
     }
 }
 

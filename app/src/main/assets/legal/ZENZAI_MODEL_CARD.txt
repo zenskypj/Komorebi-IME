@@ -1,0 +1,39 @@
+---
+language:
+- ja
+license: cc-by-sa-4.0
+base_model: Miwa-Keita/zenz-v2.5-small
+tags:
+- gguf
+- japanese-ime
+- kana-kanji-conversion
+---
+
+# zenzai-plus
+
+[Miwa-Keita/zenz-v2.5-small](https://huggingface.co/Miwa-Keita/zenz-v2.5-small)を基にin-place TTTなどを追加したモデル
+
+- zenzai-plus-base-f16.gguf
+
+GGUF F16の基本的なモデル
+
+- zenzai-plus-ft-f16.gguf
+
+soichiの過去のツイートで追加FTしたモデル
+
+- hf/base
+
+追加FTなしのHF形式
+
+- hf/ft
+
+ツイートで追加FTしたHF形式
+
+## ライセンス・クレジット
+
+CC BY-SA 4.0（クリエイティブ・コモンズ 表示‐継承 4.0 国際）。
+
+- 元モデル：Keita Miwa — [zenz-v2.5-small](https://huggingface.co/Miwa-Keita/zenz-v2.5-small)
+- 基盤モデル：京都大学 言語メディア研究室 — [gpt2-small-japanese-char](https://huggingface.co/ku-nlp/gpt2-small-japanese-char)
+- 変更：soichi1208によるGGUF変換、およびFT版への追加学習
+- [ライセンス全文](https://creativecommons.org/licenses/by-sa/4.0/legalcode.ja)

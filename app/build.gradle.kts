@@ -26,8 +26,8 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 29
-        versionName = "0.3.0-rc.5-dev"
+        versionCode = 30
+        versionName = "0.3.0-rc.6-dev"
     }
 
     buildTypes {
@@ -65,8 +65,9 @@ android {
     }
     androidResources.noCompress += "gguf"
     packaging {
-        // libmozc.so must stay page-aligned for the 16 KB page-size requirement on Android 15+.
-        jniLibs.useLegacyPackaging = false
+        // Uncompressed release libraries are page-aligned. The optional GitHub test build may
+        // compress them to fit GitHub's 100 MiB per-file limit; extracted ELF files remain 16 KiB aligned.
+        jniLibs.useLegacyPackaging = providers.gradleProperty("compressNativeForTest").orNull == "true"
     }
 
     // App Bundles already split by ABI at install time and AGP cannot combine an AAB with multiple

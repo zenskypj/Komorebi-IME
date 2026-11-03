@@ -110,6 +110,9 @@ internal fun BackupCard() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("バックアップ", style = MaterialTheme.typography.titleMedium)
+            OutlinedButton(onClick = {
+                context.startActivity(android.content.Intent(context, NfcMigrationActivity::class.java))
+            }, modifier = Modifier.fillMaxWidth()) { Text("NFC で設定・学習を移行") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("バックアップ時期を表示", modifier = Modifier.weight(1f))
                 Switch(checked = remindBackup, onCheckedChange = {
@@ -226,7 +229,7 @@ private const val BACKUP_MIME = "application/octet-stream"
  * Everything outside mozc's own profile that the user chose rather than typed: the settings, the
  * background image they picked, and any layout or theme they dropped in by hand.
  */
-private val BACKUP_EXTRAS = ProfileBackup.Extras(
+internal val BACKUP_EXTRAS = ProfileBackup.Extras(
     preferences = listOf(ImeSettings.NAME, "emoji_palette"),
     files = listOf("app_profiles.json"),
     encryptedFiles = listOf("priority_candidates.enc"),
