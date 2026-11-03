@@ -13,9 +13,9 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate（`0.3.0-rc.3`）です。自動テストを通過した
+> 現在は正式版に向けた Release Candidate（`0.3.0-rc.4`）です。自動テストを通過した
 > ビルドでも、公開前に複数Android世代・ナビゲーション方式・実機での確認が必要です。
-> 変更点と検証結果は[リリースノート](docs/releases/v0.3.0-rc.3.md)、正式版までに必要な
+> 変更点と検証結果は[リリースノート](docs/releases/v0.3.0-rc.4.md)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
 
 ## 特長
