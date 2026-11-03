@@ -20,12 +20,9 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     @Volatile private var enabled = false
     @Volatile private var generation = 0L
     private var nativeReady = false
-    @Volatile private var useZenz32 = false
-    fun usesZenz32(): Boolean = useZenz32
     private var failed = false
     // Accessed exclusively on worker, including destruction.
     private var handle = 0L
-    private var handleIsZenz32 = false
     @Volatile private var activation = 0L
     private val trainer = ZenzaiTrainer(app, ::modelFile, ::publish) {
         ui.post { if (enabled) onError() }
@@ -38,19 +35,18 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
         failed = false
         cancel()
         if (value) {
-            useZenz32 = !(ZenzPlusModel.ready(app) && ZenzaiNative.available) && Zenz32Model.ready(app) && Zenz32Native.available
-            nativeReady = useZenz32 || ZenzaiNative.available
+            nativeReady = ZenzaiNative.available
             if (!nativeReady) { failed = true; onError() }
         } else {
             worker.execute(::release)
         }
-        trainer.setEnabled(value && nativeReady && !useZenz32, activation)
+        trainer.setEnabled(value && nativeReady, activation)
     }
 
     fun cancel() {
         pending?.cancel(false)
         pending = null
-        generation = if (!nativeReady) generation + 1 else if (useZenz32) Zenz32Native.cancel() else ZenzaiNative.cancel()
+        generation = if (!nativeReady) generation + 1 else ZenzaiNative.cancel()
         ui.removeCallbacksAndMessages(null)
     }
 
@@ -62,12 +58,11 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
             if (ticket != generation || !enabled) return@schedule
             try {
                 if (handle == 0L) {
-                    handleIsZenz32 = useZenz32
-                    handle = if (handleIsZenz32) Zenz32Native.load(Zenz32Model.file(app).absolutePath) else ZenzaiNative.load(modelFile().absolutePath)
+                    handle = ZenzaiNative.load(modelFile().absolutePath)
                 }
                 if (ticket != generation || !enabled) return@schedule
                 val bytes = prompt.toByteArray(Charsets.UTF_8)
-                val result = (if (useZenz32) Zenz32Native.generate(handle, bytes, ticket) else ZenzaiNative.generate(handle, bytes, 192, ticket))
+                val result = ZenzaiNative.generate(handle, bytes, 192, ticket)
                     ?.toString(Charsets.UTF_8)?.let(ZenzaiConversion::candidate)
                 if (result != null) ui.post {
                     if (ticket == generation && enabled) onResult(result)
@@ -92,18 +87,13 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     }
 
     fun confirm(reading: String, preceding: String, output: String) {
-        if (!enabled || !nativeReady || failed || useZenz32) return
+        if (!enabled || !nativeReady || failed) return
         val prompt = ZenzaiConversion.prompt(reading, preceding) ?: return
         trainer.confirm(prompt, output)
     }
 
     fun syncDictionary(onEntries: (List<UserDictionary.Entry>) -> Unit) {
-        if (useZenz32) {
-            worker.execute {
-                val entries = UserDictionary(app).entries()
-                ui.post { if (enabled) onEntries(entries) }
-            }
-        } else trainer.dictionary { entries -> ui.post { if (enabled) onEntries(entries) } }
+        trainer.dictionary { entries -> ui.post { if (enabled) onEntries(entries) } }
     }
 
     private fun publish(version: Long, epoch: Long) {
@@ -121,7 +111,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     }
 
     private fun release() {
-        if (handle != 0L) { if (handleIsZenz32) Zenz32Native.free(handle) else ZenzaiNative.free(handle) }
+        if (handle != 0L) ZenzaiNative.free(handle)
         handle = 0L
     }
 
@@ -157,8 +147,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
 
     companion object {
         fun isBundled(context: Context): Boolean =
-            (Zenz32Model.ready(context) && Zenz32Native.available) ||
-                (ZenzPlusModel.ready(context) && ZenzaiNative.available) || runCatching { context.assets.open("zenzai/model.json").use { } }.isSuccess
+            (ZenzPlusModel.ready(context) && ZenzaiNative.available) || runCatching { context.assets.open("zenzai/model.json").use { } }.isSuccess
     }
 }
 

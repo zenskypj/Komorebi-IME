@@ -19,7 +19,10 @@ internal class ConversionSession(private val context: Context, private val prior
     var zenzaiEnabled = ImeSettings(context).zenzaiPlusEnabled
         private set
     private var mozcAlongside = ImeSettings(context).zenzaiMozcEnabled
-    private val usesMozc get() = ZenzaiConversion.usesMozc(zenzaiEnabled, mozcAlongside)
+    // Mozc supplies segment boundaries even when the neural engine provides suggestions.
+    // Retain the standalone composer only when the native engine is genuinely unavailable.
+    private val nativeAvailable by lazy { me.zssu.ime.mozc.MozcEngine.get(context) != null }
+    private val usesMozc get() = ZenzaiConversion.usesMozc(zenzaiEnabled, mozcAlongside, nativeAvailable)
     var clientContext: ClientContext? = null
         set(value) { field = value; if (usesMozc) native().clientContext = value }
     val isAvailable get() = zenzaiEnabled || native().isAvailable

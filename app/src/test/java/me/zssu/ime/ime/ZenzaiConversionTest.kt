@@ -9,6 +9,7 @@ class ZenzaiConversionTest {
         assertTrue(ZenzaiConversion.usesMozc(false, true))
         assertFalse(ZenzaiConversion.usesMozc(true, false))
         assertTrue(ZenzaiConversion.usesMozc(true, true))
+        assertTrue(ZenzaiConversion.usesMozc(true, false, nativeAvailable = true))
     }
 
     @Test fun neuralCandidateAlwaysPrecedesDictionaryAndMozcIncludingDuplicates() {
@@ -36,12 +37,6 @@ class ZenzaiConversionTest {
     @Test fun usesV2TagsAndKatakanaWithoutChatTemplate() {
         assertEquals("\uEE00キョウハイイテンキデス\uEE01", ZenzaiConversion.prompt("きょうはいいてんきです", ""))
         assertEquals("\uEE00ガッコウ\uEE02今日は\uEE01", ZenzaiConversion.prompt("ｶﾞｯｺｳ", "今日は"))
-    }
-
-    @Test fun v3ContextPrecedesInputAndCannotInjectTags() {
-        assertEquals("\uEE02今日は\uEE00ガッコウ\uEE01", ZenzaiConversion.promptV3("ｶﾞｯｺｳ", "今日は"))
-        assertEquals("\uEE00ア\uEE01", ZenzaiConversion.promptV3("あ", "\uEE07"))
-        assertEquals("\uEE02" + "前".repeat(40) + "\uEE00ア\uEE01", ZenzaiConversion.promptV3("あ", "古" + "前".repeat(40)))
     }
 
     @Test fun contextIsLimitedAndCannotInjectModelTags() {

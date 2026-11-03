@@ -220,10 +220,19 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     private val operationIcons = mutableMapOf<Int, Drawable>()
+    private val guideTextBounds = android.graphics.Rect()
     private fun drawOutput(canvas: Canvas, action: KeyAction, label: String, x: Float, y: Float, paint: Paint) {
         val id = OperationKeyIcons.resource(action, label)
         val icon = id?.let { operationIcons.getOrPut(it) { requireNotNull(ContextCompat.getDrawable(context, it)).mutate() } }
-        if (icon == null) { canvas.drawText(label, x, y - (paint.descent() + paint.ascent()) / 2f, paint); return }
+        if (icon == null) {
+            val baseline = if (paint === guideLabelPaint && label.isNotBlank()) {
+                paint.getTextBounds(label, 0, label.length, guideTextBounds)
+                if (!guideTextBounds.isEmpty) y - (guideTextBounds.top + guideTextBounds.bottom) / 2f
+                else y - (paint.descent() + paint.ascent()) / 2f
+            } else y - (paint.descent() + paint.ascent()) / 2f
+            canvas.drawText(label, x, baseline, paint)
+            return
+        }
         val size = paint.textSize.toInt().coerceAtLeast(1)
         icon.setTint(paint.color)
         icon.alpha = paint.alpha
@@ -289,8 +298,6 @@ class FlickKeyboardView @JvmOverloads constructor(
         guideBackgroundPaint.alpha = 255
         canvas.drawRoundRect(previewRect, radius, radius, guideBackgroundPaint)
         guideLabelPaint.color = theme.flickGuideSelectedLabelColor
-        val baseline =
-            previewRect.centerY() - (guideLabelPaint.descent() + guideLabelPaint.ascent()) / 2f
         drawOutput(canvas, output.action, output.label, previewRect.centerX(), previewRect.centerY(), guideLabelPaint)
     }
 
@@ -320,7 +327,6 @@ class FlickKeyboardView @JvmOverloads constructor(
             val selected = direction == touch.direction
             guideLabelPaint.color =
                 if (selected) theme.flickGuideSelectedLabelColor else theme.flickGuideLabelColor
-            val baseline = rect.centerY() - (guideLabelPaint.descent() + guideLabelPaint.ascent()) / 2f
             drawOutput(canvas, output.action, output.label, rect.centerX(), rect.centerY(), guideLabelPaint)
         }
         guideBackgroundPaint.alpha = 255

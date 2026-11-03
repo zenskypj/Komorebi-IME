@@ -523,6 +523,3 @@ Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第�
 - 任意の [zenzai-plus ビルド](docs/zenzai-plus.md) に対応します。互換ランタイムと
   指定モデルを別途用意する必要があります。通常 APK には同梱しません。
 - jawiki と F-Droid 用設定はこの更新の対象外です。
-
-zenz v3.2 のダウンロードと実験的な端末内変換については
-[zenz v3.2](docs/zenz-v3.2.md) を参照してください。

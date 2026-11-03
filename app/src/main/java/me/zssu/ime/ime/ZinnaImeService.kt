@@ -107,6 +107,8 @@ class ZinnaImeService : InputMethodService() {
      */
     private var isComposing = false
     private var isConverting = false
+    private var currentSegmentCount = 0
+    private var suppressPartialLearning = false
     private var renderedPreeditCursor = 0
 
     /**
@@ -272,7 +274,9 @@ class ZinnaImeService : InputMethodService() {
                 // Preserve the native candidate window until a Mozc id is submitted. A direct
                 // neural candidate resets it inside selectCandidate.
                 cancelKarukanConversion(clearReading = true, revertMozc = false)
-                render(session.selectCandidate(candidate))
+                val partial = isConverting && currentSegmentCount > 1 && !candidate.directCommit
+                suppressPartialLearning = partial
+                try { render(session.selectCandidate(candidate)) } finally { suppressPartialLearning = false }
             }
             onCandidateLongPressed = { candidate ->
                 val entries = meaningDictionaries.lookup(candidate.text)
@@ -889,16 +893,10 @@ class ZinnaImeService : InputMethodService() {
      * nothing at all, so space appeared to work only as the second keystroke of a word.
      */
     private fun handleSpace() {
-        if (ZenzaiConversion.canConvert(session.zenzaiEnabled, isComposing,
-                layout?.inputStyle?.fullWidthSpace == true, fieldPolicy.incognito)) {
-            zenzaiCandidate?.let { render(session.selectCandidate(it)) }
-            return
-        }
         if (karukanConversionActive) {
-            if (lastCandidates.isNotEmpty()) {
-                val next = (lastFocusedCandidateIndex + 1).mod(lastCandidates.size)
-                renderKarukanCandidates(lastCandidates, next)
-            }
+            // The user is navigating Mozc's candidates; discard an outstanding neural result.
+            cancelKarukanConversion(clearReading = true, revertMozc = false)
+            handleMozcSpace()
             return
         }
         if (shouldUseKarukan()) {
@@ -970,7 +968,16 @@ class ZinnaImeService : InputMethodService() {
      * also fire the editor action and send the message you were only trying to finalise.
      */
     private fun handleEnter() {
-        zenzaiCandidate?.takeIf { isComposing }?.let {
+        val partial = ConversionNavigation.partialCandidate(
+            isConverting, currentSegmentCount, lastCandidates, lastFocusedCandidateIndex,
+        )
+        if (partial != null) {
+            cancelKarukanConversion(clearReading = true, revertMozc = false)
+            suppressPartialLearning = true
+            try { render(session.selectCandidate(partial)) } finally { suppressPartialLearning = false }
+            return
+        }
+        zenzaiCandidate?.takeIf { isComposing && !isConverting }?.let {
             render(session.selectCandidate(it))
             return
         }
@@ -1006,12 +1013,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleCursorMove(delta: Int, adjustSegment: Boolean) {
-        if (karukanConversionActive && lastCandidates.isNotEmpty()) {
-            val next = (lastFocusedCandidateIndex + if (delta < 0) -1 else 1)
-                .mod(lastCandidates.size)
-            renderKarukanCandidates(lastCandidates, next)
-            return
-        }
+        if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
         if (
             CursorRouting.target(
@@ -1080,7 +1082,7 @@ class ZinnaImeService : InputMethodService() {
 
         zenzai.cancel()
         zenzaiCandidate = null
-        if (state.committedText.isNotEmpty() && !fieldPolicy.incognito &&
+        if (state.committedText.isNotEmpty() && !suppressPartialLearning && !fieldPolicy.incognito &&
             (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
             zenzai.confirm(zenzaiState?.preeditReading.orEmpty(),
                 session.clientContext?.precedingText.orEmpty(), state.committedText)
@@ -1095,6 +1097,7 @@ class ZinnaImeService : InputMethodService() {
             )
         isComposing = state.hasComposition
         isConverting = state.isConverting
+        currentSegmentCount = if (state.isConverting) state.segments.size else 0
         renderedPreeditCursor = state.preeditCursor
         keyboardView?.isConversionAvailable =
             state.hasComposition && layout?.inputStyle?.fullWidthSpace == true
@@ -1205,12 +1208,11 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun requestZenzai(state: MozcSession.State) {
-        if (!ZenzaiConversion.canConvert(session.zenzaiEnabled, state.hasComposition,
+        if (state.isConverting || !ZenzaiConversion.canConvert(session.zenzaiEnabled, state.hasComposition,
                 layout?.inputStyle?.fullWidthSpace == true, fieldPolicy.incognito)) return
         val reading = state.preeditReading
         val preceding = session.clientContext?.precedingText.orEmpty()
-        val prompt = (if (zenzai.usesZenz32()) ZenzaiConversion.promptV3(reading, preceding)
-            else ZenzaiConversion.prompt(reading, preceding)) ?: return
+        val prompt = ZenzaiConversion.prompt(reading, preceding) ?: return
         val registered = zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
             .map { MozcSession.Candidate(-100, it.word, directCommit = true) }
         val base = (registered + state.candidates).distinctBy { it.text }
@@ -1237,6 +1239,7 @@ class ZinnaImeService : InputMethodService() {
         session.resetContext()
         isComposing = false
         isConverting = false
+        currentSegmentCount = 0
         renderedPreeditCursor = 0
         ownSelectionUpdatePending = false
         keyboardView?.isConversionAvailable = false
@@ -1248,7 +1251,7 @@ class ZinnaImeService : InputMethodService() {
     private fun shouldUseKarukan(): Boolean =
         !settings.zenzaiPlusEnabled &&
         layout?.inputStyle?.fullWidthSpace == true &&
-        isComposing &&
+        isComposing && !isConverting &&
             !fieldPolicy.incognito &&
             settings.conversionEngine == ImeSettings.ConversionEngine.KARUKAN &&
             KarukanModelStore.files(this).ready &&
@@ -1297,21 +1300,19 @@ class ZinnaImeService : InputMethodService() {
             }
             when (result) {
                 is KarukanEngine.Result.Success -> {
-                    val candidates = HybridCandidateRanking.merge(
+                    val candidates = ConversionNavigation.appendNeuralCandidates(
+                        native = mozcCandidates,
+                        neural = result.candidates,
                         reading = reading,
-                        neuralValues = result.candidates,
-                        mozcCandidates = mozcCandidates,
-                        priorityLookup = priorityCandidates::match,
-                        limit = HYBRID_CANDIDATE_LIMIT,
+                        limit = mozcCandidates.size + KARUKAN_CANDIDATE_COUNT,
                     )
-                    if (candidates.isEmpty()) {
-                        fallbackFromKarukan(
-                            "候補を生成できなかったためMozcへ戻しました",
-                            mozcFallback,
-                        )
-                    } else {
-                        renderKarukanCandidates(candidates, 0)
-                    }
+                    // Keep Mozc's segmented preedit and focus; whole-sentence AI choices can be
+                    // selected explicitly without replacing the active segment conversion.
+                    val focused = lastFocusedCandidateIndex
+                    cancelKarukanConversion(clearReading = true, revertMozc = false)
+                    lastCandidates = candidates
+                    lastFocusedCandidateIndex = focused
+                    candidateView?.setCandidates(candidates, focused)
                 }
                 is KarukanEngine.Result.Failure -> fallbackFromKarukan(
                     result.message,
@@ -1319,26 +1320,6 @@ class ZinnaImeService : InputMethodService() {
                 )
             }
         }
-    }
-
-    private fun renderKarukanCandidates(
-        candidates: List<MozcSession.Candidate>,
-        focusedIndex: Int,
-    ) {
-        if (candidates.isEmpty()) return
-        val index = focusedIndex.coerceIn(candidates.indices)
-        val focused = candidates[index]
-        render(
-            MozcSession.State(
-                preedit = focused.text,
-                preeditCursor = focused.text.length,
-                candidates = candidates,
-                focusedCandidateIndex = index,
-                segments = listOf(MozcSession.Segment(focused.text, highlighted = true)),
-                isConverting = true,
-                consumed = true,
-            )
-        )
     }
 
     private fun fallbackFromKarukan(message: String, fallback: MozcSession.State?) {
@@ -1456,7 +1437,6 @@ class ZinnaImeService : InputMethodService() {
         private const val KARUKAN_CONTEXT_CHARS = 320
         private const val KARUKAN_CONTEXT_WINDOW_CHARS = 192
         private const val KARUKAN_CANDIDATE_COUNT = 5
-        private const val HYBRID_CANDIDATE_LIMIT = 9
         private val CONVERSION_RANGE_COLOR = Color.argb(72, 255, 152, 0)
         private val CONVERSION_FOCUSED_COLOR = Color.argb(184, 255, 122, 0)
     }

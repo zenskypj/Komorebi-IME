@@ -29,6 +29,18 @@ internal class ZenzaiTrainer(
     private val words = mutableSetOf<String>()
     private val examples = linkedMapOf<String, String>()
     private var scheduled: ScheduledFuture<*>? = null
+    private val prefs = context.getSharedPreferences("ime_settings", Context.MODE_PRIVATE)
+    @Volatile private var inputLearning = prefs.getBoolean("zenzai_auto_learning_enabled", true)
+    private val learningListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "zenzai_auto_learning_enabled") {
+            inputLearning = prefs.getBoolean(key, true)
+            if (!inputLearning && !worker.isShutdown) worker.execute {
+                scheduled?.cancel(false)
+                examples.clear()
+            }
+        }
+    }
+    init { prefs.registerOnSharedPreferenceChangeListener(learningListener) }
 
     fun setEnabled(value: Boolean, activation: Long) {
         enabled = value
@@ -73,22 +85,22 @@ internal class ZenzaiTrainer(
     }
 
     fun confirm(prompt: String, output: String) {
-        if (!enabled || ZenzaiConversion.candidate(output) == null) return
+        if (!enabled || !inputLearning || ZenzaiConversion.candidate(output) == null) return
         val activation = epoch
         worker.execute {
-            if (!enabled || activation != epoch) return@execute
+            if (!enabled || !inputLearning || activation != epoch) return@execute
             // Same-reading corrections in one burst keep the user's last confirmed spelling.
             examples[prompt] = output
             while (examples.size > 32) examples.remove(examples.keys.first())
             scheduled?.cancel(false)
             scheduled = worker.schedule({
-                if (!enabled || activation != epoch) return@schedule
+                if (!enabled || !inputLearning || activation != epoch) return@schedule
                 try {
                     val trainer = ready()
                     val batch = examples.toMap()
                     examples.clear()
                     for ((prefix, text) in batch) {
-                        if (!enabled || activation != epoch) break
+                        if (!enabled || !inputLearning || activation != epoch) break
                         ZenzaiNative.train(trainer, (prefix + ZenzaiConversion.clean(text)).toByteArray(Charsets.UTF_8))
                         updates++
                     }
@@ -159,6 +171,7 @@ internal class ZenzaiTrainer(
     }
 
     fun close() {
+        prefs.unregisterOnSharedPreferenceChangeListener(learningListener)
         enabled = false
         epoch++
         worker.execute { scheduled?.cancel(false); examples.clear(); release() }

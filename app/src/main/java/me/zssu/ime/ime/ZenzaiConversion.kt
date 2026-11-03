@@ -5,7 +5,8 @@ import java.text.Normalizer
 /** The v2 format used by the supplied fine-tuned model, independent of Android and JNI. */
 internal object ZenzaiConversion {
     const val CANDIDATE_ID = -2
-    fun usesMozc(zenzaiEnabled: Boolean, mozcAlongside: Boolean): Boolean = !zenzaiEnabled || mozcAlongside
+    fun usesMozc(zenzaiEnabled: Boolean, mozcAlongside: Boolean, nativeAvailable: Boolean = false): Boolean =
+        !zenzaiEnabled || mozcAlongside || nativeAvailable
 
     fun canConvert(enabled: Boolean, composing: Boolean, japanese: Boolean, password: Boolean): Boolean =
         enabled && composing && japanese && !password
@@ -22,12 +23,6 @@ internal object ZenzaiConversion {
             String(points, 0, points.size)
         }
         return "\uEE00$kana" + (if (context.isEmpty()) "" else "\uEE02$context") + "\uEE01"
-    }
-
-    fun promptV3(reading: String, preceding: String): String? {
-        val legacy = prompt(reading, "") ?: return null
-        val context = clean(preceding).codePoints().toArray().takeLast(40).toIntArray().let { String(it, 0, it.size) }
-        return (if (context.isEmpty()) "" else "\uEE02$context") + legacy
     }
 
     fun clean(text: String): String = text.filter {
