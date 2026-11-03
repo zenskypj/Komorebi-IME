@@ -13,6 +13,8 @@ import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -43,14 +45,14 @@ internal object NfcMigrationSession {
     const val MAX_ARCHIVE = 32 * 1024 * 1024
     private val ok = byteArrayOf(0x90.toByte(), 0)
     private val failure = byteArrayOf(0x6F, 0)
-    private data class Ready(val archive: ByteArray, val password: String, val keyPair: KeyPair)
+    private data class Ready(val archive: ByteArray, val password: String, val keyPair: KeyPair, val aid: ByteArray)
     @Volatile private var ready: Ready? = null
     private val random = SecureRandom()
 
     fun newPassword(): String = ByteArray(32).also(random::nextBytes).let { Base64.encodeToString(it, Base64.NO_WRAP) }
-    fun prepare(archive: ByteArray, password: String) {
+    fun prepare(archive: ByteArray, password: String, selectedAid: ByteArray = aid) {
         require(archive.size in 1..MAX_ARCHIVE)
-        ready = Ready(archive, password, keys())
+        ready = Ready(archive, password, keys(), selectedAid.copyOf())
     }
     fun clear() { ready = null }
     private fun keys(): KeyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
@@ -60,11 +62,12 @@ internal object NfcMigrationSession {
             init(pair.private); doPhase(other, true); generateSecret()
         })
     }
-    fun handle(command: ByteArray): ByteArray = runCatching {
+    fun handle(command: ByteArray, selectedAid: ByteArray = aid): ByteArray = runCatching {
         val data = ready ?: return failure
+        if (!data.aid.contentEquals(selectedAid)) return failure
         if (command.size >= 5 && command[0] == 0.toByte() && command[1] == 0xA4.toByte()) {
             val length = command[4].toInt() and 0xff
-            if (command.size < 5 + length || !command.copyOfRange(5, 5 + length).contentEquals(aid)) return failure
+            if (command.size < 5 + length || !command.copyOfRange(5, 5 + length).contentEquals(selectedAid)) return failure
             return ok
         }
         if (command.size < 5 || command[0] != 0x80.toByte()) return failure
@@ -91,7 +94,7 @@ internal object NfcMigrationSession {
         }
     }.getOrElse { failure }
 
-    fun receive(tag: Tag, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
+    fun receive(tag: Tag, selectedAid: ByteArray = aid, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
         val iso = IsoDep.get(tag) ?: error("相手が NFC カードエミュレーションに対応していません")
         iso.use {
             iso.timeout = 20000
@@ -101,7 +104,7 @@ internal object NfcMigrationSession {
                 check(result.size >= 2 && result[result.size - 2] == 0x90.toByte() && result.last() == 0.toByte()) { "NFC 接続が切れました" }
                 return result.copyOf(result.size - 2)
             }
-            exchange(byteArrayOf(0, 0xA4.toByte(), 4, 0, aid.size.toByte()) + aid)
+            exchange(byteArrayOf(0, 0xA4.toByte(), 4, 0, selectedAid.size.toByte()) + selectedAid)
             val keyPair = keys()
             val public = keyPair.public.encoded
             val response = exchange(byteArrayOf(0x80.toByte(), 0x10, 0, 0, public.size.toByte()) + public)
@@ -146,7 +149,7 @@ class NfcMigrationActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { ZinnaTheme { Surface(Modifier.fillMaxSize()) {
             val scope = rememberCoroutineScope()
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("NFC で設定・学習を移行", style = MaterialTheme.typography.headlineSmall)
                 Text("Mozc の学習履歴・ユーザー辞書・設定を送ります。受信側の同じ項目は上書きされます。zenzai-plus の TTT 状態とモデルは対象外です。")
                 Text("両方の端末で NFC をオンにし、画面を開いたまま背面を近づけ続けてください。相手の本人確認は行わないため、自分の端末同士で操作してください。データ量によって時間がかかります。")
@@ -199,6 +202,10 @@ class NfcMigrationActivity : ComponentActivity() {
                 OutlinedButton(onClick = { finish() }) { Text("戻る") }
             }
         } } }
+    }
+    override fun onPause() {
+        generation.incrementAndGet(); adapter?.disableReaderMode(this); NfcMigrationSession.clear(); busy = false
+        super.onPause()
     }
     override fun onDestroy() { generation.incrementAndGet(); adapter?.disableReaderMode(this); NfcMigrationSession.clear(); super.onDestroy() }
 }

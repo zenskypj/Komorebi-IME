@@ -14,6 +14,17 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 class NfcMigrationSessionTest {
+    @Test fun migrationAndBeamAidsCannotAccessEachOthersSessions() {
+        val otherAid = byteArrayOf(1, 2, 3)
+        NfcMigrationSession.prepare(byteArrayOf(42), "secret", otherAid)
+        try {
+            val selectDefault = byteArrayOf(0, 0xA4.toByte(), 4, 0, NfcMigrationSession.aid.size.toByte()) + NfcMigrationSession.aid
+            assertEquals(0x6F.toByte(), NfcMigrationSession.handle(selectDefault)[0])
+            val selectOther = byteArrayOf(0, 0xA4.toByte(), 4, 0, otherAid.size.toByte()) + otherAid
+            assertEquals(0x90.toByte(), NfcMigrationSession.handle(selectOther, otherAid)[0])
+        } finally { NfcMigrationSession.clear() }
+    }
+
     @Test fun encryptedHandshakeAndChunkedTransfer() {
         val archive = ByteArray(601) { it.toByte() }
         NfcMigrationSession.prepare(archive, "test-secret")

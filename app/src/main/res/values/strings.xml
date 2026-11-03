@@ -13,4 +13,5 @@
     <string name="layout">配列</string>
     <string name="user_dictionary">ユーザー辞書</string>
     <string name="open_source_licenses">オープンソースライセンス</string>
+    <string name="beam_accessibility_description">Meets Beam の送信操作時だけ対応ブラウザの URL 欄を読み取ります。URL 以外の画面内容は保存・送信しません。</string>
 </resources>

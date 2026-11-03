@@ -148,6 +148,12 @@ private fun SettingsScreen() {
             Spacer(Modifier.height(8.dp))
 
             BackupCard()
+            SettingsListItem(
+                icon = Icons.Filled.Devices,
+                title = "Meets Beam",
+                subtitle = "NFC でリンク・アプリ・テキストを共有",
+                onClick = { context.startActivity(Intent(context, MeetsBeamActivity::class.java)) },
+            )
 
             // Settings list
             SettingsListItem(

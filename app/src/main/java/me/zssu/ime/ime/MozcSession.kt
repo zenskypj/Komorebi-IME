@@ -117,7 +117,7 @@ class MozcSession(
             .setMixedConversion(true)
             .setUpdateInputModeFromSurroundingText(false)
             .setAutoPartialSuggestion(true)
-            .setSpaceOnAlphanumeric(Request.SpaceOnAlphanumeric.SPACE_OR_CONVERT_COMMITTING_COMPOSITION)
+            .setSpaceOnAlphanumeric(Request.SpaceOnAlphanumeric.COMMIT)
             // Keep an unfinished reading intact at either edge. The keyboard's arrows move within
             // the composition one character at a time; crossing an edge must not silently commit
             // the whole reading and hand the movement to the editor.

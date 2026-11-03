@@ -83,7 +83,12 @@ internal class ConversionSession(private val context: Context, private val prior
         return MozcSession.State(committedText = candidate.text, consumed = true)
     }
     fun currentPreedit(): String = if (usesMozc) native().currentPreedit() else kana.text
-    fun convertOrSpace(): MozcSession.State? = if (usesMozc) native().convertOrSpace() else if (kana.text.isEmpty()) MozcSession.State() else kana.state()
+    fun convertOrSpace(): MozcSession.State? = if (usesMozc) native().convertOrSpace()
+        else when (StandaloneSpace.route(kana.text.isNotEmpty(), style.fullWidthSpace)) {
+            StandaloneSpace.Target.COMMIT_AND_SPACE -> sendSpecialKey(KeyEvent.SpecialKey.SPACE)
+            StandaloneSpace.Target.NEURAL_CONVERSION -> kana.state()
+            StandaloneSpace.Target.EDITOR_SPACE -> MozcSession.State()
+        }
     fun deleteCandidateFromHistory(id: Int): MozcSession.State? = if (usesMozc) native().deleteCandidateFromHistory(id) else kana.state()
     fun setIncognitoMode(value: Boolean) { incognito = value; if (usesMozc) native().setIncognitoMode(value) }
     fun setPhoneToggleEnabled(value: Boolean) { phoneToggle = value; if (usesMozc) native().setPhoneToggleEnabled(value) }

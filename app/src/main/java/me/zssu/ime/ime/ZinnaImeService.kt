@@ -21,6 +21,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import androidx.core.view.updatePadding
+import me.zssu.ime.R
 import me.zssu.ime.keyboard.CandidateStripView
 import me.zssu.ime.keyboard.EmojiRepository
 import me.zssu.ime.keyboard.FlickDirection
@@ -383,10 +384,20 @@ class ZinnaImeService : InputMethodService() {
         } else {
             oneHandWidth
         }
-        content.addView(
-            candidates,
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, stripHeight),
-        )
+        val candidateRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            if (me.zssu.ime.settings.MeetsBeamSettings.enabled(this@ZinnaImeService) && stripHeight > 0) {
+                addView(android.widget.ImageButton(this@ZinnaImeService).apply {
+                    setImageResource(R.drawable.ic_meets_beam)
+                    setColorFilter(theme.candidateTextColor)
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    contentDescription = "Meets Beam"
+                    setOnClickListener { handleToolAction(CandidateStripView.ToolAction.MEETS_BEAM) }
+                }, LinearLayout.LayoutParams((44 * resources.displayMetrics.density).toInt(), stripHeight))
+            }
+            addView(candidates, LinearLayout.LayoutParams(0, stripHeight, 1f))
+        }
+        content.addView(candidateRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         content.addView(
             keyboard,
             LinearLayout.LayoutParams(
@@ -435,6 +446,15 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         when (action) {
+            CandidateStripView.ToolAction.MEETS_BEAM -> {
+                val pkg = currentInputEditorInfo?.packageName.orEmpty()
+                val url = me.zssu.ime.settings.BeamAccessibilityService.browserUrl(pkg)
+                val intent = Intent(this, me.zssu.ime.settings.MeetsBeamActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra("beam_package", pkg)
+                if (url != null) intent.putExtra("beam_url", url)
+                startActivity(intent)
+            }
             CandidateStripView.ToolAction.AI_STYLE -> candidateView?.showStyleSelector()
             CandidateStripView.ToolAction.CLIPBOARD -> {
                 if (settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
@@ -840,7 +860,8 @@ class ZinnaImeService : InputMethodService() {
      * nothing at all, so space appeared to work only as the second keystroke of a word.
      */
     private fun handleSpace() {
-        if (session.zenzaiEnabled && isComposing) {
+        if (ZenzaiConversion.canConvert(session.zenzaiEnabled, isComposing,
+                layout?.inputStyle?.fullWidthSpace == true, fieldPolicy.incognito)) {
             zenzaiCandidate?.let { render(session.selectCandidate(it)) }
             return
         }
@@ -1197,6 +1218,7 @@ class ZinnaImeService : InputMethodService() {
 
     private fun shouldUseKarukan(): Boolean =
         !settings.zenzaiPlusEnabled &&
+        layout?.inputStyle?.fullWidthSpace == true &&
         isComposing &&
             !fieldPolicy.incognito &&
             settings.conversionEngine == ImeSettings.ConversionEngine.KARUKAN &&
@@ -1388,6 +1410,7 @@ class ZinnaImeService : InputMethodService() {
         settings.oneHandWidth,
         settings.candidateRows,
         settings.candidateTextScale,
+        me.zssu.ime.settings.MeetsBeamSettings.enabled(this),
         settings.flickGuideStyle,
         settings.hapticFeedbackEnabled,
     ).hashCode()
