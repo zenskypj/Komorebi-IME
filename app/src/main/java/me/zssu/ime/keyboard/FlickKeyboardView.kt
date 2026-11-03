@@ -349,17 +349,9 @@ class FlickKeyboardView @JvmOverloads constructor(
         val cells = LinkedHashMap<FlickDirection, RectF>()
         for (direction in FlickDirection.entries) {
             if (touch.key.spec.output(direction) == null) continue
-            val dx = when (direction) {
-                FlickDirection.LEFT -> -w
-                FlickDirection.RIGHT -> w
-                else -> 0f
-            }
-            val dy = when (direction) {
-                FlickDirection.UP -> -h
-                FlickDirection.DOWN -> h
-                else -> 0f
-            }
-            cells[direction] = RectF(bounds).apply { offset(dx, dy) }
+            val gap = theme.keyGapDp * resources.displayMetrics.density
+            val offset = GuideGeometry.offset(direction, w, h, gap)
+            cells[direction] = RectF(bounds).apply { offset(offset.x, offset.y) }
         }
         return cells
     }

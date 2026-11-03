@@ -71,6 +71,20 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     private var currentEmojiPage = EmojiPage.RECENT
     private var currentEmojiGroup: String? = null
     private var normalHeight = 0
+    private var emojiPanel: View? = null
+
+    private fun resizeEmojiPanel(viewportWidth: Int) {
+        val panel = emojiPanel ?: return
+        if (panel.parent !== container || viewportWidth <= 0) return
+        val target = (viewportWidth - paddingLeft - paddingRight).coerceAtLeast(1)
+        val params = panel.layoutParams ?: return
+        if (params.width != target) { params.width = target; panel.layoutParams = params }
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        resizeEmojiPanel(w)
+    }
 
     private fun paletteHeight(expanded: Boolean) {
         val params = layoutParams ?: return
@@ -78,6 +92,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             if (normalHeight == 0) normalHeight = params.height
             params.height = (210 * resources.displayMetrics.density).toInt()
         } else if (normalHeight != 0) {
+            emojiPanel = null
             params.height = normalHeight
             normalHeight = 0
         } else return
@@ -352,6 +367,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
+        emojiPanel = panel
         val header = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         val headings = listOf(EmojiPage.RECENT to "最近", EmojiPage.EMOJI to "絵文字", EmojiPage.KAOMOJI to "顔文字", EmojiPage.FAVORITE to "お気に入り")
         headings.forEach { (target, label) ->
@@ -409,7 +425,11 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             }
         }
         panel.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-        container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
+        // This strip can be narrower than the screen (Beam icon, insets, or one-hand mode).
+        // Match the measured viewport so only the category tabs scroll horizontally.
+        val viewport = (width - paddingLeft - paddingRight).coerceAtLeast(1)
+        container.addView(panel, LinearLayout.LayoutParams(viewport, LinearLayout.LayoutParams.MATCH_PARENT))
+        post { resizeEmojiPanel(width) }
     }
 
     var onEmojiSelected: ((String) -> Unit)? = null
