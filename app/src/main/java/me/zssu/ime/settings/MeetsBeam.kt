@@ -1,5 +1,6 @@
 package me.zssu.ime.settings
 
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -7,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.nfc.NfcAdapter
+import android.nfc.Tag
+import android.nfc.tech.IsoDep
+import android.os.Build
 import android.nfc.cardemulation.HostApduService
 import android.nfc.cardemulation.CardEmulation
 import android.os.Bundle
@@ -82,10 +86,28 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
         if (!MeetsBeamSettings.enabled(activity) || adapter?.isEnabled != true) return false
         active = true
         return runCatching {
-        adapter.enableReaderMode(activity, { tag ->
-            if (!active || !working.compareAndSet(false, true)) return@enableReaderMode
-            activity.runOnUiThread { if (active) onDetected() }
+            adapter.enableReaderMode(activity, { tag -> dispatchTag(tag) },
+                NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                    NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
+                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
+            // Some vendor NFC stacks fall back to Android's ordinary tag intent. Route it to
+            // the already-open Beam screen as well, without replacing reader mode.
+            if (activity is MeetsBeamActivity) {
+                val intent = Intent(activity, MeetsBeamActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
+                val pending = PendingIntent.getActivity(activity, 0x4d42, intent, flags)
+                runCatching { adapter.enableForegroundDispatch(activity, pending, null, null) }
+            }
+            true
+        }.getOrElse { active = false; false }
+    }
+
+    fun dispatchTag(tag: Tag) {
+        if (!active || !working.compareAndSet(false, true)) return
+        activity.runOnUiThread { if (active) onDetected() }
+        Thread({
             try {
+                if (IsoDep.get(tag) == null) error("ISO-DEP 非対応: ${tag.techList.joinToString { it.substringAfterLast('.') }}")
                 var message: BeamMessage? = null
                 val (_, password) = NfcMigrationSession.receive(tag, BeamTransport.aid,
                     verify = { data, secret -> message = BeamTransport.open(data, secret) }) { _, _ ->
@@ -95,18 +117,22 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
                 val verified = requireNotNull(message)
                 activity.runOnUiThread { if (active) { stop(); onMessage(verified) } }
             } catch (e: Exception) {
-                val detail = when (e) {
-                    is android.nfc.TagLostException -> "NFC 接続が切れました。端末を近づけたまま試してください。"
-                    is java.io.IOException -> "NFC 通信に失敗しました。端末を近づけ直してください。"
+                val detail = when {
+                    e is android.nfc.TagLostException -> "NFC 接続が切れました。端末を近づけたまま試してください。"
+                    e is java.io.IOException -> "NFC 通信に失敗しました。端末を近づけ直してください。"
+                    e.message?.startsWith("ISO-DEP 非対応") == true -> e.message!!
                     else -> "送受信データを確認できませんでした。両端末の Beam を再起動してください。"
                 }
                 activity.runOnUiThread { if (active) onError(detail) }
             } finally { working.set(false) }
-        }, NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
-        true
-        }.getOrElse { active = false; false }
+        }, "meets-beam-reader").apply { isDaemon = true; start() }
     }
-    fun stop() { active = false; runCatching { adapter?.disableReaderMode(activity) } }
+
+    fun stop() {
+        active = false
+        runCatching { adapter?.disableReaderMode(activity) }
+        if (activity is MeetsBeamActivity) runCatching { adapter?.disableForegroundDispatch(activity) }
+    }
 }
 
 class MeetsBeamActivity : ComponentActivity() {
@@ -115,6 +141,8 @@ class MeetsBeamActivity : ComponentActivity() {
     private var enabled by mutableStateOf(false)
     private var busy by mutableStateOf(false)
     private var receiver: BeamReceiver? = null
+    private var receivingSelected = false
+    private var pendingTag: Tag? = null
     private var outgoing: BeamMessage? = null
     private val adapter by lazy { NfcAdapter.getDefaultAdapter(this) }
 
@@ -132,7 +160,7 @@ class MeetsBeamActivity : ComponentActivity() {
                 Text("双方の端末で有効にして NFC をオンにし、画面を開いたまま近づけてください。相手の本人確認は行わないため、自分の端末同士で操作してください。")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Meets Beam を有効にする", modifier = Modifier.weight(1f))
-                    Switch(checked = enabled, onCheckedChange = { enabled = it; MeetsBeamSettings.setEnabled(this@MeetsBeamActivity, it); if (!it) { receiver?.stop(); NfcMigrationSession.clear(); busy = false } })
+                    Switch(checked = enabled, onCheckedChange = { enabled = it; MeetsBeamSettings.setEnabled(this@MeetsBeamActivity, it); if (!it) { receiver?.stop(); NfcMigrationSession.clear(); receivingSelected = false; busy = false } })
                 }
                 Text("ブラウザの URL 自動取得は、送信操作時だけ対応ブラウザのアドレス欄を読みます。")
                 OutlinedButton(onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("URL 自動取得のユーザー補助設定") }
@@ -157,14 +185,12 @@ class MeetsBeamActivity : ComponentActivity() {
                     }.onFailure { status = "送信できません。テキストは 32 KB 以下にしてください。" }
                 }) { Text("送信側になる") }
                 Button(enabled = enabled && !busy && adapter?.isEnabled == true, onClick = {
-                    val next = BeamReceiver(this@MeetsBeamActivity, { present(it); busy = false }, { detail -> status = detail }, { status = "NFC を検出しました。通信中は端末を近づけたままにしてください。" })
-                    receiver = next
-                    busy = next.start()
-                    status = if (busy) "受信待ちです。送信側に端末を近づけてください。" else "NFC を確認してください。"
+                    receivingSelected = true
+                    startReceiver()
                 }) { Text("受信側になる") }
                 if (adapter != null && adapter?.isEnabled != true) OutlinedButton(onClick = { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }) { Text("NFC をオンにする") }
                 if (busy) OutlinedButton(onClick = {
-                    receiver?.stop(); NfcMigrationSession.clear()
+                    receivingSelected = false; receiver?.stop(); NfcMigrationSession.clear()
                     adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
                     busy = false; status = "中止しました。"
                 }) { Text("中止") }
@@ -207,10 +233,35 @@ class MeetsBeamActivity : ComponentActivity() {
                 .getOrElse { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkg"))) }
         }
     }
+    private fun startReceiver() {
+        receiver?.stop()
+        val next = BeamReceiver(this, { message -> receivingSelected = false; present(message); busy = false },
+            { detail -> status = detail }, { status = "NFC を検出しました。通信中は端末を近づけたままにしてください。" })
+        receiver = next
+        busy = next.start()
+        status = if (busy) "受信待ちです。送信側に端末を近づけてください。" else "NFC を確認してください。"
+        pendingTag?.let { pendingTag = null; next.dispatchTag(it) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val tag = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
+            else @Suppress("DEPRECATION") intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+        if (receivingSelected && tag != null) {
+            if (busy) receiver?.dispatchTag(tag) else pendingTag = tag
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (receivingSelected && enabled && adapter?.isEnabled == true) startReceiver()
+    }
     override fun onPause() {
+        val wasSending = busy && !receivingSelected
         receiver?.stop(); NfcMigrationSession.clear(); busy = false
+        if (wasSending) status = "画面を離れたため送信を停止しました。もう一度送信側を選んでください。"
         adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
         super.onPause()
     }
-    override fun onDestroy() { receiver?.stop(); NfcMigrationSession.clear(); super.onDestroy() }
+    override fun onDestroy() { receivingSelected = false; receiver?.stop(); NfcMigrationSession.clear(); super.onDestroy() }
 }
