@@ -466,6 +466,35 @@ class ZinnaImeService : InputMethodService() {
         session.setIncognitoMode(fieldPolicy.incognito)
         loaded?.let { session.applyInputStyle(it.inputStyle) }
         candidates.showTools()
+        val onboarding = getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
+        if (ZenzPlusModel.ready(this) && !onboarding.getBoolean("flick_onboarding_done", false)) {
+            val chooser = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(android.graphics.Color.rgb(35, 35, 40))
+                setPadding(24, 24, 24, 24)
+                addView(android.widget.TextView(context).apply {
+                    text = "フリック入力の方法を選んでください"
+                    setTextColor(android.graphics.Color.WHITE)
+                    textSize = 18f
+                })
+            }
+            fun option(label: String, mode: ImeSettings.FlickInputMode) {
+                chooser.addView(android.widget.Button(this).apply {
+                    text = label
+                    setOnClickListener {
+                        settings.flickInputMode = mode
+                        session.setPhoneToggleEnabled(mode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
+                        onboarding.edit().putBoolean("flick_onboarding_done", true).apply()
+                        root.removeView(chooser)
+                    }
+                })
+            }
+            option("フリックのみ", ImeSettings.FlickInputMode.FLICK_ONLY)
+            option("フリックと連続タップ", ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
+            root.addView(chooser, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER))
+        }
         return root
     }
 
@@ -866,10 +895,7 @@ class ZinnaImeService : InputMethodService() {
 
             is KeyAction.MoveCursor -> handleCursorMove(
                 delta = action.delta,
-                adjustSegment = isConverting &&
-                    direction != FlickDirection.CENTER &&
-                    (key.center.action is KeyAction.Space ||
-                        key.center.action is KeyAction.Convert),
+                adjustSegment = isConverting,
             )
 
             is KeyAction.SwitchLayout -> switchLayout(action.layoutId)
@@ -1051,8 +1077,11 @@ class ZinnaImeService : InputMethodService() {
         // Outside a composition, move the editor caret instead.
         val ic = currentInputConnection ?: return
         val extracted = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
-        val target = (extracted.selectionStart + delta).coerceIn(0, extracted.text?.length ?: 0)
-        ic.setSelection(target, target)
+        val start = minOf(extracted.selectionStart, extracted.selectionEnd)
+        val end = maxOf(extracted.selectionStart, extracted.selectionEnd)
+        val target = if (start != end) { if (delta < 0) start else end }
+            else (start + delta).coerceIn(0, extracted.text?.length ?: 0)
+        ic.setSelection(extracted.startOffset + target, extracted.startOffset + target)
     }
 
     private fun switchLayout(layoutId: String) {
