@@ -23,6 +23,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ZinnaIme">
 
+        <activity android:name=".ime.ProofreadActivity" android:exported="false" android:label="AI 文章校正" />
         <activity android:name=".settings.NfcMigrationActivity" android:exported="false" />
         <activity android:name=".settings.MeetsBeamActivity" android:exported="true" android:label="Meets Beam で送る">
             <intent-filter>

@@ -88,3 +88,8 @@ zenzai-plus: soichi1208, based on Miwa-Keita's zenz-v2.5-small and Kyoto Univers
 language media laboratory's gpt2-small-japanese-char. Model CC BY-SA 4.0;
 model card and MIT runtime license are included in app/src/main/assets/legal/.
 Model is downloaded on user request from https://huggingface.co/soichi1208/zenzai-plus.
+
+Optional proofreading models: Qwen3 by Qwen, Apache License 2.0; GGUF quantizations by Unsloth.
+https://huggingface.co/unsloth/Qwen3-0.6B-GGUF
+https://huggingface.co/unsloth/Qwen3-1.7B-GGUF
+Proofreading runtime uses llama.cpp (MIT), source revision 66afb885a8ddcc0511798aec9fb5a01017941018.

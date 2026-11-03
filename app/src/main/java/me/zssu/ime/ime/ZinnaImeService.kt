@@ -525,6 +525,7 @@ class ZinnaImeService : InputMethodService() {
                 if (url != null) intent.putExtra("beam_url", url)
                 startActivity(intent)
             }
+            CandidateStripView.ToolAction.PROOFREAD -> startProofreading()
             CandidateStripView.ToolAction.RECONVERT -> {
                 cancelKarukanConversion(clearReading = true, revertMozc = false)
                 render(session.undo(), requestNeural = false)
@@ -679,6 +680,11 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        ProofreadRequest.result?.let { result ->
+            val applied = ProofreadRequest.apply?.invoke(result) == true
+            ProofreadRequest.clear()
+            if (!applied) Toast.makeText(this, "入力欄が変わったため校正結果を適用できませんでした", Toast.LENGTH_LONG).show()
+        }
         editAnchor = null
         priorityCandidates.invalidate()
         refreshZenzai()
@@ -1069,6 +1075,57 @@ class ZinnaImeService : InputMethodService() {
             if (handled) return
             target = EnterRouting.fallbackAfterFailure(target, inputType)
         }
+    }
+
+    private fun startProofreading() {
+        if (fieldPolicy.incognito || (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0) {
+            Toast.makeText(this, "この入力欄では校正を利用できません", Toast.LENGTH_SHORT).show(); return
+        }
+        val ic = currentInputConnection ?: return
+        if (isComposing) {
+            ic.finishComposingText()
+            session.resetContext()
+            isComposing = false
+            isConverting = false
+            renderedPreeditCursor = 0
+            segmentBar?.visibility = View.GONE
+            candidateView?.clear()
+        }
+        val selection = ic.getSelectedText(0)?.toString().orEmpty()
+        val original = if (selection.isNotEmpty()) selection else ic.getTextBeforeCursor(600, 0)?.toString().orEmpty()
+        if (original.isBlank() || original.length > 600) { Toast.makeText(this, "校正する文章を選択してください（600文字以内）", Toast.LENGTH_SHORT).show(); return }
+        val editorPackage = currentInputEditorInfo?.packageName
+        val editorFieldId = currentInputEditorInfo?.fieldId
+        val editorInputType = currentInputEditorInfo?.inputType
+        ProofreadRequest.text = original
+        ProofreadRequest.result = null
+        ProofreadRequest.apply = { replacement ->
+            val target = currentInputConnection
+            if (target == null || currentInputEditorInfo?.packageName != editorPackage || currentInputEditorInfo?.fieldId != editorFieldId || currentInputEditorInfo?.inputType != editorInputType) false
+            else if (selection.isNotEmpty()) {
+                if (!ProofreadApply.matches(original, true, target.getSelectedText(0)?.toString(), null)) false else target.commitText(replacement, 1)
+            } else {
+                if (!ProofreadApply.matches(original, false, target.getSelectedText(0)?.toString(), target.getTextBeforeCursor(original.length, 0)?.toString())) false
+                else {
+                    val extracted = target.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)
+                    if (extracted == null || extracted.selectionStart != extracted.selectionEnd) false
+                    else {
+                        val cursor = extracted.startOffset + extracted.selectionEnd
+                        if (cursor < original.length) false else {
+                            target.beginBatchEdit()
+                            try {
+                                if (!target.setSelection(cursor - original.length, cursor)) false
+                                else if (target.getSelectedText(0)?.toString() != original) {
+                                    target.setSelection(cursor, cursor); false
+                                } else if (target.commitText(replacement, 1)) true
+                                else { target.setSelection(cursor, cursor); false }
+                            } finally { target.endBatchEdit() }
+                        }
+                    }
+                }
+            }
+        }
+        startActivity(Intent(this, ProofreadActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS))
     }
 
     private fun handleEditCommand(command: String) {

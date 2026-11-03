@@ -526,3 +526,5 @@ Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第�
 
 キーボードの文節編集・再変換・編集パネル・学習管理・性能診断については、
 [キーボード強化](docs/keyboard-strengthening.md)を参照してください。
+
+Qwen3 を使う端末内の文章校正については、[文章校正](docs/proofreading.md)を参照してください。

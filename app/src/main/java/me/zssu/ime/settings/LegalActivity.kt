@@ -57,6 +57,7 @@ private val DOCUMENTS = listOf(
     LegalDocument("Karukan / Apache 2.0", "KARUKAN_LICENSE_APACHE.txt"),
     LegalDocument("Karukan付属データ", "KARUKAN_UPSTREAM_NOTICES.txt"),
     LegalDocument("llama.cpp", "LLAMA_CPP_LICENSE.txt"),
+    LegalDocument("Qwen3 校正ランタイム / MIT", "PROOFREAD_LLAMA_LICENSE.txt"),
     LegalDocument("Unicode", "UNICODE_LICENSE.txt"),
     LegalDocument("Tokenizers", "TOKENIZERS_LICENSE.txt"),
     LegalDocument("Rust Onig", "ONIG_LICENSE.txt"),
