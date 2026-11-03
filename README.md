@@ -1,5 +1,7 @@
 # Komorebi IME
 
+[![技術者倫理|遵守済み](https://gijutsusharin.li/badge.svg)](https://gijutsusharin.li)
+
 > [!TIP]
 > **最新版をダウンロード**: [GitHub Releases（latest）](https://github.com/zenskypj/Komorebi-IME/releases/latest)
 > 最新のテスト用APK（ユニバーサル debug 署名版・`me.zssu.ime.debug`）を掲載しています。
@@ -17,11 +19,12 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate（`0.3.0-rc.23-dev`）です。自動テストを通過した
-> ビルドでも、公開前に複数Android世代・ナビゲーション方式・実機での確認が必要です。
-> 変更点と入手方法は [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、
-> 正式版までに必要な人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
-> 最新の `0.3.0-rc.23-dev` のみ Latest、それ以前のテスト版は pre-release（debug 署名）です。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.23-dev`、開発中のテスト版は
+> `0.3.0-rc.24-dev`（pre-release）です。自動テストを通過したビルドでも、公開前に
+> 複数Android世代・ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
+> [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
+> 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
+> テスト用APKはすべて debug 署名（`me.zssu.ime.debug`）です。
 
 ## 特長
 
