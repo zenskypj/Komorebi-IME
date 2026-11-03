@@ -431,10 +431,18 @@ class ZinnaImeService : InputMethodService() {
         val segments = LinearLayout(this).apply {
             visibility = View.GONE
             val operations = listOf("前の文節" to -2, "縮める" to -1, "広げる" to 1, "次の文節" to 2)
-            for ((label, code) in operations) addView(android.widget.Button(context).apply {
-                text = label; textSize = 12f
+            for ((label, code) in operations) addView(android.widget.TextView(context).apply {
+                text = label; textSize = 12f; gravity = Gravity.CENTER
+                setTextColor(this@ZinnaImeService.theme.candidateTextColor)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(this@ZinnaImeService.theme.keyColor)
+                    cornerRadius = 12 * resources.displayMetrics.density
+                }
+                isFocusable = true
                 setOnClickListener { handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1) }
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            }, LinearLayout.LayoutParams(0, (36 * resources.displayMetrics.density).toInt(), 1f).apply {
+                val gap = (3 * resources.displayMetrics.density).toInt(); setMargins(gap, gap, gap, gap)
+            })
         }
         segmentBar = segments
         content.addView(segments)
@@ -476,32 +484,51 @@ class ZinnaImeService : InputMethodService() {
         candidates.showTools()
         val onboarding = getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
         if (!onboarding.getBoolean("flick_onboarding_done", false)) {
+            fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+            fun background(color: Int) = android.graphics.drawable.GradientDrawable().apply { setColor(color); cornerRadius = dp(18).toFloat() }
             val chooser = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(android.graphics.Color.rgb(35, 35, 40))
-                setPadding(24, 24, 24, 24)
+                this.background = background(theme.backgroundColor)
+                elevation = dp(8).toFloat()
+                setPadding(dp(16), dp(12), dp(16), dp(12))
                 addView(android.widget.TextView(context).apply {
-                    text = "フリック入力の方法を選んでください"
-                    setTextColor(android.graphics.Color.WHITE)
-                    textSize = 18f
+                    text = "入力方法を選ぶ"; setTextColor(theme.candidateTextColor); textSize = 18f
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
                 })
             }
-            fun option(label: String, mode: ImeSettings.FlickInputMode) {
-                chooser.addView(android.widget.Button(this).apply {
-                    text = label
+            val choices = LinearLayout(this)
+            fun option(title: String, description: String, mode: ImeSettings.FlickInputMode) {
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
+                    this.background = background(theme.keyColor)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    contentDescription = "$title。$description"
+                    isFocusable = true
+                    addView(android.widget.TextView(context).apply {
+                        text = title; setTextColor(theme.candidateTextColor); textSize = 14f
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    })
+                    addView(android.widget.TextView(context).apply {
+                        text = description; setTextColor(theme.candidateTextColor); textSize = 11f; alpha = 0.7f
+                    })
                     setOnClickListener {
                         settings.flickInputMode = mode
                         session.setPhoneToggleEnabled(mode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
                         onboarding.edit().putBoolean("flick_onboarding_done", true).apply()
                         root.removeView(chooser)
                     }
-                })
+                }
+                choices.addView(card, LinearLayout.LayoutParams(0, dp(76), 1f).apply { setMargins(dp(3), dp(10), dp(3), dp(6)) })
             }
-            option("フリックのみ", ImeSettings.FlickInputMode.FLICK_ONLY)
-            option("フリックと連続タップ", ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
-            root.addView(chooser, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.CENTER))
+            option("フリックのみ", "連続タップでも同じ文字", ImeSettings.FlickInputMode.FLICK_ONLY)
+            option("タップも使う", "連続タップで あ→い→う", ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
+            chooser.addView(choices)
+            chooser.addView(android.widget.TextView(this).apply {
+                text = "あとから入力設定で変更できます"; textSize = 11f; alpha = 0.65f; setTextColor(theme.candidateTextColor)
+            })
+            root.addView(chooser, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(164), Gravity.CENTER).apply {
+                setMargins(dp(12), 0, dp(12), 0)
+            })
         }
         return root
     }

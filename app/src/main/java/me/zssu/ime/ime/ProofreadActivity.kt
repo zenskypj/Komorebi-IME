@@ -50,6 +50,11 @@ class ProofreadActivity : Activity() {
     private var error: String? = null
     private var progress: String? = null
     private var selected = 0
+    private val dark get() = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    private val surface get() = Color.parseColor(if (dark) "#151820" else "#F7F8FC")
+    private val foreground get() = Color.parseColor(if (dark) "#EFF1F8" else "#202635")
+    private val accent get() = Color.parseColor(if (dark) "#B8C7FF" else "#385AC5")
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
     private fun modelFile(m: Model) = File(noBackupFilesDir, "proofread/${m.filename}")
     private fun post(action: () -> Unit) = ui.post { if (!isFinishing && !isDestroyed) action() }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,24 +63,48 @@ class ProofreadActivity : Activity() {
         val mem = ActivityManager.MemoryInfo().also { (getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(it) }
         val recommended = ProofreadRecommendation.select(mem.availMem, noBackupFilesDir.usableSpace)
         selected = getSharedPreferences("proofread", MODE_PRIVATE).getInt("model", recommended).coerceIn(0, 1)
-        container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 24, 32, 32) }
-        setContentView(ScrollView(this).apply { addView(container) })
+        container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(16), dp(20), dp(24)); setBackgroundColor(surface) }
+        val scroll = ScrollView(this).apply { setBackgroundColor(surface); isFillViewport = true; addView(container) }
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(scroll) { view, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        setContentView(scroll)
         render(recommended)
     }
-    private fun label(text: CharSequence, size: Float = 16f) = TextView(this).apply { this.text = text; textSize = size; setPadding(0, 12, 0, 12) }
-    private fun button(text: String, enabled: Boolean = true, click: () -> Unit) = Button(this).apply { this.text = text; isEnabled = enabled; setOnClickListener { click() } }
+    private fun label(text: CharSequence, size: Float = 14f) = TextView(this).apply {
+        this.text = text; textSize = size; setTextColor(this@ProofreadActivity.foreground)
+        setPadding(0, dp(6), 0, dp(6)); setLineSpacing(dp(3).toFloat(), 1f)
+        if (size >= 19f) setTypeface(typeface, android.graphics.Typeface.BOLD)
+    }
+    private fun button(text: String, enabled: Boolean = true, click: () -> Unit) = Button(this).apply {
+        this.text = text; isEnabled = enabled; isAllCaps = false; textSize = 14f
+        val primary = text == "校正する" || text == "この結果を適用" || text == "モデルをダウンロード"
+        val chosen = text.contains("選択中")
+        val fill = if (primary) accent else if (chosen) Color.parseColor(if (dark) "#293653" else "#E8EEFF") else Color.TRANSPARENT
+        background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(fill); cornerRadius = dp(14).toFloat()
+            if (!primary) setStroke(dp(1), Color.parseColor(if (dark) "#3B4355" else "#D5DBE8"))
+        }
+        setTextColor(if (primary) { if (dark) Color.parseColor("#18254A") else Color.WHITE } else this@ProofreadActivity.foreground)
+        alpha = if (enabled) 1f else 0.4f
+        setPadding(dp(14), 0, dp(14), 0)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48)).apply { setMargins(0, dp(5), 0, dp(5)) }
+        setOnClickListener { click() }
+    }
     private fun render(recommended: Int) {
         container.removeAllViews()
         container.addView(label("AI 文章校正", 24f))
         container.addView(label("文章は端末内で処理します。モデルの取得にはネット接続が必要です。"))
         for (i in models.indices) {
             val m = models[i]
-            val mark = (if (i == recommended) " おすすめ" else "") + (if (i == selected) " ✓" else "") + (if (modelFile(m).length() == m.bytes) "（取得済み）" else "")
+            val mark = (if (i == recommended) " おすすめ" else "") + (if (i == selected) " ・選択中" else "") + (if (modelFile(m).length() == m.bytes) "（取得済み）" else "")
             container.addView(button(m.label + mark, !busy) { selected = i; output = null; error = null; progress = null
                 getSharedPreferences("proofread", MODE_PRIVATE).edit().putInt("model", i).apply(); render(recommended) })
         }
         val model = models[selected]
-        container.addView(label("Qwen3 / Apache License 2.0、量子化: Unsloth"))
+        container.addView(label("Qwen3 / Apache 2.0 · Unsloth", 11f))
         if (modelFile(model).length() == model.bytes) container.addView(button("選択中のモデルを削除", !busy) {
             if (!modelFile(model).delete()) error = "モデルを削除できませんでした"
             else { output = null; error = null; progress = "モデルを削除しました" }
@@ -83,6 +112,10 @@ class ProofreadActivity : Activity() {
         })
         if (modelFile(model).length() != model.bytes) container.addView(button("モデルをダウンロード", !busy && ProofreadNative.available) { download(model, recommended) })
         if (!ProofreadNative.available) container.addView(label("この端末では校正ランタイムを利用できません。"))
+        if (busy) container.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = true
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3)).apply { setMargins(0, dp(12), 0, dp(8)) }
+        })
         progress?.let { container.addView(label(it)) }
         error?.let { container.addView(label(it)) }
         val input = ProofreadRequest.text.orEmpty()

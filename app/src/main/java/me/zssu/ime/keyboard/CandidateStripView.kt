@@ -283,84 +283,100 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         setContainerFillWidth(true)
         scrollTo(0, 0)
         container.addView(iconButton(R.drawable.ic_tool_menu, "ツールメニュー", true) { showToolMenu() })
-        for (action in toolOrder()) {
-            if (!toolPrefs.getBoolean("visible_" + action.name, true)) continue
-            if (action == ToolAction.MEETS_BEAM && !me.zssu.ime.settings.MeetsBeamSettings.enabled(context)) continue
+        val visibleTools = toolOrder().filter {
+            toolPrefs.getBoolean("visible_" + it.name, true) &&
+                (it != ToolAction.MEETS_BEAM || me.zssu.ime.settings.MeetsBeamSettings.enabled(context))
+        }.take(5)
+        for (action in visibleTools) {
             val button = if (action == ToolAction.ONE_HAND_CYCLE) oneHandButton(expand = true) { onToolAction?.invoke(action) }
                 else iconButton(toolIcon(action), toolLabel(action), true) { onToolAction?.invoke(action) }
             container.addView(button)
         }
     }
 
-    private fun showToolMenu() {
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    private fun rounded(color: Int, radius: Int = 16) = android.graphics.drawable.GradientDrawable().apply {
+        setColor(color); cornerRadius = dp(radius).toFloat()
+    }
+    private fun showToolMenu(editing: Boolean = false) {
         paletteHeight(true)
+        layoutParams = layoutParams.apply { height = dp(180) }
         container.removeAllViews()
         setContainerFillWidth(false)
         scrollTo(0, 0)
-        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        val header = LinearLayout(context)
-        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
-        header.addView(TextView(context).apply { text = "ツールをタップして開く／表示と順番を変更"; setTextColor(theme.candidateTextColor); textSize = 13f })
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), 0, dp(8), dp(4))
+        }
+        val header = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() }, LinearLayout.LayoutParams(dp(40), dp(36)))
+        header.addView(TextView(context).apply {
+            text = if (editing) "先頭5件を上部に表示" else "ツール"
+            textSize = 13f; setTextColor(theme.candidateTextColor); gravity = Gravity.CENTER_VERTICAL
+        }, LinearLayout.LayoutParams(0, dp(36), 1f))
+        header.addView(TextView(context).apply {
+            text = if (editing) "完了" else "編集"
+            gravity = Gravity.CENTER; textSize = 13f; setTextColor(theme.candidateTextColor)
+            setOnClickListener { showToolMenu(!editing) }
+        }, LinearLayout.LayoutParams(dp(48), dp(36)))
         panel.addView(header)
-        val scroller = android.widget.ScrollView(context)
-        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val order = toolOrder()
+        val grid = android.widget.GridLayout(context).apply { columnCount = 3 }
         order.forEachIndexed { index, action ->
-            val row = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
-            row.addView(TextView(context).apply {
-                text = toolLabel(action); setTextColor(theme.candidateTextColor); textSize = 15f
-                setPadding(12, 10, 12, 10)
-                setOnClickListener { showTools(); onToolAction?.invoke(action) }
+            val pinned = toolPrefs.getBoolean("visible_" + action.name, true)
+            val tile = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), 0, dp(4), 0)
+                background = rounded(if (editing && pinned) theme.keyPressedColor else theme.keyColor, 12)
+                alpha = if (editing && !pinned) 0.5f else 1f
+                contentDescription = toolLabel(action) + if (editing) { if (pinned) "、上部に表示" else "、メニューのみ" } else ""
+            }
+            tile.addView(android.widget.ImageView(context).apply {
+                if (action == ToolAction.ONE_HAND_CYCLE) setImageDrawable(OneHandModeDrawable(oneHandMode, theme.candidateTextColor, resources.displayMetrics.density))
+                else setImageResource(toolIcon(action))
+                setColorFilter(theme.candidateTextColor)
+            }, LinearLayout.LayoutParams(dp(20), dp(20)))
+            tile.addView(TextView(context).apply {
+                text = toolLabel(action); textSize = 11f; setTextColor(theme.candidateTextColor)
+                maxLines = 2; setPadding(dp(7), 0, 0, 0)
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            row.addView(android.widget.Switch(context).apply {
-                contentDescription = toolLabel(action) + "をツールバーに表示"
-                isChecked = toolPrefs.getBoolean("visible_" + action.name, true)
-                setOnCheckedChangeListener { _, checked -> toolPrefs.edit().putBoolean("visible_" + action.name, checked).apply() }
-            })
-            fun move(delta: Int) {
-                val next = index + delta
-                if (next !in order.indices) return
-                val changed = order.toMutableList()
-                java.util.Collections.swap(changed, index, next)
-                toolPrefs.edit().putString("order", changed.joinToString(",") { it.name }).apply()
-                showToolMenu()
+            tile.setOnClickListener {
+                if (editing) {
+                    toolPrefs.edit().putBoolean("visible_" + action.name, !pinned).apply()
+                    showToolMenu(true)
+                } else { showTools(); onToolAction?.invoke(action) }
             }
-            for ((label, delta) in listOf("↑" to -1, "↓" to 1)) row.addView(TextView(context).apply {
-                text = label; textSize = 22f; setTextColor(theme.candidateTextColor); setPadding(18, 4, 18, 4)
-                contentDescription = toolLabel(action) + if (delta < 0) "を上へ" else "を下へ"
-                setOnClickListener { move(delta) }
-            })
-            row.setOnLongClickListener {
-                it.startDragAndDrop(android.content.ClipData.newPlainText("tool", action.name), View.DragShadowBuilder(it), action, 0)
-                true
+            tile.setOnLongClickListener {
+                it.startDragAndDrop(android.content.ClipData.newPlainText("tool", action.name), View.DragShadowBuilder(it), action, 0); true
             }
-            row.getChildAt(0).setOnLongClickListener { row.performLongClick() }
-            row.setOnDragListener { _, event ->
+            tile.setOnDragListener { _, event ->
                 when (event.action) {
                     android.view.DragEvent.ACTION_DRAG_STARTED -> event.localState is ToolAction
                     android.view.DragEvent.ACTION_DROP -> {
                         val source = event.localState as? ToolAction
                         if (source != null) {
-                            val changed = order.toMutableList()
-                            changed.remove(source); changed.add(index, source)
+                            val changed = order.toMutableList(); changed.remove(source); changed.add(index, source)
                             toolPrefs.edit().putString("order", changed.joinToString(",") { it.name }).apply()
-                            showToolMenu()
-                        }
-                        true
+                            showToolMenu(editing)
+                        }; true
                     }
                     else -> true
                 }
             }
-            list.addView(row)
+            grid.addView(tile, android.widget.GridLayout.LayoutParams().apply {
+                width = 0; height = dp(40)
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                setMargins(dp(3), dp(3), dp(3), dp(3))
+            })
         }
-        scroller.addView(list)
-        panel.addView(scroller, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        panel.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         emojiPanel = panel
-        container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
+        container.addView(panel, LinearLayout.LayoutParams(width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
     }
 
     fun showEditPanel() {
         paletteHeight(true)
+        layoutParams = layoutParams.apply { height = dp(180) }
         container.removeAllViews()
         setContainerFillWidth(false)
         val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
