@@ -147,6 +147,8 @@ private fun SettingsScreen() {
 
             Spacer(Modifier.height(8.dp))
 
+            BackupCard()
+
             // Settings list
             SettingsListItem(
                 icon = Icons.Filled.Psychology,

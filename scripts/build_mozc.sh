@@ -16,6 +16,18 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOZC_SRC="${ROOT}/third_party/mozc/src"
 MODULE="${ROOT}/mozc/src/main"
 
+MOZC_COMMIT="2fc7403f231fc201e9d7bdce5fc6f5bca7f534b8"
+
+if [[ ! -d "${MOZC_SRC}" ]]; then
+  git clone --no-checkout https://github.com/google/mozc.git "${ROOT}/third_party/mozc"
+  git -C "${ROOT}/third_party/mozc" checkout --detach "${MOZC_COMMIT}"
+fi
+
+if [[ "$(git -C "${ROOT}/third_party/mozc" rev-parse HEAD)" != "${MOZC_COMMIT}" ]]; then
+  echo "error: Mozc revision differs from ${MOZC_COMMIT}; use a separate checkout for another revision" >&2
+  exit 1
+fi
+
 if [[ ! -d "${MOZC_SRC}" ]]; then
   echo "error: ${MOZC_SRC} not found. Run: git clone --depth 1 https://github.com/google/mozc.git third_party/mozc" >&2
   exit 1
@@ -34,15 +46,18 @@ if git -C "${ROOT}/third_party/mozc" rev-parse --is-inside-work-tree >/dev/null 
   MOZC_IS_GIT=true
 fi
 
-for patch in "${ROOT}"/patches/*.patch; do
+for patch in "${ROOT}"/patches/[0-9][0-9][0-9][0-9]-*.patch; do
   [[ -e "${patch}" ]] || continue
   name="$(basename "${patch}")"
   if [[ "${MOZC_IS_GIT}" == true ]]; then
     if git -C "${ROOT}/third_party/mozc" apply --check "${patch}"; then
       echo "==> Applying ${name}"
       git -C "${ROOT}/third_party/mozc" apply "${patch}"
-    else
+    elif git -C "${ROOT}/third_party/mozc" apply --reverse --check "${patch}"; then
       echo "==> ${name} already applied"
+    else
+      echo "error: ${name} neither applies nor is already applied" >&2
+      exit 1
     fi
   else
     # Non-git checkout (e.g. tarball): fall back to patch(1).
@@ -65,16 +80,18 @@ if [[ -f "${ROOT}/patches/flick_geometry.inc" ]]; then
   install -m 644 "${ROOT}/patches/flick_geometry.inc" "${MOZC_SRC}/engine/flick_geometry.inc"
 fi
 
+"${PYTHON}" "${ROOT}/scripts/gen_system_dictionary.py" > "${MOZC_SRC}/data/dictionary_oss/dictionary10.txt"
+
 if [[ ! -d third_party/ndk ]]; then
   echo "==> Fetching mozc build dependencies (Android NDK r29)"
   "${PYTHON}" build_tools/update_deps.py
 fi
 
 echo "==> Building libmozc.so for all ABIs"
-"${BAZEL}" build package --config oss_android --config release_build
+"${BAZEL}" build package --config oss_android --config release_build --curses=no --show_progress_rate_limit=30
 
 echo "==> Building mozc.data (host config)"
-"${BAZEL}" build //data_manager/oss:mozc.data --config oss_linux --config release_build
+"${BAZEL}" build //data_manager/oss:mozc.data --config oss_linux --config release_build --curses=no --show_progress_rate_limit=30
 
 echo "==> Staging native libraries"
 rm -rf "${MODULE}/jniLibs"
@@ -86,6 +103,8 @@ rm -rf "${MODULE}/jniLibs.tmp"
 echo "==> Staging mozc.data"
 mkdir -p "${MODULE}/assets"
 install -m 644 bazel-bin/data_manager/oss/mozc.data "${MODULE}/assets/mozc.data"
+
+printf 'katakana-english.txt\n' > "${MODULE}/assets/system_dictionaries.txt"
 
 echo "==> Staging protocol buffers"
 # protoc resolves `import "protocol/config.proto"` relative to the source root, so the protos have

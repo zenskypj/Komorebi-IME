@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Used only when the user explicitly downloads the optional Karukan model. Conversion and
+    <!-- Used only when the user explicitly downloads the optional Karukan or zenz model. Conversion and
          typed text remain on-device; Mozc works without a network connection. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -11,6 +11,7 @@
       IME that never touches the network itself.
     -->
     <application
+        android:name=".KomorebiApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

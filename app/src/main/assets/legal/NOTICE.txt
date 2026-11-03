@@ -12,8 +12,8 @@ interface, documentation, input behavior, and other implementation details.
 The modifications are maintained independently from the original project.
 Support contact for this edition: support@zslink.xyz
 
-The keyboard toolbar includes selected AndroidX Material Icons Core 1.7.6
-designs, adapted from Compose vector path data to Android VectorDrawable XML:
+The keyboard, toolbar, and settings include Material icon designs, adapted
+and modified as Android VectorDrawable XML:
   Copyright 2024 The Android Open Source Project
   Licensed under the Apache License, Version 2.0.
 
@@ -61,3 +61,26 @@ Bundled supplementary dictionary:
 Complete terms for Mozc, its OSS dictionary, Protocol Buffers, and the other
 runtime dependencies are shipped in assets/legal/ and can be read from the
 application's "Open source licenses" screen.
+
+Upstream updates reviewed against Zinna-IME commit
+81e04e6155d81d39f79864303b44ddb6e3682203 (2026-11-02).
+New upstream material is offered under Unlicense OR MIT-0; see UPSTREAM_LICENSE.
+Komorebi modifications and previously received Apache-2.0 material retain their
+existing license and notices. Third-party software and dictionary terms above
+remain applicable. The upstream license change does not relicense those works.
+
+Optional zenzai-plus build (-Pzenzai=true):
+  zenzai-plus-ft-f16.gguf, supplied by soichi1208:
+  https://huggingface.co/soichi1208/zenzai-plus
+  Fine-tuned from Miwa-Keita/zenz-v2.5-small (Keita Miwa), based on
+  ku-nlp/gpt2-small-japanese-char (Kyoto University Language Media Laboratory).
+  Model weights: CC BY-SA 4.0. Compatible llama.cpp/GGML runtime: MIT.
+  The supplied model card and runtime license are bundled in optional APKs.
+
+Standalone kana conversion tables originate from google/mozc, BSD-3-Clause;
+see the bundled Mozc license.
+
+zenz v3.2 inference uses azooKey's llama.cpp fork (MIT License).
+The corresponding license is in app/src/main/assets/legal/ZENZ32_LLAMA_LICENSE.txt.
+The optional zenz-v3.2-small GGUF model is downloaded separately from Miwa-Keita
+under Apache License 2.0: https://huggingface.co/Miwa-Keita/zenz-v3.2-small-gguf

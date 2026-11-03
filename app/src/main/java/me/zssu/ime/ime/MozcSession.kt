@@ -42,6 +42,7 @@ class MozcSession(
         val preedit: String = "",
         /** Caret position within [preedit], in Java chars. */
         val preeditCursor: Int = 0,
+        val preeditReading: String = "",
         val candidates: List<Candidate> = emptyList(),
         val focusedCandidateIndex: Int = -1,
         /** Mozc's visible preedit/conversion segments, retained so the client can draw boundaries. */
@@ -83,8 +84,10 @@ class MozcSession(
     data class Segment(val text: String, val highlighted: Boolean)
 
     private var requestedStyle: InputStyle? = null
+    var clientContext: org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context? = null
     private var currentStyle: InputStyle? = null
     private var configApplied = false
+    private var configuredFullWidthSpace: Boolean? = null
     private var incognito = false
     private var phoneToggleEnabled = false
     private var deletableCandidateIds: Set<Int> = emptySet()
@@ -180,7 +183,7 @@ class MozcSession(
         } else {
             key.keyString = text
         }
-        return engine?.sendKey(key.build())?.toState()
+        return engine?.sendKey(key.build(), clientContext)?.toState()
     }
 
     fun sendSpecialKey(
@@ -189,7 +192,7 @@ class MozcSession(
     ): State? {
         val key = KeyEvent.newBuilder().setSpecialKey(specialKey)
         if (shift) key.addModifierKeys(KeyEvent.ModifierKey.SHIFT)
-        return engine?.sendKey(key.build())?.toState()
+        return engine?.sendKey(key.build(), clientContext)?.toState()
     }
 
     /**
@@ -214,7 +217,8 @@ class MozcSession(
      * patches/0001-rule-based-typing-correction.patch.
      */
     private fun applyConfig(engine: MozcEngine) {
-        if (configApplied) return
+        val fullWidthSpace = requestedStyle?.fullWidthSpace ?: false
+        if (configApplied && configuredFullWidthSpace == fullWidthSpace) return
         val output = engine.eval(Input.newBuilder().setType(Input.CommandType.GET_CONFIG))
         val builder =
             if (output != null && output.hasConfig()) output.config.toBuilder()
@@ -224,6 +228,10 @@ class MozcSession(
                 .setType(Input.CommandType.SET_CONFIG)
                 .setConfig(
                     builder
+                        .setSpaceCharacterForm(
+                            if (fullWidthSpace) Config.FundamentalCharacterForm.FUNDAMENTAL_FULL_WIDTH
+                            else Config.FundamentalCharacterForm.FUNDAMENTAL_HALF_WIDTH
+                        )
                         .setUseTypingCorrection(true)
                         .setUseKanaModifierInsensitiveConversion(true)
                         .setUseHistorySuggest(true)
@@ -235,6 +243,7 @@ class MozcSession(
                 )
         )
         configApplied = true
+        configuredFullWidthSpace = fullWidthSpace
     }
 
     /**
@@ -448,6 +457,7 @@ class MozcSession(
         return State(
             committedText = if (hasResult()) result.value else "",
             preedit = displayedPreedit,
+            preeditReading = reading,
             preeditCursor = cursor.coerceIn(0, preeditText.length),
             candidates = candidates,
             focusedCandidateIndex = reorderedFocused,

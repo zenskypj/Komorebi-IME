@@ -13,9 +13,9 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate（`0.3.0-rc.1`）です。自動テストを通過した
+> 現在は正式版に向けた Release Candidate（`0.3.0-rc.3`）です。自動テストを通過した
 > ビルドでも、公開前に複数Android世代・ナビゲーション方式・実機での確認が必要です。
-> 変更点と検証結果は[リリースノート](docs/releases/v0.3.0-rc.1.md)、正式版までに必要な
+> 変更点と検証結果は[リリースノート](docs/releases/v0.3.0-rc.3.md)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
 
 ## 特長
@@ -504,3 +504,25 @@ Mozc OSS辞書、Protocol Buffers、その他ランタイム依存関係のラ�
 「第三者ソフトウェア」に出典、変更内容、Apache License 2.0を表示します。
 
 このフォークに関する問い合わせ: [support@zslink.xyz](mailto:support@zslink.xyz)
+
+### フォーク元のライセンス更新
+
+Zinna-IME の 2026-11-02 時点の更新部分は Unlicense または MIT-0 の選択式です。
+原文は [UPSTREAM_LICENSE](UPSTREAM_LICENSE) に収録し、アプリ内にも表示しています。
+Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第三者ソフトウェア・辞書の条件は
+引き続き維持します。取り込み状況は [上流更新記録](docs/upstream-sync.md) を参照してください。
+
+### 上流更新の追加統合
+
+- 設定のバックアップから、Mozc学習・ユーザー辞書・設定・独自配列・テーマ・背景・
+  アプリ別設定・意味辞書・最優先候補をパスフレーズ付きで書き出せます。
+  復元は次回のプロセス起動時に反映します。
+- カタカナ英語辞書は `scripts/gen_system_dictionary.py` で Mozc システム辞書へ組み込み、
+  個人辞書を優先しすぎて通常語を押し下げる問題を避けます。
+  ネイティブ生成前に `scripts/fetch_dictionaries.sh` を実行してください。
+- 任意の [zenzai-plus ビルド](docs/zenzai-plus.md) に対応します。互換ランタイムと
+  指定モデルを別途用意する必要があります。通常 APK には同梱しません。
+- jawiki と F-Droid 用設定はこの更新の対象外です。
+
+zenz v3.2 のダウンロードと実験的な端末内変換については
+[zenz v3.2](docs/zenz-v3.2.md) を参照してください。

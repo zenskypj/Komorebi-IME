@@ -55,13 +55,14 @@ class MozcEngine private constructor() {
      * Sends a SEND_KEY input. [keyEvent] carries the reading produced by the input method — for
      * flick input that is the resolved kana, not the physical key.
      */
-    fun sendKey(keyEvent: ProtoCommandsKeyEvent): Output? = synchronized(lock) {
+    fun sendKey(keyEvent: ProtoCommandsKeyEvent, clientContext: org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context? = null): Output? = synchronized(lock) {
         if (!ensureSessionLocked()) return null
         evalLocked(
             Input.newBuilder()
                 .setType(Input.CommandType.SEND_KEY)
                 .setId(sessionId)
                 .setKey(keyEvent)
+                .apply { if (clientContext != null) setContext(clientContext) }
         )
     }
 
@@ -85,6 +86,11 @@ class MozcEngine private constructor() {
     }
 
     /** Escape hatch for inputs this facade does not model yet (config, user dictionary, …). */
+    internal fun <T> withProfileLock(block: () -> T): T = synchronized(lock) {
+        evalLocked(Input.newBuilder().setType(Input.CommandType.SYNC_DATA))
+        block()
+    }
+
     fun eval(input: Input.Builder): Output? = synchronized(lock) { evalLocked(input) }
 
     private fun ensureSessionLocked(): Boolean {
@@ -164,6 +170,7 @@ class MozcEngine private constructor() {
             }
 
             val profileDir = File(context.filesDir, "mozc").apply { mkdirs() }
+            ProfileBackup.applyStagedRestore(context, profileDir)
             val dataFile = extractDataFile(context) ?: return null
 
             // Before onPostLoad, not after: building the engine reads the conversion history, and

@@ -1,6 +1,9 @@
 package me.zssu.ime.keyboard
 
 import android.content.Context
+import androidx.core.content.ContextCompat
+import android.graphics.drawable.Drawable
+import me.zssu.ime.R
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PointF
@@ -212,6 +215,17 @@ class FlickKeyboardView @JvmOverloads constructor(
         return placed
     }
 
+    private val operationIcons = mutableMapOf<Int, Drawable>()
+    private fun drawOutput(canvas: Canvas, action: KeyAction, label: String, x: Float, y: Float, paint: Paint) {
+        val id = OperationKeyIcons.resource(action, label)
+        val icon = id?.let { operationIcons.getOrPut(it) { requireNotNull(ContextCompat.getDrawable(context, it)).mutate() } }
+        if (icon == null) { canvas.drawText(label, x, y - (paint.descent() + paint.ascent()) / 2f, paint); return }
+        val size = paint.textSize.toInt().coerceAtLeast(1)
+        icon.setTint(paint.color)
+        icon.alpha = paint.alpha
+        icon.setBounds((x-size/2f).toInt(), (y-size/2f).toInt(), (x+size/2f).toInt(), (y+size/2f).toInt())
+        icon.draw(canvas)
+    }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val radius = theme.keyCornerRadiusDp * resources.displayMetrics.density
@@ -225,16 +239,21 @@ class FlickKeyboardView @JvmOverloads constructor(
                 else -> modifierPaint
             }
             if (paint != null) canvas.drawRoundRect(placed.bounds, radius, radius, paint)
-            val baseline = placed.bounds.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
-            canvas.drawText(faceLabel(placed.spec), placed.bounds.centerX(), baseline, labelPaint)
+            drawOutput(canvas, placed.spec.center.action, faceLabel(placed.spec), placed.bounds.centerX(), placed.bounds.centerY(), labelPaint)
             placed.spec.longPress?.let { output ->
                 val inset = 5f * resources.displayMetrics.density
-                canvas.drawText(
-                    output.label,
-                    placed.bounds.right - inset,
-                    placed.bounds.top - longPressPaint.ascent() + inset / 2f,
-                    longPressPaint,
-                )
+                if (OperationKeyIcons.resource(output.action, output.label) != null) {
+                    val size = longPressPaint.textSize
+                    drawOutput(canvas, output.action, output.label, placed.bounds.right - inset - size / 2f,
+                        placed.bounds.top + inset / 2f + size / 2f, longPressPaint)
+                } else {
+                    canvas.drawText(
+                        output.label,
+                        placed.bounds.right - inset,
+                        placed.bounds.top - longPressPaint.ascent() + inset / 2f,
+                        longPressPaint,
+                    )
+                }
             }
         }
 
@@ -267,7 +286,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         guideLabelPaint.color = theme.flickGuideSelectedLabelColor
         val baseline =
             previewRect.centerY() - (guideLabelPaint.descent() + guideLabelPaint.ascent()) / 2f
-        canvas.drawText(output.label, previewRect.centerX(), baseline, guideLabelPaint)
+        drawOutput(canvas, output.action, output.label, previewRect.centerX(), previewRect.centerY(), guideLabelPaint)
     }
 
     private fun drawFlickGuide(canvas: Canvas, touch: Touch, radius: Float) {
@@ -297,7 +316,7 @@ class FlickKeyboardView @JvmOverloads constructor(
             guideLabelPaint.color =
                 if (selected) theme.flickGuideSelectedLabelColor else theme.flickGuideLabelColor
             val baseline = rect.centerY() - (guideLabelPaint.descent() + guideLabelPaint.ascent()) / 2f
-            canvas.drawText(output.label, rect.centerX(), baseline, guideLabelPaint)
+            drawOutput(canvas, output.action, output.label, rect.centerX(), rect.centerY(), guideLabelPaint)
         }
         guideBackgroundPaint.alpha = 255
     }

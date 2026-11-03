@@ -114,12 +114,17 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             val view = container.getChildAt(index) as TextView
             view.tag = candidate
             val label = when {
-                candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE ->
-                    "★ ${candidate.text}"
+                candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE -> candidate.text
                 candidate.correction -> "補正 ${candidate.text}"
                 else -> candidate.text
             }
             if (view.text != label) view.text = label
+            val star = if (candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE) ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()?.apply {
+                setTint(theme.candidateTextColor); val size = (18 * resources.displayMetrics.density).toInt(); setBounds(0, 0, size, size)
+            } else null
+            view.setCompoundDrawablesRelative(star, null, null, null)
+            view.compoundDrawablePadding = (4 * resources.displayMetrics.density).toInt()
+            view.contentDescription = if (star != null) "最優先 ${candidate.text}" else label
         }
 
         if (focusedChild != focusedIndex) {
@@ -293,11 +298,19 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             EmojiPage.RECENT to "最近",
             EmojiPage.EMOJI to "絵文字",
             EmojiPage.KAOMOJI to "顔文字",
-            EmojiPage.FAVORITE to "★",
+            EmojiPage.FAVORITE to "お気に入り",
         )
         pages.forEach { (target, label) ->
             container.addView(TextView(context).apply {
-                text = if (target == selectedPage) "[$label]" else label
+                text = if (target == EmojiPage.FAVORITE) "" else label
+                contentDescription = label
+                if (target == EmojiPage.FAVORITE) {
+                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()
+                    star?.setTint(theme.candidateTextColor)
+                    star?.setBounds(0, 0, (20 * resources.displayMetrics.density).toInt(), (20 * resources.displayMetrics.density).toInt())
+                    setCompoundDrawablesRelative(star, null, null, null)
+                }
+                if (target == selectedPage) setBackgroundColor(theme.keyPressedColor)
                 setTextColor(theme.candidateTextColor)
                 setPadding(padding, padding / 2, padding, padding / 2)
                 gravity = Gravity.CENTER
@@ -312,7 +325,14 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         }
         values.forEach { emoji ->
             container.addView(TextView(context).apply {
-                text = if (emoji in favorites) "$emoji★" else emoji
+                text = emoji
+                contentDescription = if (emoji in favorites) "$emoji お気に入り" else emoji
+                if (emoji in favorites) {
+                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()
+                    star?.setTint(theme.candidateTextColor)
+                    star?.setBounds(0, 0, (14 * resources.displayMetrics.density).toInt(), (14 * resources.displayMetrics.density).toInt())
+                    setCompoundDrawablesRelative(null, null, star, null)
+                }
                 setTextColor(theme.candidateTextColor)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, theme.labelSizeSp + 4f)
                 setPadding(padding, padding / 2, padding, padding / 2)

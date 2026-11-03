@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -156,8 +158,10 @@ private fun AppearanceScreen() {
                                 if (settings.setBackgroundPreset(preset.id)) { selectedPreset = preset.id; hasImage = true }
                             }, modifier = Modifier.width(120.dp), shape = RoundedCornerShape(10.dp)) {
                                 Image(thumb, preset.label, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(60.dp))
-                                Text(if (selectedPreset == preset.id) "✓ ${preset.label}" else preset.label,
-                                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
+                                Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (selectedPreset == preset.id) Icon(Icons.Filled.Check, contentDescription = "選択中", modifier = Modifier.size(16.dp))
+                                    Text(preset.label, style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                     }

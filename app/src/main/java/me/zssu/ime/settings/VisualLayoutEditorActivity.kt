@@ -22,6 +22,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.ArrowBack as LeftArrow
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
@@ -54,6 +58,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.painterResource
+import me.zssu.ime.keyboard.OperationKeyIcons
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -151,7 +157,11 @@ private fun LayoutEditorScreen() {
                                     FilterChip(
                                         selected = r == rowIndex && k == keyIndex,
                                         onClick = { rowIndex = r; keyIndex = k },
-                                        label = { Text(key.faceLabel, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
+                                        label = {
+                                            val icon = OperationKeyIcons.resource(key.center.action, key.faceLabel)
+                                            if (icon != null) Icon(painterResource(icon), contentDescription = OperationKeyIcons.description(key.center.action, key.faceLabel), modifier = Modifier.size(18.dp))
+                                            else Text(key.faceLabel, maxLines = 1, style = MaterialTheme.typography.labelSmall)
+                                        },
                                         modifier = Modifier.width((52 * key.weight).dp),
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -168,7 +178,12 @@ private fun LayoutEditorScreen() {
                 if (selected != null) {
                     Card(shape = RoundedCornerShape(16.dp)) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("選択中: ${selected.faceLabel}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("選択中: ", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                val icon = OperationKeyIcons.resource(selected.center.action, selected.faceLabel)
+                                if (icon != null) Icon(painterResource(icon), contentDescription = OperationKeyIcons.description(selected.center.action, selected.faceLabel), modifier = Modifier.size(18.dp))
+                                else Text(selected.faceLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            }
 
                             // Action type
                             Text("アクション種別", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -309,7 +324,13 @@ private fun LayoutEditorScreen() {
                                     OutlinedButton(onClick = {
                                         val m = moveKey(current, rowIndex, keyIndex, dir); layout = m.layout; rowIndex = m.row; keyIndex = m.key
                                     }, modifier = Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
-                                        Text(dir, style = MaterialTheme.typography.labelSmall)
+                                        val (icon, description) = when (dir) {
+                                            "←" -> Icons.Filled.LeftArrow to "左へ移動"
+                                            "→" -> Icons.Filled.ArrowForward to "右へ移動"
+                                            "↑" -> Icons.Filled.ArrowUpward to "上へ移動"
+                                            else -> Icons.Filled.ArrowDownward to "下へ移動"
+                                        }
+                                        Icon(icon, contentDescription = description)
                                     }
                                 }
                             }

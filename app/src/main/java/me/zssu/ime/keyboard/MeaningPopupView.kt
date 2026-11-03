@@ -160,7 +160,12 @@ class MeaningPopupView(context: Context) : FrameLayout(context) {
 
         if (canPrioritize) {
             card.addView(TextView(context).apply {
-                text = if (isPrioritized) "★ 最優先を解除" else "★ 最優先にする"
+                text = if (isPrioritized) "最優先を解除" else "最優先にする"
+                val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()
+                star?.setTint(primaryTextColor)
+                star?.setBounds(0, 0, (20 * resources.displayMetrics.density).toInt(), (20 * resources.displayMetrics.density).toInt())
+                setCompoundDrawablesRelative(star, null, null, null)
+                compoundDrawablePadding = (6 * resources.displayMetrics.density).toInt()
                 setTextColor(primaryTextColor)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
                 setPadding(pad, pad, pad, pad / 2)

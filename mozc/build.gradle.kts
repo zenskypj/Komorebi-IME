@@ -32,6 +32,8 @@ android {
     sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")
     sourceSets["main"].assets.srcDirs("src/main/assets")
 
+    testOptions.unitTests.isReturnDefaultValues = true
+
     // mozc.data stays deflated in the APK — it compresses to roughly half its 18 MB, and the file
     // has to be extracted to a real path for DataManager either way, so leaving it uncompressed
     // would only inflate the download. See MozcEngine.extractDataFile.

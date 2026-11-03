@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.core.content.ContextCompat
+import me.zssu.ime.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -273,6 +277,12 @@ private fun ThemeEditorScreen(initialThemeId: String?) {
 
 @Composable
 private fun ThemePreview(theme: KeyboardTheme, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val operationIcons = remember(context) {
+        mapOf("↶" to R.drawable.ic_ime_undo, "⌫" to R.drawable.ic_ime_backspace,
+            "◀" to R.drawable.ic_ime_cursor_left, "▶" to R.drawable.ic_ime_cursor_right,
+            "↵" to R.drawable.ic_ime_enter).mapValues { ContextCompat.getDrawable(context, it.value)?.mutate() }
+    }
     val measurer = rememberTextMeasurer()
     val labelStyle = remember { TextStyle(fontSize = 11.sp) }
     Canvas(modifier.clip(RoundedCornerShape(8.dp))) {
@@ -303,8 +313,19 @@ private fun ThemePreview(theme: KeyboardTheme, modifier: Modifier = Modifier) {
             val x = gap + ci * (keyW + gap); val y = keyTop + ri * keyH
             val fillColor = if (keys[ri][ci].second) modColor else if (ri == 3 && ci == 0) pressedColor else keyColor
             drawRoundRect(fillColor, Offset(x, y), Size(keyW, keyH - gap), CornerRadius(theme.keyCornerRadiusDp * 4f))
-            val tr = measurer.measure(keys[ri][ci].first, labelStyle, maxLines = 1)
-            drawText(tr, topLeft = Offset(x + keyW / 2f - tr.size.width / 2f, y + (keyH - gap) / 2f - tr.size.height / 2f), color = labelColor)
+            val icon = operationIcons[keys[ri][ci].first]
+            if (icon != null) {
+                val iconSize = minOf(keyW, keyH - gap) * 0.42f
+                val centerX = x + keyW / 2f
+                val centerY = y + (keyH - gap) / 2f
+                icon.setTint(theme.labelColor)
+                icon.setBounds((centerX - iconSize / 2).toInt(), (centerY - iconSize / 2).toInt(),
+                    (centerX + iconSize / 2).toInt(), (centerY + iconSize / 2).toInt())
+                drawIntoCanvas { icon.draw(it.nativeCanvas) }
+            } else {
+                val tr = measurer.measure(keys[ri][ci].first, labelStyle, maxLines = 1)
+                drawText(tr, topLeft = Offset(x + keyW / 2f - tr.size.width / 2f, y + (keyH - gap) / 2f - tr.size.height / 2f), color = labelColor)
+            }
         }
         val gx = gap + keyW + gap; val gy = keyTop
         drawRoundRect(guideBg.copy(alpha = 0.4f), Offset(gx, gy - keyH), Size(keyW, keyH * 2), CornerRadius(theme.keyCornerRadiusDp * 4f))

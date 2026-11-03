@@ -5,6 +5,15 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val bundleZenzai = providers.gradleProperty("zenzai").orNull == "true"
+if (bundleZenzai) {
+    val validateZenzai by tasks.registering {
+        val required = listOf("src/zenzai/assets/zenzai/model.json", "src/zenzai/assets/zenzai/zenzai-plus-ft-f16.gguf", "src/zenzai/jniLibs/arm64-v8a/libzinna_zenzai.so").map(::file)
+        inputs.files(required)
+        doLast { check(required.all { it.isFile }) { "Run scripts/prepare_zenzai.py and scripts/build_zenzai.sh before -Pzenzai=true" } }
+    }
+    tasks.named("preBuild").configure { dependsOn(validateZenzai) }
+}
 android {
     namespace = "me.zssu.ime"
     compileSdk {
@@ -17,8 +26,8 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.3.0-rc.1"
+        versionCode = 27
+        versionName = "0.3.0-rc.3"
     }
 
     buildTypes {
@@ -49,6 +58,12 @@ android {
         compose = true
     }
 
+    if (bundleZenzai) {
+        sourceSets["main"].assets.srcDir("src/zenzai/assets")
+        sourceSets["main"].jniLibs.srcDir("src/zenzai/jniLibs")
+        defaultConfig.ndk.abiFilters.add("arm64-v8a")
+    }
+    androidResources.noCompress += "gguf"
     packaging {
         // libmozc.so must stay page-aligned for the 16 KB page-size requirement on Android 15+.
         jniLibs.useLegacyPackaging = false

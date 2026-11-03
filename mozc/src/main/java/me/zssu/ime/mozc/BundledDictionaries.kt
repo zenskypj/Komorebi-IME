@@ -47,19 +47,22 @@ object BundledDictionaries {
 
         if (stamp.isFile && stamp.readText().startsWith("$version\n")) return null
 
+        val system = runCatching { context.assets.open("system_dictionaries.txt").bufferedReader().use { it.readLines().toSet() } }.getOrDefault(emptySet())
         val imported = mutableListOf<Status>()
         for ((assetName, dictionaryName) in DICTIONARIES) {
             val tsv = runCatching {
                 context.assets.open("$ASSET_DIR/$assetName").bufferedReader().use { it.readText() }
             }.onFailure { Log.e(TAG, "cannot read $assetName", it) }.getOrNull() ?: continue
 
+            // Clear legacy user copies of words now compiled into mozc.data.
+            val systemDictionary = assetName in system
             val output = engine.eval(
                 Input.newBuilder()
                     .setType(Input.CommandType.IMPORT_USER_DICTIONARY)
                     .setUserDictionaryImportData(
                         UserDictionaryImportData.newBuilder()
                             .setDictionaryName(dictionaryName)
-                            .setData(tsv)
+                            .setData(if (systemDictionary) "# migrated to system dictionary\n" else tsv)
                     )
             )
             if (output == null) {

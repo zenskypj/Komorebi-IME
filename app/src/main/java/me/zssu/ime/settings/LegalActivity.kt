@@ -47,7 +47,8 @@ class LegalActivity : ComponentActivity() {
 private data class LegalDocument(val title: String, val assetName: String)
 
 private val DOCUMENTS = listOf(
-    LegalDocument("本アプリ / Apache 2.0", "LICENSE.txt"),
+    LegalDocument("Komorebi / Apache 2.0", "LICENSE.txt"),
+    LegalDocument("Zinna 更新部分 / Unlicense・MIT-0", "UPSTREAM_LICENSE.txt"),
     LegalDocument("帰属表示", "NOTICE.txt"),
     LegalDocument("第三者ソフトウェア", "THIRD_PARTY_NOTICES.txt"),
     LegalDocument("Mozc", "MOZC_LICENSE.txt"),
@@ -56,6 +57,7 @@ private val DOCUMENTS = listOf(
     LegalDocument("Karukan / Apache 2.0", "KARUKAN_LICENSE_APACHE.txt"),
     LegalDocument("Karukan付属データ", "KARUKAN_UPSTREAM_NOTICES.txt"),
     LegalDocument("llama.cpp", "LLAMA_CPP_LICENSE.txt"),
+    LegalDocument("zenz v3.2 ランタイム / MIT", "ZENZ32_LLAMA_LICENSE.txt"),
     LegalDocument("Tokenizers", "TOKENIZERS_LICENSE.txt"),
     LegalDocument("Rust Onig", "ONIG_LICENSE.txt"),
     LegalDocument("Oniguruma本体", "ONIGURUMA_LICENSE.txt"),
@@ -68,7 +70,11 @@ private val DOCUMENTS = listOf(
 @Composable
 private fun LegalScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var selected by remember { mutableStateOf(DOCUMENTS.first()) }
+    val documents = remember { DOCUMENTS + listOf(
+        LegalDocument("zenzai-plus モデルカード", "ZENZAI_MODEL_CARD.txt"),
+        LegalDocument("zenzai-plus ランタイム / MIT", "ZENZAI_RUNTIME_LICENSE.txt"),
+    ).filter { document -> runCatching { context.assets.open("legal/${document.assetName}").use { } }.isSuccess } }
+    var selected by remember { mutableStateOf(documents.first()) }
     val body = remember(selected) {
         runCatching {
             context.assets.open("legal/${selected.assetName}")
@@ -100,7 +106,7 @@ private fun LegalScreen(onBack: () -> Unit) {
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            DOCUMENTS.forEach { document ->
+            documents.forEach { document ->
                 if (document == selected) {
                     Button(onClick = { selected = document }) { Text(document.title) }
                 } else {

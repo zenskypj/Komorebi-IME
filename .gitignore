@@ -39,3 +39,11 @@ local.properties
 
 # Kotlin compiler session files
 .kotlin/
+
+/third_party/zenzai-llama/
+/app/src/zenzai/assets/
+/app/src/zenzai/jniLibs/
+
+/mozc/src/main/assets/system_dictionaries.txt
+
+/third_party/zenz32-llama/

@@ -8,3 +8,7 @@
 -keep class me.zssu.ime.karukan.KarukanNative {
     native <methods>;
 }
+
+-keep class me.zssu.ime.ime.ZenzaiNative { *; }
+
+-keep class me.zssu.ime.ime.Zenz32Native { *; }

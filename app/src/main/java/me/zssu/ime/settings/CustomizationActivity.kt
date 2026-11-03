@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Download
@@ -192,7 +193,10 @@ private fun CustomizationScreen() {
                                     message = if (id == MaterialYouTheme.ID) "Material You は動的生成のため編集不可" else "$id を読み込みました"
                                 },
                                 label = {
-                                    Text((if (active) "✓ " else "") + id, style = MaterialTheme.typography.labelSmall)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (active) Icon(Icons.Filled.Check, contentDescription = "使用中", modifier = Modifier.size(16.dp))
+                                        Text(id, style = MaterialTheme.typography.labelSmall)
+                                    }
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,

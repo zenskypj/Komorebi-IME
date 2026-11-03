@@ -1,0 +1,28 @@
+diff --git a/src/converter/history_reconstructor_test.cc b/src/converter/history_reconstructor_test.cc
+index 05abad6..02c44f8 100644
+--- a/src/converter/history_reconstructor_test.cc
++++ b/src/converter/history_reconstructor_test.cc
+@@ -137,6 +137,23 @@ TEST(HistoryReconstructorTest, GetLastConnectivePart) {
+   }
+ }
+ 
++TEST(HistoryReconstructorTest, JapaneseNounContextIsNotLearned) {
++  const testing::MockDataManager data_manager;
++  const dictionary::PosMatcher pos_matcher(data_manager.GetPosMatcherData());
++  const converter::HistoryReconstructor reconstructor(pos_matcher);
++  for (const auto text : {"追記", "カタカナ"}) {
++    Segments segments;
++    ASSERT_TRUE(reconstructor.ReconstructHistory(text, &segments));
++    ASSERT_EQ(segments.segments_size(), 1);
++    const auto& candidate = segments.segment(0).candidate(0);
++    EXPECT_EQ(candidate.value, text);
++    EXPECT_EQ(candidate.attributes, Attribute::NO_LEARNING);
++    EXPECT_EQ(candidate.rid, pos_matcher.GetGeneralNounId());
++  }
++  Segments segments;
++  EXPECT_FALSE(reconstructor.ReconstructHistory("したい", &segments));
++}
++
+ TEST(HistoryReconstructorTest, ReconstructHistory) {
+   const testing::MockDataManager data_manager;
+   const dictionary::PosMatcher pos_matcher(data_manager.GetPosMatcherData());

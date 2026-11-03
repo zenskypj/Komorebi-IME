@@ -63,7 +63,7 @@ class UserDictionary(context: Context) {
      * Replaces the dictionary from Mozc / Google Japanese Input compatible TSV.
      * Parsing and size checks finish before the encrypted authoritative file is touched.
      */
-    fun importTsv(tsv: String): Result<List<Entry>> = runCatching {
+    fun importTsv(tsv: String, syncEngine: Boolean = true): Result<List<Entry>> = runCatching {
         require(tsv.toByteArray().size <= MAX_IMPORT_BYTES) { "辞書は 5 MB 以下にしてください" }
         var skippedPos = 0
         val parsed = tsv.lines().mapNotNull { line ->
@@ -86,15 +86,22 @@ class UserDictionary(context: Context) {
         if (skippedPos > 0) {
             Log.w(TAG, "skipped $skippedPos row(s) with unrecognized part-of-speech")
         }
-        write(parsed.distinctBy { it.reading to it.word })
+        write(parsed.distinctBy { it.reading to it.word }, syncEngine)
     }
 
-    private fun write(entries: List<Entry>): List<Entry> {
+    internal fun restoreTsv(tsv: String) {
+        if (tsv.isBlank()) write(emptyList(), syncEngine = false)
+        else importTsv(tsv, syncEngine = false).getOrThrow()
+    }
+
+    private fun write(entries: List<Entry>, syncEngine: Boolean = true): List<Entry> {
         SecureStore.write(
             file,
             entries.joinToString("\n") { "${it.reading}\t${it.word}\t${it.pos}\t${it.comment}" },
         )
-        sync()
+        val preferences = appContext.getSharedPreferences("ime_settings", Context.MODE_PRIVATE)
+        preferences.edit().putLong(REVISION_KEY, preferences.getLong(REVISION_KEY, 0) + 1).apply()
+        if (syncEngine) sync()
         return entries
     }
 
@@ -142,6 +149,8 @@ class UserDictionary(context: Context) {
         private const val MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
         /** Shown in mozc's dictionary list, and kept distinct from the bundled dictionaries. */
+        const val REVISION_KEY = "user_dictionary_revision"
+
         const val DICTIONARY_NAME = "ユーザー辞書"
 
         const val DEFAULT_POS = "名詞"
