@@ -63,6 +63,11 @@ internal class ZenzaiTrainer(
         handle = ZenzaiNative.load(base.absolutePath)
         snapshot = File(base.parentFile, "${base.nameWithoutExtension}.ttt.enc")
         metadata = File(base.parentFile, "${base.nameWithoutExtension}.words.enc")
+        val reset = prefs.getLong("zenzai_reset_learning", 0)
+        if (reset > prefs.getLong("zenzai_reset_applied", 0)) {
+            snapshot?.delete(); metadata?.delete()
+            prefs.edit().putLong("zenzai_reset_applied", reset).apply()
+        }
         var restored = false
         if (snapshot!!.isFile) {
             ParcelFileDescriptor.adoptFd(ZenzaiNative.memoryFile()).use { memory ->
@@ -173,6 +178,21 @@ internal class ZenzaiTrainer(
         handle = 0L
         updates = 0
         words.clear()
+    }
+
+    fun resetLearning(done: () -> Unit) {
+        enabled = false
+        epoch++
+        worker.execute {
+            scheduled?.cancel(false)
+            examples.clear()
+            release()
+            val dir = File(context.noBackupFilesDir, "zenzai")
+            dir.listFiles()?.filter { it.name.endsWith(".ttt.enc") || it.name.endsWith(".words.enc") }?.forEach { it.delete() }
+            prefs.edit().putLong("zenzai_reset_applied", prefs.getLong("zenzai_reset_learning", 0)).apply()
+            status()
+            done()
+        }
     }
 
     fun close() {

@@ -30,6 +30,9 @@ class PriorityCandidateRepository(context: Context) {
     private var indexByValue: Map<String, List<Entry>>? = null
 
     @Synchronized
+    fun invalidate() { cached = null; indexByValue = null }
+
+    @Synchronized
     fun entries(): List<Entry> = cached ?: read().also { cached = it }
 
     @Synchronized

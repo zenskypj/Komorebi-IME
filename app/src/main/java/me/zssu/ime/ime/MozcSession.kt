@@ -38,6 +38,7 @@ class MozcSession(
     data class State(
         /** Text mozc has finalised; append it to the editor. */
         val committedText: String = "",
+        val deleteBeforeCodePoints: Int = 0,
         /** Current composition, to be shown underlined. */
         val preedit: String = "",
         /** Caret position within [preedit], in Java chars. */
@@ -232,8 +233,8 @@ class MozcSession(
                             if (fullWidthSpace) Config.FundamentalCharacterForm.FUNDAMENTAL_FULL_WIDTH
                             else Config.FundamentalCharacterForm.FUNDAMENTAL_HALF_WIDTH
                         )
-                        .setUseTypingCorrection(true)
-                        .setUseKanaModifierInsensitiveConversion(true)
+                        .setUseTypingCorrection(typingCorrection)
+                        .setUseKanaModifierInsensitiveConversion(typingCorrection)
                         .setUseHistorySuggest(true)
                         .setSuggestionsSize(9)
                         .setComposingTimeoutThresholdMsec(
@@ -255,6 +256,14 @@ class MozcSession(
     fun setIncognitoMode(enabled: Boolean) {
         if (incognito == enabled && configApplied) return
         incognito = enabled
+        configApplied = false
+        engine?.let(::applyConfig)
+    }
+
+    private var typingCorrection = true
+    fun setTypingCorrectionEnabled(value: Boolean) {
+        if (typingCorrection == value) return
+        typingCorrection = value
         configApplied = false
         engine?.let(::applyConfig)
     }
@@ -456,6 +465,8 @@ class MozcSession(
 
         return State(
             committedText = if (hasResult()) result.value else "",
+            deleteBeforeCodePoints = if (hasDeletionRange() && deletionRange.offset < 0 &&
+                deletionRange.length == -deletionRange.offset) deletionRange.length else 0,
             preedit = displayedPreedit,
             preeditReading = reading,
             preeditCursor = cursor.coerceIn(0, preeditText.length),

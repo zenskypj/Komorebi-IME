@@ -33,7 +33,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, SETTINGS, AI_STYLE, MEETS_BEAM }
+    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, SETTINGS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -43,6 +43,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     var listener: OnCandidateSelectedListener? = null
     var onCandidateLongPressed: ((MozcSession.Candidate) -> Unit)? = null
+    var onPanelExpanded: ((Boolean) -> Unit)? = null
+    var onEditCommand: ((String) -> Unit)? = null
     var onToolAction: ((ToolAction) -> Unit)? = null
     var onClipboardItemSelected: ((String) -> Unit)? = null
     var onClipboardHistoryCleared: (() -> Unit)? = null
@@ -87,6 +89,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     }
 
     private fun paletteHeight(expanded: Boolean) {
+        onPanelExpanded?.invoke(expanded)
         val params = layoutParams ?: return
         if (expanded) {
             if (normalHeight == 0) normalHeight = params.height
@@ -257,6 +260,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.ONE_HAND_CYCLE -> "片手モード"
         ToolAction.SETTINGS -> "設定"
         ToolAction.MEETS_BEAM -> "Meets Beam"
+        ToolAction.EDIT -> "カーソル・範囲選択"
+        ToolAction.RECONVERT -> "確定を戻す"
     }
     private fun toolIcon(action: ToolAction): Int = when (action) {
         ToolAction.AI_STYLE -> R.drawable.ic_ai_style
@@ -265,6 +270,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.ONE_HAND_CYCLE -> R.drawable.ic_material_settings
         ToolAction.SETTINGS -> R.drawable.ic_material_settings
         ToolAction.MEETS_BEAM -> R.drawable.ic_meets_beam
+        ToolAction.EDIT -> R.drawable.ic_ime_cursor_right
+        ToolAction.RECONVERT -> R.drawable.ic_ime_undo
     }
     fun showTools() {
         paletteHeight(false)
@@ -321,10 +328,49 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
                 contentDescription = toolLabel(action) + if (delta < 0) "を上へ" else "を下へ"
                 setOnClickListener { move(delta) }
             })
+            row.setOnLongClickListener {
+                it.startDragAndDrop(android.content.ClipData.newPlainText("tool", action.name), View.DragShadowBuilder(it), action, 0)
+                true
+            }
+            row.getChildAt(0).setOnLongClickListener { row.performLongClick() }
+            row.setOnDragListener { _, event ->
+                when (event.action) {
+                    android.view.DragEvent.ACTION_DRAG_STARTED -> event.localState is ToolAction
+                    android.view.DragEvent.ACTION_DROP -> {
+                        val source = event.localState as? ToolAction
+                        if (source != null) {
+                            val changed = order.toMutableList()
+                            changed.remove(source); changed.add(index, source)
+                            toolPrefs.edit().putString("order", changed.joinToString(",") { it.name }).apply()
+                            showToolMenu()
+                        }
+                        true
+                    }
+                    else -> true
+                }
+            }
             list.addView(row)
         }
         scroller.addView(list)
         panel.addView(scroller, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        emojiPanel = panel
+        container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
+    }
+
+    fun showEditPanel() {
+        paletteHeight(true)
+        container.removeAllViews()
+        setContainerFillWidth(false)
+        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        panel.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
+        for (group in listOf(listOf("前の単語" to "word_left", "左" to "left", "右" to "right", "次の単語" to "word_right"), listOf("行頭" to "home", "行末" to "end", "選択開始・終了" to "select"), listOf("全選択" to "all", "コピー" to "copy", "切り取り" to "cut", "貼り付け" to "paste"))) {
+            val row = LinearLayout(context)
+            for ((label, command) in group) row.addView(TextView(context).apply {
+                text = label; applyTheme(this); gravity = Gravity.CENTER
+                setOnClickListener { onEditCommand?.invoke(command) }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            panel.addView(row)
+        }
         emojiPanel = panel
         container.addView(panel, LinearLayout.LayoutParams(resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
     }

@@ -21,6 +21,9 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
             task.run()
         }, "zenzai-worker")
     }.apply { removeOnCancelPolicy = true }
+    private val cache = object : LinkedHashMap<String, MozcSession.Candidate>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MozcSession.Candidate>?) = size > 32
+    }
     private var pending: ScheduledFuture<*>? = null
     @Volatile private var enabled = false
     @Volatile private var generation = 0L
@@ -36,6 +39,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     fun setEnabled(value: Boolean) {
         if (enabled == value) return
         enabled = value
+        if (!value) cache.clear()
         activation++
         failed = false
         cancel()
@@ -59,6 +63,10 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
         cancel()
         if (!enabled || !nativeReady || failed) return
         val ticket = generation
+        cache[prompt]?.let { candidate ->
+            ui.post { if (ticket == generation && enabled) onResult(candidate) }
+            return
+        }
         pending = worker.schedule({
             if (ticket != generation || !enabled) return@schedule
             try {
@@ -67,10 +75,12 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
                 }
                 if (ticket != generation || !enabled) return@schedule
                 val bytes = prompt.toByteArray(Charsets.UTF_8)
+                val started = System.nanoTime()
                 val result = ZenzaiNative.generate(handle, bytes, 192, ticket)
                     ?.toString(Charsets.UTF_8)?.let(ZenzaiConversion::candidate)
+                InputPerformance.record(app, "ai", System.nanoTime() - started)
                 if (result != null) ui.post {
-                    if (ticket == generation && enabled) onResult(result)
+                    if (ticket == generation && enabled) { cache[prompt] = result; onResult(result) }
                 }
             } catch (_: Exception) {
                 ui.post {
@@ -81,6 +91,14 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
                 }
             }
         }, 600, TimeUnit.MILLISECONDS)
+    }
+
+    fun resetLearning() {
+        val resume = enabled
+        setEnabled(false)
+        cache.clear()
+        val resetActivation = activation
+        trainer.resetLearning { ui.post { if (resume && activation == resetActivation && !worker.isShutdown) setEnabled(true) } }
     }
 
     fun close() {
@@ -102,6 +120,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     }
 
     private fun publish(version: Long, epoch: Long) {
+        ui.post { cache.clear() }
         if (worker.isShutdown) { ZenzaiNative.freeVersion(version); return }
         try {
             worker.execute {

@@ -523,3 +523,6 @@ Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第�
 - 任意の [zenzai-plus ビルド](docs/zenzai-plus.md) に対応します。互換ランタイムと
   指定モデルを別途用意する必要があります。通常 APK には同梱しません。
 - jawiki と F-Droid 用設定はこの更新の対象外です。
+
+キーボードの文節編集・再変換・編集パネル・学習管理・性能診断については、
+[キーボード強化](docs/keyboard-strengthening.md)を参照してください。

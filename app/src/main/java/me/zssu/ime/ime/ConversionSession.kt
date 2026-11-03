@@ -11,6 +11,7 @@ internal class ConversionSession(private val context: Context, private val prior
     private var mozc: MozcSession? = null
     private var incognito = false
     private var phoneToggle = false
+    private var typingCorrection = true
     private val flick = context.assets.open("zenzai/flick.tsv").bufferedReader().use { KanaComposer.rules(it.readLines()) }
     private var style = InputStyle.FLICK_HIRAGANA
     private val kana = KanaComposer(runCatching {
@@ -33,6 +34,7 @@ internal class ConversionSession(private val context: Context, private val prior
         it.clientContext = clientContext
         it.setIncognitoMode(incognito)
         it.setPhoneToggleEnabled(phoneToggle)
+        it.setTypingCorrectionEnabled(typingCorrection)
     }
 
     fun setZenzaiEnabled(enabled: Boolean, alongside: Boolean) {
@@ -94,6 +96,7 @@ internal class ConversionSession(private val context: Context, private val prior
         }
     fun deleteCandidateFromHistory(id: Int): MozcSession.State? = if (usesMozc) native().deleteCandidateFromHistory(id) else kana.state()
     fun setIncognitoMode(value: Boolean) { incognito = value; if (usesMozc) native().setIncognitoMode(value) }
+    fun setTypingCorrectionEnabled(value: Boolean) { typingCorrection = value; if (usesMozc) native().setTypingCorrectionEnabled(value) }
     fun setPhoneToggleEnabled(value: Boolean) { phoneToggle = value; if (usesMozc) native().setPhoneToggleEnabled(value) }
 
     fun stopKeyToggling(): MozcSession.State? = if (usesMozc) native().stopKeyToggling() else kana.state()

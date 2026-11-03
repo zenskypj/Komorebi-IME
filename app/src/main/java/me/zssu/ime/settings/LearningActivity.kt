@@ -54,6 +54,11 @@ class LearningActivity : ComponentActivity() {
 @Composable
 private fun LearningScreen() {
     val context = LocalContext.current
+    val diagnostic = remember { context.getSharedPreferences("input_performance", 0) }
+    var performanceEnabled by remember { mutableStateOf(diagnostic.getBoolean("enabled", false)) }
+    var confirmTtt by remember { mutableStateOf(false) }
+    val priority = remember { me.zssu.ime.ime.PriorityCandidateRepository(context) }
+    var pinned by remember { mutableStateOf(priority.entries()) }
     var confirmReset by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<String?>(null) }
     val settings = remember { ImeSettings(context) }
@@ -110,6 +115,29 @@ private fun LearningScreen() {
                 }
             }
 
+            Card {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("性能診断", style = MaterialTheme.typography.titleMedium)
+                    Text("入力処理と AI の所要時間だけを記録します。入力本文は保存しません。")
+                    Switch(checked = performanceEnabled, onCheckedChange = { performanceEnabled = it; diagnostic.edit().putBoolean("enabled", it).apply() })
+                    for ((key, label) in listOf("key" to "キー処理", "ai" to "AI 推論")) {
+                        val count = diagnostic.getLong(key + "_count", 0)
+                        val mean = diagnostic.getLong(key + "_total_us", 0) / count.coerceAtLeast(1) / 1000.0
+                        Text("$label: $count 回 / 平均 $mean ms / 最大 ${diagnostic.getLong(key + "_max_us", 0) / 1000.0} ms")
+                    }
+                    OutlinedButton(onClick = { diagnostic.edit().clear().putBoolean("enabled", performanceEnabled).apply() }) { Text("診断記録を消去") }
+                }
+            }
+            Card {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("優先する表記", style = MaterialTheme.typography.titleMedium)
+                    Text("候補の長押しから表記を登録できます。")
+                    for (entry in pinned) OutlinedButton(onClick = { priority.unpin(entry.reading, entry.value); pinned = priority.entries() }) {
+                        Text("${entry.reading} → ${entry.value}：優先解除")
+                    }
+                    OutlinedButton(onClick = { confirmTtt = true }) { Text("zenzai-plus の TTT 学習をリセット") }
+                }
+            }
             Card(shape = RoundedCornerShape(14.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("変換学習について", style = MaterialTheme.typography.titleMedium)
@@ -124,6 +152,17 @@ private fun LearningScreen() {
         }
     }
 
+    if (confirmTtt) AlertDialog(
+        onDismissRequest = { confirmTtt = false },
+        title = { Text("TTT 学習をリセットしますか？") },
+        text = { Text("zenzai-plus の学習結果を初期化します。モデルとユーザー辞書は残ります。") },
+        confirmButton = { TextButton(onClick = {
+            val prefs = context.getSharedPreferences(ImeSettings.NAME, 0)
+            prefs.edit().putLong("zenzai_reset_learning", System.currentTimeMillis()).apply()
+            confirmTtt = false
+        }) { Text("リセット") } },
+        dismissButton = { TextButton(onClick = { confirmTtt = false }) { Text("キャンセル") } },
+    )
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },

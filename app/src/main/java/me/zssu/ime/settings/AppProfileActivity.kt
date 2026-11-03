@@ -148,6 +148,8 @@ private fun ProfileEditorDialog(
     var style by remember(initial) { mutableStateOf(initial.resolvedKeyboardStyle) }
     var oneHand by remember(initial) { mutableStateOf(initial.resolvedOneHandMode) }
     var height by remember(initial) { mutableFloatStateOf(initial.keyHeightScale) }
+    var correction by remember(initial) { mutableStateOf(initial.typingCorrection) }
+    var neuralEnabled by remember(initial) { mutableStateOf(initial.neuralEnabled) }
     var incognito by remember(initial) { mutableStateOf(initial.incognito) }
 
     AlertDialog(
@@ -178,6 +180,14 @@ private fun ProfileEditorDialog(
                         style == option,
                         Modifier.fillMaxWidth(),
                     ) { style = option }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("AI 変換を許可", Modifier.weight(1f))
+                    Switch(checked = neuralEnabled, onCheckedChange = { neuralEnabled = it })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("入力ミスを補正", Modifier.weight(1f))
+                    Switch(checked = correction, onCheckedChange = { correction = it })
                 }
                 Text("片手モード")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -215,6 +225,8 @@ private fun ProfileEditorDialog(
                             oneHandMode = oneHand.name,
                             keyHeightScale = height,
                             incognito = incognito,
+                            neuralEnabled = neuralEnabled,
+                            typingCorrection = correction,
                         )
                     )
                 },

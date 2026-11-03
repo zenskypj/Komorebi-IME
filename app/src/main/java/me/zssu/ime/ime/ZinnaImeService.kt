@@ -80,12 +80,16 @@ class ZinnaImeService : InputMethodService() {
             submitCurrentComposition()
             refreshZenzai()
             layout?.let { session.applyInputStyle(it.inputStyle) }
+        } else if (key == "zenzai_reset_learning") {
+            zenzai.resetLearning()
         } else if ((key == me.zssu.ime.mozc.UserDictionary.REVISION_KEY || key == "zenzai_train_dictionary") && session.zenzaiEnabled) {
             zenzai.syncDictionary { zenzaiDictionary = it }
         }
     }
     private lateinit var karukanEngine: KarukanEngine
 
+    private var editAnchor: Int? = null
+    private var segmentBar: LinearLayout? = null
     private var keyboardView: FlickKeyboardView? = null
     private var panelView: KeyboardPanelView? = null
     private var contentLayout: LinearLayout? = null
@@ -395,6 +399,8 @@ class ZinnaImeService : InputMethodService() {
             listener = FlickKeyboardView.OnKeyOutputListener(::onKeyOutput)
         }
 
+        candidates.onPanelExpanded = { expanded -> keyboard.visibility = if (expanded) View.GONE else View.VISIBLE }
+        candidates.onEditCommand = ::handleEditCommand
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
@@ -422,6 +428,16 @@ class ZinnaImeService : InputMethodService() {
             addView(candidates, LinearLayout.LayoutParams(0, stripHeight, 1f))
         }
         content.addView(candidateRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        val segments = LinearLayout(this).apply {
+            visibility = View.GONE
+            val operations = listOf("前の文節" to -2, "縮める" to -1, "広げる" to 1, "次の文節" to 2)
+            for ((label, code) in operations) addView(android.widget.Button(context).apply {
+                text = label; textSize = 12f
+                setOnClickListener { handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1) }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        }
+        segmentBar = segments
+        content.addView(segments)
         content.addView(
             keyboard,
             LinearLayout.LayoutParams(
@@ -455,6 +471,7 @@ class ZinnaImeService : InputMethodService() {
             settings.flickInputMode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE
         )
         session.setIncognitoMode(fieldPolicy.incognito)
+        session.setTypingCorrectionEnabled(activeProfile?.typingCorrection ?: true)
         loaded?.let { session.applyInputStyle(it.inputStyle) }
         candidates.showTools()
         val onboarding = getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
@@ -508,6 +525,11 @@ class ZinnaImeService : InputMethodService() {
                 if (url != null) intent.putExtra("beam_url", url)
                 startActivity(intent)
             }
+            CandidateStripView.ToolAction.RECONVERT -> {
+                cancelKarukanConversion(clearReading = true, revertMozc = false)
+                render(session.undo(), requestNeural = false)
+            }
+            CandidateStripView.ToolAction.EDIT -> candidateView?.showEditPanel()
             CandidateStripView.ToolAction.AI_STYLE -> candidateView?.showStyleSelector()
             CandidateStripView.ToolAction.CLIPBOARD -> {
                 if (settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
@@ -657,6 +679,8 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        editAnchor = null
+        priorityCandidates.invalidate()
         refreshZenzai()
         meaningPopup?.hide(notify = false)
         appProfiles.recordSeenPackage(info?.packageName)
@@ -691,6 +715,7 @@ class ZinnaImeService : InputMethodService() {
             InputViewRefreshPolicy.Target.NONE -> Unit
         }
         session.setIncognitoMode(nextPolicy.incognito)
+        session.setTypingCorrectionEnabled(activeProfile?.typingCorrection ?: true)
         ownSelectionUpdatePending = false
         when (InputRestartRouting.target(restarting, isComposing)) {
             InputRestartRouting.Target.PRESERVE_COMPOSITION -> {
@@ -846,6 +871,12 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun onKeyOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {
+        val started = System.nanoTime()
+        try { handleKeyOutput(output, key, direction) }
+        finally { InputPerformance.record(this, "key", System.nanoTime() - started) }
+    }
+
+    private fun handleKeyOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {
         val clientContext = org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context.newBuilder()
         if (fieldPolicy.incognito) {
             clientContext.inputFieldType = org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context.InputFieldType.PASSWORD
@@ -1040,6 +1071,37 @@ class ZinnaImeService : InputMethodService() {
         }
     }
 
+    private fun handleEditCommand(command: String) {
+        val ic = currentInputConnection ?: return
+        when (command) {
+            "all" -> { ic.performContextMenuAction(android.R.id.selectAll); return }
+            "copy" -> { ic.performContextMenuAction(android.R.id.copy); return }
+            "cut" -> { ic.performContextMenuAction(android.R.id.cut); return }
+            "paste" -> { ic.performContextMenuAction(android.R.id.paste); return }
+        }
+        val extracted = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
+        val text = extracted.text?.toString() ?: return
+        val cursor = extracted.selectionEnd.coerceIn(0, text.length)
+        if (command == "select") {
+            editAnchor = if (editAnchor == null) extracted.startOffset + cursor else null
+            return
+        }
+        val target = when (command) {
+            "home" -> text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (cursor == 0) 0 else it + 1 }
+            "end" -> text.indexOf('\n', cursor).let { if (it < 0) text.length else it }
+            "word_left", "word_right" -> {
+                val breaker = java.text.BreakIterator.getWordInstance(java.util.Locale.JAPANESE)
+                breaker.setText(text)
+                val next = if (command == "word_left") breaker.preceding(cursor) else breaker.following(cursor)
+                if (next == java.text.BreakIterator.DONE) cursor else next
+            }
+            "left" -> if (cursor > 0) text.offsetByCodePoints(cursor, -1) else 0
+            else -> if (cursor < text.length) text.offsetByCodePoints(cursor, 1) else cursor
+        }
+        val absolute = extracted.startOffset + target
+        ic.setSelection(editAnchor ?: absolute, absolute)
+    }
+
     private fun handleCursorMove(delta: Int, adjustSegment: Boolean) {
         if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
@@ -1128,6 +1190,7 @@ class ZinnaImeService : InputMethodService() {
             )
         isComposing = state.hasComposition
         isConverting = state.isConverting
+        segmentBar?.visibility = if (isConverting) View.VISIBLE else View.GONE
         currentSegmentCount = if (state.isConverting) state.segments.size else 0
         val focusedSegment = state.segments.indexOfFirst { it.highlighted }
         val displayCursor = if (state.isConverting && focusedSegment >= 0)
@@ -1140,6 +1203,15 @@ class ZinnaImeService : InputMethodService() {
         editorSelectionUpdateObserved = false
         ic.beginBatchEdit()
         try {
+            if (state.deleteBeforeCodePoints > 0 && !ic.deleteSurroundingTextInCodePoints(state.deleteBeforeCodePoints, 0)) {
+                session.resetContext()
+                isComposing = false
+                isConverting = false
+                renderedPreeditCursor = 0
+                segmentBar?.visibility = View.GONE
+                candidateView?.clear()
+                return
+            }
             if (state.committedText.isNotEmpty()) {
                 val committed = ic.commitText(state.committedText, 1)
                 if (committed && !fieldPolicy.incognito &&
@@ -1233,7 +1305,7 @@ class ZinnaImeService : InputMethodService() {
 
     private fun refreshZenzai() {
         val policy = InputFieldPolicy.from(currentInputEditorInfo)
-        val enabled = settings.zenzaiPlusEnabled && ZenzaiEngine.isBundled(this) && !policy.incognito
+        val enabled = settings.zenzaiPlusEnabled && activeProfile?.neuralEnabled != false && ZenzaiEngine.isBundled(this) && !policy.incognito
         zenzai.cancel()
         zenzaiCandidate = null
         zenzaiState = null
@@ -1284,7 +1356,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun shouldUseKarukan(): Boolean =
-        !settings.zenzaiPlusEnabled &&
+        !settings.zenzaiPlusEnabled && activeProfile?.neuralEnabled != false &&
         layout?.inputStyle?.fullWidthSpace == true &&
         isComposing && !isConverting &&
             !fieldPolicy.incognito &&

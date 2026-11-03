@@ -21,6 +21,8 @@ class AppProfileStore(context: Context) {
         val oneHandMode: String = ImeSettings.OneHandMode.OFF.name,
         val keyHeightScale: Float = 1f,
         val incognito: Boolean = false,
+        val neuralEnabled: Boolean = true,
+        val typingCorrection: Boolean = true,
     ) {
         val resolvedKeyboardStyle: KeyboardStyle get() = KeyboardStyle.of(keyboardStyle)
         val resolvedOneHandMode: ImeSettings.OneHandMode get() = runCatching {

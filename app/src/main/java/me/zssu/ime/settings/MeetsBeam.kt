@@ -207,6 +207,7 @@ class MeetsBeamActivity : ComponentActivity() {
                     if (message.type == "url") Button(onClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(message.value))) }) { Text("受信した URL を開く") }
                     if (message.type == "app") Button(onClick = { openApp(message.value) }) { Text("受信したアプリを開く") }
                 }
+                if (!busy && receivingSelected) OutlinedButton(onClick = { startReceiver() }) { Text("受信を再試行") }
                 OutlinedButton(onClick = { finish() }) { Text("戻る") }
             }
         } } }
@@ -245,7 +246,7 @@ class MeetsBeamActivity : ComponentActivity() {
     private fun startReceiver() {
         receiver?.stop()
         val next = BeamReceiver(this, { message -> receivingSelected = false; present(message); busy = false },
-            { detail -> status = detail }, { status = "NFC を検出しました。通信中は端末を近づけたままにしてください。" })
+            { detail -> status = detail; busy = false; receiver?.stop() }, { status = "NFC を検出しました。通信中は端末を近づけたままにしてください。" })
         receiver = next
         busy = next.start()
         status = if (busy) "受信待ちです。送信側に端末を近づけてください。" else "NFC を確認してください。"
