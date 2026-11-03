@@ -30,6 +30,12 @@ internal object KeyboardInsetPolicy {
         bottom = resolveEdge(bottom, navigationVisible, previous.bottom),
     )
 
+    /** Visible overlap with the physical bottom navigation area, in screen pixels. */
+    fun bottomOverlap(viewBottom: Int, displayBottom: Int, navigationHeight: Int): Int {
+        if (viewBottom <= 0 || displayBottom <= 0 || navigationHeight <= 0) return 0
+        return (viewBottom - (displayBottom - navigationHeight)).coerceIn(0, navigationHeight)
+    }
+
     /**
      * A hidden navigation bar can produce one transient all-zero dispatch while returning from a
      * settings Activity. Retain the last intersection for that frame. Once the bar is visible, a

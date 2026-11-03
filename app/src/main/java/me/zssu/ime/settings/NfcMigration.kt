@@ -55,7 +55,15 @@ internal object NfcMigrationSession {
         ready = Ready(archive, password, keys(), selectedAid.copyOf(), onDetected, onComplete)
     }
     fun clear() { ready = null }
-    private fun keys(): KeyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+    internal fun keys(): KeyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+    internal fun selectCommand(selectedAid: ByteArray): ByteArray =
+        byteArrayOf(0, 0xA4.toByte(), 4, 0, selectedAid.size.toByte()) + selectedAid + byteArrayOf(0)
+    internal fun dataCommand(instruction: Int, data: ByteArray): ByteArray {
+        require(data.size <= 255)
+        return byteArrayOf(0x80.toByte(), instruction.toByte(), 0, 0, data.size.toByte()) + data + byteArrayOf(0)
+    }
+
+    class TransferFailure(val step: String, cause: Throwable) : java.io.IOException("$step: ${cause.message.orEmpty()}", cause)
     private fun shared(pair: KeyPair, publicBytes: ByteArray): ByteArray {
         val other = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(publicBytes))
         return MessageDigest.getInstance("SHA-256").digest(KeyAgreement.getInstance("ECDH").run {
@@ -73,10 +81,12 @@ internal object NfcMigrationSession {
         }
         if (command.size < 5 || command[0] != 0x80.toByte()) return failure
         val length = command[4].toInt() and 0xff
-        if (command.size != 5 + length) return failure
+        // Accept both ISO 7816 case 3 (no Le) and case 4 (Le=0) APDUs.
+        if (command.size != 5 + length &&
+            !(command.size == 6 + length && command.last() == 0.toByte())) return failure
         when (command[1].toInt() and 0xff) {
             0x10 -> {
-                val clientPublic = command.copyOfRange(5, command.size)
+                val clientPublic = command.copyOfRange(5, 5 + length)
                 val nonce = ByteArray(12).also(random::nextBytes)
                 val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
                     init(Cipher.ENCRYPT_MODE, SecretKeySpec(shared(data.keyPair, clientPublic), "AES"), GCMParameterSpec(128, nonce))
@@ -103,20 +113,25 @@ internal object NfcMigrationSession {
         }
     }.getOrElse { failure }
 
-    fun receive(tag: Tag, selectedAid: ByteArray = aid, verify: ((ByteArray, CharArray) -> Unit)? = null, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
+    fun receive(tag: Tag, selectedAid: ByteArray = aid, verify: ((ByteArray, CharArray) -> Unit)? = null,
+        preparedKeys: KeyPair? = null, report: (Int, Int) -> Unit): Pair<ByteArray, CharArray> {
         val iso = IsoDep.get(tag) ?: error("相手が NFC カードエミュレーションに対応していません")
+        val keyPair = preparedKeys ?: keys()
+        var step = "接続"
+        try {
         iso.use {
-            iso.timeout = 20000
             iso.connect()
+            iso.timeout = 20000
             fun exchange(cmd: ByteArray): ByteArray {
                 val result = iso.transceive(cmd)
                 check(result.size >= 2 && result[result.size - 2] == 0x90.toByte() && result.last() == 0.toByte()) { "NFC 接続が切れました" }
                 return result.copyOf(result.size - 2)
             }
-            exchange(byteArrayOf(0, 0xA4.toByte(), 4, 0, selectedAid.size.toByte()) + selectedAid)
-            val keyPair = keys()
+            step = "接続先の選択"
+            exchange(selectCommand(selectedAid))
+            step = "鍵交換"
             val public = keyPair.public.encoded
-            val response = exchange(byteArrayOf(0x80.toByte(), 0x10, 0, 0, public.size.toByte()) + public)
+            val response = exchange(dataCommand(0x10, public))
             check(response.isNotEmpty())
             val size = response[0].toInt() and 0xff
             check(size in 1..128 && response.size > 1 + size + 16)
@@ -129,9 +144,10 @@ internal object NfcMigrationSession {
             }
             val password = cipher.doFinal(response.copyOfRange(1 + size + 16, response.size)).toString(Charsets.UTF_8).toCharArray()
             val out = ByteArrayOutputStream(archiveSize)
+            step = "データ受信"
             while (out.size() < archiveSize) {
                 val offset = out.size()
-                val chunk = exchange(byteArrayOf(0x80.toByte(), 0x20, 0, 0, 4) + ByteBuffer.allocate(4).putInt(offset).array())
+                val chunk = exchange(dataCommand(0x20, ByteBuffer.allocate(4).putInt(offset).array()))
                 check(chunk.isNotEmpty() && offset + chunk.size <= archiveSize)
                 out.write(chunk)
                 if (offset % 24000 == 0 || out.size() == archiveSize) report(out.size(), archiveSize)
@@ -144,6 +160,7 @@ internal object NfcMigrationSession {
             }
             return bytes to password
         }
+        } catch (e: Exception) { throw TransferFailure(step, e) }
     }
 }
 

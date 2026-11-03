@@ -19,6 +19,14 @@ class KeyboardInsetPolicyTest {
     }
 
     @Test
+    fun `first frame reserves only actual navigation overlap`() {
+        assertEquals(24, KeyboardInsetPolicy.bottomOverlap(viewBottom = 1000, displayBottom = 1000, navigationHeight = 24))
+        assertEquals(0, KeyboardInsetPolicy.bottomOverlap(viewBottom = 976, displayBottom = 1000, navigationHeight = 24))
+        assertEquals(12, KeyboardInsetPolicy.bottomOverlap(viewBottom = 988, displayBottom = 1000, navigationHeight = 24))
+        assertEquals(0, KeyboardInsetPolicy.bottomOverlap(viewBottom = 1000, displayBottom = 1000, navigationHeight = 0))
+    }
+
+    @Test
     fun `horizontal safety insets remain in landscape`() {
         assertEquals(
             KeyboardInsetPolicy.Padding(left = 48, right = 12, bottom = 20),

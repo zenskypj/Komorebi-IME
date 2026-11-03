@@ -35,7 +35,10 @@ class NfcMigrationSessionTest {
             assertEquals(0, completed)
             val pair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
             val client = pair.public.encoded
-            val result = NfcMigrationSession.handle(byteArrayOf(0x80.toByte(), 0x10, 0, 0, client.size.toByte()) + client)
+            val select = NfcMigrationSession.selectCommand(NfcMigrationSession.aid)
+            assertEquals(0.toByte(), select.last())
+            assertEquals(0x90.toByte(), NfcMigrationSession.handle(select)[0])
+            val result = NfcMigrationSession.handle(NfcMigrationSession.dataCommand(0x10, client))
             assertEquals(0x90.toByte(), result[result.size - 2])
             val length = result[0].toInt() and 255
             val peer = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(result.copyOfRange(1, 1 + length)))
@@ -46,7 +49,7 @@ class NfcMigrationSessionTest {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, nonce)) }
             assertEquals("test-secret", cipher.doFinal(result.copyOfRange(17 + length, result.size - 2)).toString(Charsets.UTF_8))
             val chunks = (0 until archive.size step 240).flatMap { offset ->
-                val response = NfcMigrationSession.handle(byteArrayOf(0x80.toByte(), 0x20, 0, 0, 4) + ByteBuffer.allocate(4).putInt(offset).array())
+                val response = NfcMigrationSession.handle(NfcMigrationSession.dataCommand(0x20, ByteBuffer.allocate(4).putInt(offset).array()))
                 assertEquals(0x90.toByte(), response[response.size - 2])
                 response.dropLast(2)
             }.toByteArray()

@@ -82,14 +82,19 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
     private val adapter = NfcAdapter.getDefaultAdapter(activity)
     private val working = AtomicBoolean(false)
     @Volatile private var active = false
+    private var preparedKeys: java.security.KeyPair? = null
     fun start(): Boolean {
         if (!MeetsBeamSettings.enabled(activity) || adapter?.isEnabled != true) return false
         active = true
         return runCatching {
+            // Generate the ephemeral key before the phones touch; key generation while connected
+            // can exceed the NFC presence-check window on slower devices.
+            preparedKeys = NfcMigrationSession.keys()
+            val options = Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 1000) }
             adapter.enableReaderMode(activity, { tag -> dispatchTag(tag) },
                 NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
                     NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V or
-                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
+                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, options)
             // Some vendor NFC stacks fall back to Android's ordinary tag intent. Route it to
             // the already-open Beam screen as well, without replacing reader mode.
             if (activity is MeetsBeamActivity) {
@@ -110,7 +115,8 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
                 if (IsoDep.get(tag) == null) error("ISO-DEP 非対応: ${tag.techList.joinToString { it.substringAfterLast('.') }}")
                 var message: BeamMessage? = null
                 val (_, password) = NfcMigrationSession.receive(tag, BeamTransport.aid,
-                    verify = { data, secret -> message = BeamTransport.open(data, secret) }) { _, _ ->
+                    verify = { data, secret -> message = BeamTransport.open(data, secret) },
+                    preparedKeys = requireNotNull(preparedKeys)) { _, _ ->
                     if (!active) throw java.io.IOException("cancelled")
                 }
                 password.fill('\u0000')
@@ -118,6 +124,8 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
                 activity.runOnUiThread { if (active) { stop(); onMessage(verified) } }
             } catch (e: Exception) {
                 val detail = when {
+                    e is NfcMigrationSession.TransferFailure && e.cause is android.nfc.TagLostException -> "${e.step}中に NFC 接続が切れました。端末を近づけたまま試してください。"
+                    e is NfcMigrationSession.TransferFailure -> "${e.step}で NFC 通信に失敗しました。端末を近づけ直してください。"
                     e is android.nfc.TagLostException -> "NFC 接続が切れました。端末を近づけたまま試してください。"
                     e is java.io.IOException -> "NFC 通信に失敗しました。端末を近づけ直してください。"
                     e.message?.startsWith("ISO-DEP 非対応") == true -> e.message!!
@@ -130,6 +138,7 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
 
     fun stop() {
         active = false
+        preparedKeys = null
         runCatching { adapter?.disableReaderMode(activity) }
         if (activity is MeetsBeamActivity) runCatching { adapter?.disableForegroundDispatch(activity) }
     }

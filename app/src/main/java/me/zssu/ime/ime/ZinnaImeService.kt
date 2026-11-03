@@ -220,6 +220,35 @@ class ZinnaImeService : InputMethodService() {
             // And ask for a fresh dispatch once attached, so a stale seed (after a rotation, say)
             // is corrected rather than persisting for the rest of the session.
             doOnAttach { ViewCompat.requestApplyInsets(it) }
+            // During an IME switch some devices draw one frame before delivering navigation
+            // insets. Compare the laid-out panel with the physical navigation area so a window
+            // already positioned above it gets no extra padding.
+            viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (!isAttachedToWindow || height <= 0) return true
+                    val windowInsets = ViewCompat.getRootWindowInsets(this@apply)
+                    val navigationType = WindowInsetsCompat.Type.navigationBars()
+                    if (windowInsets != null && !windowInsets.isVisible(navigationType)) return true
+                    val stableHeight = windowInsets?.getInsetsIgnoringVisibility(navigationType)?.bottom ?: 0
+                    val navResource = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+                    val resourceHeight = if (navResource != 0) resources.getDimensionPixelSize(navResource) else 0
+                    val navigationHeight = if (stableHeight > 0) stableHeight else resourceHeight
+                    @Suppress("DEPRECATION")
+                    val display = (getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
+                    val realSize = android.graphics.Point()
+                    @Suppress("DEPRECATION")
+                    display.getRealSize(realSize)
+                    val location = IntArray(2)
+                    getLocationOnScreen(location)
+                    val overlap = KeyboardInsetPolicy.bottomOverlap(location[1] + height, realSize.y, navigationHeight)
+                    if (overlap > paddingBottom) {
+                        systemInsetBottom = maxOf(systemInsetBottom, overlap)
+                        updatePadding(bottom = systemInsetBottom)
+                        return false
+                    }
+                    return true
+                }
+            })
         }
 
         val root = FrameLayout(this)
