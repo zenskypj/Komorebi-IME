@@ -33,7 +33,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, SETTINGS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, PROOFREAD }
+    enum class ToolAction { SNIPPETS, CLIPBOARD, EMOJI, ONE_HAND_CYCLE, SETTINGS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, PROOFREAD }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -46,6 +46,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onPanelExpanded: ((Boolean) -> Unit)? = null
     var onEditCommand: ((String) -> Unit)? = null
     var onToolAction: ((ToolAction) -> Unit)? = null
+    var onSnippetSelected: ((String) -> Unit)? = null
+    var onManageSnippets: (() -> Unit)? = null
     var onClipboardItemSelected: ((String) -> Unit)? = null
     var onClipboardHistoryCleared: (() -> Unit)? = null
 
@@ -283,6 +285,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.CLIPBOARD -> "クリップボード"
         ToolAction.EMOJI -> "絵文字"
         ToolAction.ONE_HAND_CYCLE -> "片手モード"
+        ToolAction.SNIPPETS -> "定型文"
         ToolAction.SETTINGS -> "設定"
         ToolAction.MEETS_BEAM -> "Meets Beam"
         ToolAction.EDIT -> "カーソル・範囲選択"
@@ -294,6 +297,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.CLIPBOARD -> R.drawable.ic_material_content_paste
         ToolAction.EMOJI -> R.drawable.ic_material_face
         ToolAction.ONE_HAND_CYCLE -> R.drawable.ic_material_settings
+        ToolAction.SNIPPETS -> R.drawable.ic_material_content_paste
         ToolAction.SETTINGS -> R.drawable.ic_material_settings
         ToolAction.MEETS_BEAM -> R.drawable.ic_meets_beam
         ToolAction.EDIT -> R.drawable.ic_ime_cursor_right
@@ -398,6 +402,24 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         panel.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         emojiPanel = panel
         container.addView(panel, LinearLayout.LayoutParams(width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
+    }
+
+    fun showSnippets(items: List<String>) {
+        paletteHeight(true)
+        container.removeAllViews()
+        setContainerFillWidth(false)
+        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        panel.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
+        panel.addView(TextView(context).apply {
+            text = "定型文を追加・編集"; applyTheme(this)
+            setOnClickListener { onManageSnippets?.invoke() }
+        })
+        for (value in items) panel.addView(TextView(context).apply {
+            text = value; maxLines = 2; applyTheme(this)
+            setOnClickListener { onSnippetSelected?.invoke(value) }
+        })
+        val scroll = android.widget.ScrollView(context).apply { addView(panel) }
+        container.addView(scroll, LinearLayout.LayoutParams(width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, dp(180)))
     }
 
     fun showEditPanel() {

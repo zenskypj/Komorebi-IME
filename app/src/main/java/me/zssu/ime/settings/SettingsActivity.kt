@@ -51,6 +51,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -147,6 +149,22 @@ private fun SettingsScreen() {
 
             Spacer(Modifier.height(8.dp))
 
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("入力の使い方", style = MaterialTheme.typography.titleMedium)
+                    Text("① 入力設定でフリック／QWERTYと片手モードを選びます。\n② 文字を入力し、スペースで変換。矢印で文節を選び、文節バーの「縮める／広げる」で区切りを調整します。\n③ スペースを長押しして左右に滑らせるとカーソル移動。\n④ メニューから定型文、範囲選択、AI文章校正を開けます。AIモデルは任意で取得できます。")
+                    val practice = remember { mutableStateOf("") }
+                    androidx.compose.material3.OutlinedTextField(
+                        value = practice.value,
+                        onValueChange = { practice.value = it },
+                        label = { Text("ここで入力・変換を試せます") },
+                        supportingText = { Text("例：きょうはいいてんき → スペースで変換 → 文節をタップ") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    FilledTonalButton(onClick = { context.startActivity(Intent(context, InputSettingsActivity::class.java)) }) { Text("入力方法・片手設定") }
+                    FilledTonalButton(onClick = { context.startActivity(Intent(context, SnippetActivity::class.java)) }) { Text("定型文を管理") }
+                }
+            }
             BackupCard()
             SettingsListItem(
                 icon = Icons.Filled.Devices,

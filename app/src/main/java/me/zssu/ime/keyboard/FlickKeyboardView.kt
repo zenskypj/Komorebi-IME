@@ -39,6 +39,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     var listener: OnKeyOutputListener? = null
+    var onTrackpadMove: ((Int) -> Unit)? = null
 
     /** Relabels a space/convert key to match what pressing it will do right now. */
     var isConversionAvailable: Boolean = false
@@ -117,6 +118,8 @@ class FlickKeyboardView @JvmOverloads constructor(
         var repeated: Boolean = false,
         /** Set once [KeySpec.longPress] fires, so release does not also emit the centre output. */
         var longPressed: Boolean = false,
+        var trackpad: Boolean = false,
+        var trackpadMotion: TrackpadMotion? = null,
     )
 
     private var placedKeys: List<PlacedKey> = emptyList()
@@ -459,7 +462,21 @@ class FlickKeyboardView @JvmOverloads constructor(
         activeTouches[pointerId] = touch
         if (theme.hapticFeedback) performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        if (key.spec.repeatable) {
+        if (key.spec.center.action is KeyAction.Space || key.spec.center.action is KeyAction.Convert) {
+            val hold = Runnable {
+                if (touch.direction == FlickDirection.CENTER) {
+                    touch.trackpad = true
+                    touch.longPressed = true
+                    touch.trackpadMotion = TrackpadMotion(18 * resources.displayMetrics.density, touch.downX + touch.path.dx)
+                    cancelRepeat()
+                    performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    announceForAccessibility("カーソル移動。左右に滑らせて移動")
+                    invalidate()
+                }
+            }
+            longPressRunnable = hold
+            handler.postDelayed(hold, LONG_PRESS_DELAY_MS)
+        } else if (key.spec.repeatable) {
             if (key.spec.hasFlicks) {
                 // A repeatable key that also flicks — the space bar — cannot fire on press, or a
                 // sideways swipe would insert a stray space before the cursor move. Resolve on
@@ -482,12 +499,17 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun onPointerMove(pointerId: Int, x: Float, y: Float) {
         val touch = activeTouches[pointerId] ?: return
         touch.path.record(x, y)
+        if (touch.trackpad) {
+            val count = touch.trackpadMotion?.move(x) ?: 0
+            repeat(kotlin.math.abs(count)) { onTrackpadMove?.invoke(if (count < 0) -1 else 1) }
+            return
+        }
         val direction = resolveDirection(touch)
         if (direction != touch.direction) {
             touch.direction = direction
             cancelRepeat()
             invalidate()
-            if (touch.key.spec.repeatable && direction != FlickDirection.CENTER && !touch.longPressed) {
+            if (touch.key.spec.repeatable && touch.key.spec.center.action !is KeyAction.Space && touch.key.spec.center.action !is KeyAction.Convert && direction != FlickDirection.CENTER && !touch.longPressed) {
                 // Swiped to a flick direction on a repeatable key: keep repeating in that direction.
                 scheduleRepeat(touch, direction, skipInitialDelay = true)
             }
@@ -547,6 +569,7 @@ class FlickKeyboardView @JvmOverloads constructor(
      * shift is invisible and the next capital looks like a bug.
      */
     private fun faceLabel(spec: KeySpec): String {
+        if (activeTouches.values.any { it.key.spec === spec && it.trackpad }) return "↔ カーソル"
         if (isConversionAvailable &&
             (spec.center.action is KeyAction.Space || spec.center.action is KeyAction.Convert)
         ) {

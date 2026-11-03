@@ -97,6 +97,7 @@ class ZinnaImeService : InputMethodService() {
 
     private var editAnchor: Int? = null
     private var segmentBar: LinearLayout? = null
+    private var segmentSummary: LinearLayout? = null
     private var keyboardView: FlickKeyboardView? = null
     private var panelView: KeyboardPanelView? = null
     private var contentLayout: LinearLayout? = null
@@ -360,6 +361,8 @@ class ZinnaImeService : InputMethodService() {
                 setCandidates(lastCandidates, lastFocusedCandidateIndex)
             }
             onToolAction = ::handleToolAction
+            onSnippetSelected = { text -> if (!fieldPolicy.incognito) { handleSymbol(text); showTools() } }
+            onManageSnippets = { startActivity(Intent(this@ZinnaImeService, me.zssu.ime.settings.SnippetActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             onStyleSelected = { style ->
                 applyStyleCorrection(style)
                 candidateView?.showTools()
@@ -482,13 +485,26 @@ class ZinnaImeService : InputMethodService() {
                     cornerRadius = 12 * resources.displayMetrics.density
                 }
                 isFocusable = true
-                setOnClickListener { handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1) }
-            }, LinearLayout.LayoutParams(0, (36 * resources.displayMetrics.density).toInt(), 1f).apply {
+                setOnClickListener { if (isConverting) handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1) }
+            }, LinearLayout.LayoutParams(0, (48 * resources.displayMetrics.density).toInt(), 1f).apply {
                 val gap = (3 * resources.displayMetrics.density).toInt(); setMargins(gap, gap, gap, gap)
             })
         }
-        segmentBar = segments
-        content.addView(segments)
+        val summary = LinearLayout(this)
+        val segmentScroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(summary)
+        }
+        segmentSummary = summary
+        val segmentControls = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            addView(segmentScroll)
+            addView(segments)
+        }
+        segments.visibility = View.VISIBLE
+        segmentBar = segmentControls
+        content.addView(segmentControls)
         content.addView(
             keyboard,
             LinearLayout.LayoutParams(
@@ -512,6 +528,7 @@ class ZinnaImeService : InputMethodService() {
         candidateView = candidates
         panelView = panel
         contentLayout = content
+        keyboard.onTrackpadMove = { delta -> handleCursorMove(delta, adjustSegment = false) }
         keyboardView = keyboard
         meaningPopup = popupView
         builtFromRevision = combinedRevision()
@@ -594,6 +611,10 @@ class ZinnaImeService : InputMethodService() {
                     .putExtra("beam_package", pkg)
                 if (url != null) intent.putExtra("beam_url", url)
                 startActivity(intent)
+            }
+            CandidateStripView.ToolAction.SNIPPETS -> {
+                if (!fieldPolicy.incognito) candidateView?.showSnippets(SnippetStore(this).entries())
+                else Toast.makeText(this, "機密モードでは定型文を表示しません", Toast.LENGTH_SHORT).show()
             }
             CandidateStripView.ToolAction.PROOFREAD -> startProofreading()
             CandidateStripView.ToolAction.RECONVERT -> {
@@ -990,7 +1011,7 @@ class ZinnaImeService : InputMethodService() {
 
             is KeyAction.MoveCursor -> handleCursorMove(
                 delta = action.delta,
-                adjustSegment = isConverting,
+                adjustSegment = isConverting && (key.center.action is KeyAction.Space || key.center.action is KeyAction.Convert),
             )
 
             is KeyAction.SwitchLayout -> switchLayout(action.layoutId)
@@ -1374,9 +1395,11 @@ class ZinnaImeService : InputMethodService() {
         val special = if (delta < 0) KeyEvent.SpecialKey.LEFT else KeyEvent.SpecialKey.RIGHT
         // In conversion, ordinary arrows move the focused clause. A sideways space flick supplies
         // Shift+Arrow, Mozc's standard command for shrinking/expanding that clause boundary.
-        val state = session.sendSpecialKey(special, shift = adjustSegment)
-        if (state != null && state.hasComposition) {
-            render(state, requestNeural = false)
+        val wasComposing = isComposing
+        val state = if (isComposing) session.sendSpecialKey(special, shift = adjustSegment) else null
+        if (wasComposing) {
+            if (state == null) render(null, requestNeural = false)
+            else if (state.hasComposition) render(state, requestNeural = false)
             return
         }
         // Outside a composition, move the editor caret instead.
@@ -1385,7 +1408,7 @@ class ZinnaImeService : InputMethodService() {
         val start = minOf(extracted.selectionStart, extracted.selectionEnd)
         val end = maxOf(extracted.selectionStart, extracted.selectionEnd)
         val target = if (start != end) { if (delta < 0) start else end }
-            else (start + delta).coerceIn(0, extracted.text?.length ?: 0)
+            else EditorCursor.step(extracted.text?.toString().orEmpty(), start, delta)
         ic.setSelection(extracted.startOffset + target, extracted.startOffset + target)
     }
 
@@ -1445,6 +1468,34 @@ class ZinnaImeService : InputMethodService() {
         segmentBar?.visibility = if (isConverting) View.VISIBLE else View.GONE
         currentSegmentCount = if (state.isConverting) state.segments.size else 0
         val focusedSegment = state.segments.indexOfFirst { it.highlighted }
+        segmentSummary?.apply {
+            removeAllViews()
+            if (state.isConverting) state.segments.forEachIndexed { index, segment ->
+                addView(android.widget.TextView(this@ZinnaImeService).apply {
+                    text = if (segment.highlighted) "【${segment.text}】" else segment.text
+                    textSize = 16f
+                    gravity = Gravity.CENTER
+                    setPadding(16, 0, 16, 0)
+                    setTextColor(theme.candidateTextColor)
+                    setBackgroundColor(if (segment.highlighted) theme.keyColor else android.graphics.Color.TRANSPARENT)
+                    contentDescription = "文節${index + 1} ${segment.text}" + if (segment.highlighted) " 選択中" else ""
+                    setOnClickListener {
+                        if (zenzaiState !== state || !isConverting || focusedSegment < 0) return@setOnClickListener
+                        repeat(kotlin.math.abs(index - focusedSegment)) {
+                            handleCursorMove(if (index < focusedSegment) -1 else 1, adjustSegment = false)
+                        }
+                    }
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (48 * resources.displayMetrics.density).toInt()))
+            }
+            getChildAt(focusedSegment)?.let { selected ->
+                post { if (zenzaiState === state) selected.requestRectangleOnScreen(android.graphics.Rect(0, 0, selected.width, selected.height)) }
+            }
+        }
+        segmentBar?.let { bar ->
+            val controls = bar.getChildAt(1) as? LinearLayout
+            controls?.getChildAt(0)?.isEnabled = focusedSegment > 0
+            controls?.getChildAt(3)?.isEnabled = focusedSegment >= 0 && focusedSegment < state.segments.lastIndex
+        }
         val displayCursor = if (state.isConverting && focusedSegment >= 0)
             state.segments.take(focusedSegment + 1).sumOf { it.text.length }.coerceAtMost(state.preedit.length)
         else state.preeditCursor
