@@ -33,7 +33,15 @@ class ProofreadPromptTest {
         val prompt = ProofreadPrompt.prompt("誤字がある", ProofreadPrompt.Style.FIX)
         assertTrue(prompt.startsWith("<|im_start|>system\n"))
         assertTrue(prompt.contains("\n<|im_start|>user\n誤字がある /no_think<|im_end|>\n<|im_start|>assistant\n"))
-        assertTrue(prompt.endsWith("<|im_start|>assistant\n"))
+    }
+
+    @Test fun qwenPromptHardDisablesThinking() {
+        val prompt = ProofreadPrompt.prompt("本文", ProofreadPrompt.Style.FIX, format = ProofreadPrompt.Format.QWEN)
+        val assistant = prompt.substringAfter("<|im_start|>assistant\n")
+        // A closed, empty thinking block is prefilled so the first token is the answer.
+        assertTrue(assistant.startsWith("<" + "think" + ">"))
+        assertTrue(assistant.contains("<" + "/" + "think" + ">"))
+        assertTrue(prompt.contains("/no_think"))
     }
 
     @Test fun promptCannotBeHijackedThroughUserText() {
@@ -62,8 +70,10 @@ class ProofreadPromptTest {
 
     @Test fun systemInstructionForbidsExplanations() {
         val instruction = ProofreadPrompt.systemInstruction(ProofreadPrompt.Style.FIX, "")
-        assertTrue(instruction.contains("書き換え後の本文だけ"))
-        assertTrue(instruction.contains("翻訳しません"))
+        assertTrue(instruction.contains("本文だけ"))
+        assertTrue(instruction.contains("翻訳"))
+        // Kept short on purpose: the prefill budget matters on a 2048-token context.
+        assertTrue(instruction.length <= 160)
     }
 
     @Test fun extractDropsThinkingBlocksAndControlTokens() {

@@ -55,7 +55,7 @@ internal object ProofreadModelStore {
             bytes = 532517120L,
             sha256 = "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
             license = "Apache-2.0",
-            format = ProofreadPrompt.Format.CHATML,
+            format = ProofreadPrompt.Format.QWEN,
         ),
         Spec(
             id = "qwen3-1.7b-q4_k_m",
@@ -66,7 +66,7 @@ internal object ProofreadModelStore {
             bytes = 1107409472L,
             sha256 = "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
             license = "Apache-2.0",
-            format = ProofreadPrompt.Format.CHATML,
+            format = ProofreadPrompt.Format.QWEN,
         ),
         Spec(
             id = "gemma-4-e2b-it-q4_k_m",

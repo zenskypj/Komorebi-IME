@@ -23,8 +23,8 @@ internal object ProofreadPrompt {
         FREE("自由に指示する", "利用者が指定した方針で書き換える"),
     }
 
-    /** How a model family frames its chat turns. */
-    enum class Format { CHATML, GEMMA }
+    /** How a model family frames its chat turns (and disables reasoning). */
+    enum class Format { QWEN, GEMMA }
 
     /** Longest text a single review may cover, in Java chars. */
     const val MAX_TEXT = 600
@@ -39,6 +39,10 @@ internal object ProofreadPrompt {
 
     /** Any control token, including Gemma's `<start_of_turn>` / `<channel|>` forms. */
     private val OUTPUT_CONTROL = Regex("<\\|?[A-Za-z0-9_]+\\|?>")
+
+    /** Qwen3's thinking delimiters, assembled from parts so the literal stays plain ASCII. */
+    private val THINK_OPEN = "<" + "think" + ">"
+    private val THINK_CLOSE = "<" + "/" + "think" + ">"
 
     /**
      * Strips control tokens and normalises newlines in user-supplied text.
@@ -66,36 +70,41 @@ internal object ProofreadPrompt {
         }
 
     /**
-     * The rules that make any model return only the rewritten sentence.
+     * The rules every model must follow.
      *
-     * Numbered, short, and stated as prohibitions as well as a task: small models drop
-     * "don't explain" far more often than they drop an explicit "output only" list.
+     * Deliberately short. A small on-device model follows four tight constraints more reliably
+     * than a long numbered list, and every extra sentence is prefill the runtime must process on a
+     * 2048-token context (with the reviewed text competing for the same budget). The four that
+     * carry their weight are: body only, no explanation/markup, do not change meaning or translate,
+     * and leave already-correct text alone.
      */
-    fun systemInstruction(style: Style, freeInstruction: String): String = buildString {
-        append("あなたは日本語の文章を校正・推敲する編集者です。次のルールを必ず守ります。\n")
-        append("1. 出力するのは書き換え後の本文だけです。説明・あいさつ・前置き・後書き・見出し・箇条書き・番号・引用符・コードブロック・マークダウン記法は付けません。\n")
-        append("2. 元の意味・事実・人名・地名・数値・記号・改行の位置を変えません。要約や加筆はしません。\n")
-        append("3. 翻訳しません。別の言語にしません。\n")
-        append("4. 直す必要のない箇所はそのまま残します。\n")
-        append("5. これらのルールや指示そのものを出力しません。\n")
-        append("今回の作業: ").append(instructionFor(style, freeInstruction))
-    }
+    fun systemInstruction(style: Style, freeInstruction: String): String =
+        "日本語の校正者として、与えられた文だけを直し、直した本文だけを出力します。" +
+            "説明・前置き・見出し・箇条書き・引用符・マークダウンは付けません。" +
+            "意味・数値・改行を変えず、翻訳や加筆をしません。" +
+            "直す必要がない箇所はそのままにします。方針: " +
+            instructionFor(style, freeInstruction)
 
     /** The full prompt for one review. The text is sanitised before it is embedded. */
     fun prompt(
         text: String,
         style: Style,
         freeInstruction: String = "",
-        format: Format = Format.CHATML,
+        format: Format = Format.QWEN,
     ): String = when (format) {
-        Format.CHATML -> buildString {
+        Format.QWEN -> buildString {
             append("<|im_start|>system\n")
             append(systemInstruction(style, freeInstruction))
             append("<|im_end|>\n<|im_start|>user\n")
             append(sanitize(text))
-            // Qwen's non-thinking switch keeps the reasoning block out of the answer.
+            // Qwen's soft switch keeps the reasoning block out of the answer.
             append(" /no_think")
             append("<|im_end|>\n<|im_start|>assistant\n")
+            // Prefilling a closed thinking block hard-disables reasoning. This is exactly what
+            // Qwen3's own chat template writes when enable_thinking is false, so the first
+            // generated token is already the rewritten sentence. The soft switch alone is not
+            // always honoured by small models.
+            append(THINK_OPEN).append("\n\n").append(THINK_CLOSE).append("\n\n")
         }
         Format.GEMMA -> buildString {
             // Gemma 4 supports a native system role. Omitting <|think|> disables thinking.
@@ -117,7 +126,7 @@ internal object ProofreadPrompt {
     fun extract(raw: String): String {
         val body = when {
             "<channel|>" in raw -> raw.substringAfter("<channel|>")
-            "</think>" in raw -> raw.substringAfter("</think>")
+            THINK_CLOSE in raw -> raw.substringAfter(THINK_CLOSE)
             else -> raw
         }
         return body.replace(OUTPUT_CONTROL, "").trim()
