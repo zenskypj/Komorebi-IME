@@ -15,7 +15,12 @@ import me.zssu.ime.mozc.UserDictionary
 internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     private val app = context.applicationContext
     private val ui = Handler(Looper.getMainLooper())
-    private val worker = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
+    private val worker = ScheduledThreadPoolExecutor(1) { task ->
+        Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            task.run()
+        }, "zenzai-worker")
+    }.apply { removeOnCancelPolicy = true }
     private var pending: ScheduledFuture<*>? = null
     @Volatile private var enabled = false
     @Volatile private var generation = 0L
@@ -75,7 +80,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
                     }
                 }
             }
-        }, 120, TimeUnit.MILLISECONDS)
+        }, 600, TimeUnit.MILLISECONDS)
     }
 
     fun close() {

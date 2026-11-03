@@ -6,6 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SelectionUpdateTest {
+    @Test fun `delayed cursor updates are recognized without hiding current edits`() {
+        assertTrue(SelectionUpdate.isStale(3, 3, 5, 5))
+        assertFalse(SelectionUpdate.isStale(5, 5, 5, 5))
+        assertFalse(SelectionUpdate.isStale(3, 3, -1, -1))
+    }
+
 
     @Test
     fun `preedit cursor is restored relative to composing span start`() {

@@ -19,7 +19,12 @@ internal class ZenzaiTrainer(
     private val publish: (Long, Long) -> Unit,
     private val error: () -> Unit,
 ) {
-    private val worker = ScheduledThreadPoolExecutor(1).apply { removeOnCancelPolicy = true }
+    private val worker = ScheduledThreadPoolExecutor(1) { task ->
+        Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            task.run()
+        }, "zenzai-worker")
+    }.apply { removeOnCancelPolicy = true }
     @Volatile private var enabled = false
     @Volatile private var epoch = 0L
     private var handle = 0L

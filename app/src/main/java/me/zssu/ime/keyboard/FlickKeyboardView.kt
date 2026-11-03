@@ -428,6 +428,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 val index = event.actionIndex
+                onPointerMove(event.getPointerId(index), event.getX(index), event.getY(index))
                 onPointerUp(event.getPointerId(index))
                 if (event.actionMasked == MotionEvent.ACTION_UP) performClick()
             }
@@ -503,8 +504,8 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun resolveDirection(touch: Touch): FlickDirection =
         FlickResolver.resolve(
             key = touch.key.spec,
-            dx = touch.path.peakDx,
-            dy = touch.path.peakDy,
+            dx = touch.path.dx,
+            dy = touch.path.dy,
             thresholdPx = flickThresholdPx,
         )
 

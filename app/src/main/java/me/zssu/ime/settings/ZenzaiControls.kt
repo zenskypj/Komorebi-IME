@@ -31,7 +31,7 @@ internal fun ZenzaiControls() {
         val subscription = ZenzPlusModel.observe(context) { plusState = it }
         onDispose { subscription.close() }
     }
-    val available = ZenzaiEngine.isBundled(context)
+    val available = remember(plusState) { ZenzaiEngine.isBundled(context) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("zenzai-plus（TTT と辞書学習）", style = MaterialTheme.typography.titleMedium)

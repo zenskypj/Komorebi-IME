@@ -78,15 +78,13 @@ class FlickResolverTest {
     }
 
     @Test
-    fun `curved path keeps its farthest intentional excursion`() {
-        val path = FlickResolver.PathTracker(originX = 100f, originY = 100f)
-        path.record(145f, 94f)
-        path.record(132f, 72f)
-        path.record(108f, 92f) // Curves back near the key before release.
-
-        assertEquals(
-            FlickDirection.RIGHT,
-            FlickResolver.resolve(fullKey, path.peakDx, path.peakDy, threshold),
-        )
+    fun `direction follows the latest position including return to center`() {
+        val path = FlickResolver.PathTracker(100f, 100f)
+        path.record(145f, 100f)
+        assertEquals(FlickDirection.RIGHT, FlickResolver.resolve(fullKey, path.dx, path.dy, threshold))
+        path.record(100f, 60f)
+        assertEquals(FlickDirection.UP, FlickResolver.resolve(fullKey, path.dx, path.dy, threshold))
+        path.record(103f, 102f)
+        assertEquals(FlickDirection.CENTER, FlickResolver.resolve(fullKey, path.dx, path.dy, threshold))
     }
 }

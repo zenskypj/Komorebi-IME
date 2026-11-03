@@ -782,6 +782,17 @@ class ZinnaImeService : InputMethodService() {
             return
         }
 
+        // Rapid edits can queue several callbacks. A callback for an older render must not
+        // finish the newer composing span and silently commit its kana.
+        val extracted = currentInputConnection?.getExtractedText(
+            android.view.inputmethod.ExtractedTextRequest(), 0,
+        )
+        if (extracted != null && SelectionUpdate.isStale(
+                newSelStart, newSelEnd,
+                extracted.startOffset + extracted.selectionStart,
+                extracted.startOffset + extracted.selectionEnd,
+            )) return
+
         // Clear the guard first: finishComposingText can synchronously cause another selection
         // callback in some editors.
         isComposing = false
