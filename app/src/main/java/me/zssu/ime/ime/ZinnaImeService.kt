@@ -1176,7 +1176,6 @@ class ZinnaImeService : InputMethodService() {
         val editorInputType = currentInputEditorInfo?.inputType ?: 0
         ProofreadRequest.text = original
         ProofreadRequest.result = null
-        ProofreadRequest.modelManagement = false
         ProofreadRequest.apply = buildProofreadApply(
             original = original,
             wasSelection = selection.isNotEmpty(),

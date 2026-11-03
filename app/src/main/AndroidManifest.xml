@@ -28,6 +28,11 @@
             android:exported="false"
             android:label="AI 文章校正"
             android:theme="@style/Theme.ZinnaIme.Proofread" />
+        <activity
+            android:name=".ime.ProofreadModelActivity"
+            android:exported="false"
+            android:label="AI 文章校正モデル"
+            android:parentActivityName=".settings.SettingsActivity" />
         <activity android:name=".settings.NfcMigrationActivity" android:exported="false" />
         <activity android:name=".settings.MeetsBeamActivity" android:exported="true" android:label="Meets Beam で送る">
             <intent-filter>
