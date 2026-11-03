@@ -199,13 +199,26 @@ class MozcSession(
     /**
      * Opens the conversion candidate list with one user action.
      *
-     * A freshly entered 12-key character is intentionally left open for ゛小゜ modification.
-     * Sending Space directly can therefore spend the first press only closing that table chunk.
-     * Close it explicitly, then send Space so the same press reaches Mozc's Convert command.
+     * A freshly entered 12-key character is intentionally left open for ゛小゜ modification, so the
+     * key sequence starts by closing that chunk and then tries HENKAN (Mozc's Convert command)
+     * before falling back to Space. That way the very first convert press already shows candidates
+     * instead of being spent on the toggle chunk. When nothing is composing only Space is sent, and
+     * an unconsumed result still lets the client insert an ordinary space. See [ConvertKeySequence].
      */
     fun convertOrSpace(): State? {
         stopKeyToggling()
-        return sendSpecialKey(KeyEvent.SpecialKey.SPACE)
+        // HENKAN is only meaningful on the kana planes. On the latin/numeric planes Space must stay
+        // Space — Mozc commits the alphanumeric composition and inserts a space — so the
+        // convert-first sequence is reserved for Japanese.
+        val japanese = currentStyle?.fullWidthSpace == true
+        val keys = ConvertKeySequence.order(japanese && currentPreeditText.isNotEmpty())
+        var last: State? = null
+        for (key in keys) {
+            last = sendSpecialKey(key)
+            if (ConvertKeySequence.reachedConversion(last)) return last
+            if (!ConvertKeySequence.canRetry(last)) break
+        }
+        return last
     }
 
     /**

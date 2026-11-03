@@ -3,17 +3,24 @@ package me.zssu.ime.ime
 import android.content.Context
 import android.content.ClipboardManager
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
 import android.graphics.Color
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.BackgroundColorSpan
 import android.text.style.UnderlineSpan
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.view.Gravity
 import android.widget.Toast
@@ -128,6 +135,11 @@ class ZinnaImeService : InputMethodService() {
     private var ownSelectionUpdatePending = false
     private var editorStateUpdateInProgress = false
     private var editorSelectionUpdateObserved = false
+
+    /** Used to retry applying a proofreading result once the editor connection comes back up. */
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+    private var proofreadApplyAttempts = 0
+    private val proofreadApplyRetry = Runnable { tryApplyProofreadResult() }
 
     /** [ImeSettings.revision] the current input view was built from. */
     private var builtFromRevision = Int.MIN_VALUE
@@ -391,6 +403,33 @@ class ZinnaImeService : InputMethodService() {
             0
         }
 
+        // Sits outside the horizontally scrolling strip so the tool menu stays reachable while a
+        // conversion candidate list is showing — the strip scrolls, this button never does.
+        val menuButton = ImageButton(this).apply {
+            setImageResource(R.drawable.ic_tool_menu)
+            imageTintList = ColorStateList.valueOf(this@ZinnaImeService.theme.candidateTextColor)
+            contentDescription = "ツールメニュー"
+            background = null
+            val padding = (12 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setOnClickListener {
+                if (this@ZinnaImeService.theme.hapticFeedback) {
+                    it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+                // Closing the menu returns to whatever was on screen — usually the candidates a
+                // conversion just produced — rather than dropping the user on the tool icons.
+                candidates.showMenu {
+                    if (lastCandidates.isNotEmpty()) {
+                        candidates.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+                    } else {
+                        candidates.showTools()
+                    }
+                }
+            }
+        }
+        val menuButtonWidth = (44 * resources.displayMetrics.density).toInt()
+
         val keyboard = FlickKeyboardView(this).apply {
             theme = this@ZinnaImeService.theme
             layout = loaded?.let(::adaptLayoutForStyle)
@@ -399,7 +438,10 @@ class ZinnaImeService : InputMethodService() {
             listener = FlickKeyboardView.OnKeyOutputListener(::onKeyOutput)
         }
 
-        candidates.onPanelExpanded = { expanded -> keyboard.visibility = if (expanded) View.GONE else View.VISIBLE }
+        candidates.onPanelExpanded = { expanded ->
+            keyboard.visibility = if (expanded) View.GONE else View.VISIBLE
+            menuButton.visibility = if (expanded) View.GONE else View.VISIBLE
+        }
         candidates.onEditCommand = ::handleEditCommand
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -425,6 +467,7 @@ class ZinnaImeService : InputMethodService() {
         }
         val candidateRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            addView(menuButton, LinearLayout.LayoutParams(menuButtonWidth, stripHeight))
             addView(candidates, LinearLayout.LayoutParams(0, stripHeight, 1f))
         }
         content.addView(candidateRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
@@ -707,11 +750,7 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        ProofreadRequest.result?.let { result ->
-            val applied = ProofreadRequest.apply?.invoke(result) == true
-            ProofreadRequest.clear()
-            if (!applied) Toast.makeText(this, "入力欄が変わったため校正結果を適用できませんでした", Toast.LENGTH_LONG).show()
-        }
+        tryApplyProofreadResult()
         editAnchor = null
         priorityCandidates.invalidate()
         refreshZenzai()
@@ -885,6 +924,7 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onDestroy() {
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
+        mainHandler.removeCallbacks(proofreadApplyRetry)
         zenzai.close()
         clipboardManager?.removePrimaryClipChangedListener(clipboardListener)
         clipboardManager = null
@@ -1105,12 +1145,14 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun startProofreading() {
-        if (fieldPolicy.incognito || (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0) {
-            Toast.makeText(this, "この入力欄では校正を利用できません", Toast.LENGTH_SHORT).show(); return
+        if (fieldPolicy.incognito ||
+            (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0) {
+            Toast.makeText(this, "この入力欄ではAI文章校正を利用できません", Toast.LENGTH_SHORT).show()
+            return
         }
-        val ic = currentInputConnection ?: return
+        val ic = currentInputConnection
         if (isComposing) {
-            ic.finishComposingText()
+            ic?.finishComposingText()
             session.resetContext()
             isComposing = false
             isConverting = false
@@ -1118,41 +1160,168 @@ class ZinnaImeService : InputMethodService() {
             segmentBar?.visibility = View.GONE
             candidateView?.clear()
         }
-        val selection = ic.getSelectedText(0)?.toString().orEmpty()
-        val original = if (selection.isNotEmpty()) selection else ic.getTextBeforeCursor(600, 0)?.toString().orEmpty()
-        if (original.isBlank() || original.length > 600) { Toast.makeText(this, "校正する文章を選択してください（600文字以内）", Toast.LENGTH_SHORT).show(); return }
+        val selection = runCatching { ic?.getSelectedText(0)?.toString() }.getOrNull().orEmpty()
+        val beforeCursor = runCatching {
+            ic?.getTextBeforeCursor(ProofreadPrompt.MAX_TEXT, 0)?.toString()
+        }.getOrNull().orEmpty()
+        val original = if (selection.isNotEmpty()) selection else beforeCursor
+        // Grab whatever text is available, but always open the screen: with an empty field the user
+        // can type the text by hand, so the button never looks dead just because nothing was
+        // selected.
+        if (ic == null) {
+            Toast.makeText(this, "この入力欄を読み取れません。校正画面で直接入力できます", Toast.LENGTH_SHORT).show()
+        }
         val editorPackage = currentInputEditorInfo?.packageName
-        val editorFieldId = currentInputEditorInfo?.fieldId
-        val editorInputType = currentInputEditorInfo?.inputType
+        val editorFieldId = currentInputEditorInfo?.fieldId ?: 0
+        val editorInputType = currentInputEditorInfo?.inputType ?: 0
         ProofreadRequest.text = original
         ProofreadRequest.result = null
-        ProofreadRequest.apply = { replacement ->
-            val target = currentInputConnection
-            if (target == null || currentInputEditorInfo?.packageName != editorPackage || currentInputEditorInfo?.fieldId != editorFieldId || currentInputEditorInfo?.inputType != editorInputType) false
-            else if (selection.isNotEmpty()) {
-                if (!ProofreadApply.matches(original, true, target.getSelectedText(0)?.toString(), null)) false else target.commitText(replacement, 1)
-            } else {
-                if (!ProofreadApply.matches(original, false, target.getSelectedText(0)?.toString(), target.getTextBeforeCursor(original.length, 0)?.toString())) false
-                else {
-                    val extracted = target.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)
-                    if (extracted == null || extracted.selectionStart != extracted.selectionEnd) false
-                    else {
-                        val cursor = extracted.startOffset + extracted.selectionEnd
-                        if (cursor < original.length) false else {
-                            target.beginBatchEdit()
-                            try {
-                                if (!target.setSelection(cursor - original.length, cursor)) false
-                                else if (target.getSelectedText(0)?.toString() != original) {
-                                    target.setSelection(cursor, cursor); false
-                                } else if (target.commitText(replacement, 1)) true
-                                else { target.setSelection(cursor, cursor); false }
-                            } finally { target.endBatchEdit() }
-                        }
-                    }
-                }
-            }
+        ProofreadRequest.modelManagement = false
+        ProofreadRequest.apply = buildProofreadApply(
+            original = original,
+            wasSelection = selection.isNotEmpty(),
+            editorPackage = editorPackage,
+            editorFieldId = editorFieldId,
+            editorInputType = editorInputType,
+        )
+        startProofreadActivity()
+    }
+
+    private fun startProofreadActivity() {
+        startActivity(
+            Intent(this, ProofreadActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            )
+        )
+    }
+
+    /**
+     * The closure the proofreading screen calls to apply its result.
+     *
+     * It re-checks the editor identity (package, field id, input type) and the reviewed text
+     * against the live editor, so a result can never land in a different field or overwrite text
+     * that changed while the screen was open. A throwing connection is contained by the caller.
+     */
+    private fun buildProofreadApply(
+        original: String,
+        wasSelection: Boolean,
+        editorPackage: String?,
+        editorFieldId: Int,
+        editorInputType: Int,
+    ): (String) -> Boolean = { replacement ->
+        val ic = currentInputConnection
+        if (ic == null ||
+            currentInputEditorInfo?.packageName != editorPackage ||
+            currentInputEditorInfo?.fieldId != editorFieldId ||
+            currentInputEditorInfo?.inputType != editorInputType
+        ) {
+            false
+        } else if (wasSelection) {
+            selectedText(ic) == original && ic.commitText(replacement, 1)
+        } else if (original.isEmpty()) {
+            // Nothing could be captured, so the user typed the text by hand; there is nothing to
+            // verify against, and the result belongs at the caret.
+            ic.commitText(replacement, 1)
+        } else {
+            replaceBeforeCursor(ic, original, replacement)
         }
-        startActivity(Intent(this, ProofreadActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS))
+    }
+
+    private fun selectedText(ic: InputConnection): String? =
+        runCatching { ic.getSelectedText(0)?.toString() }.getOrNull()
+
+    /**
+     * Replaces the reviewed text that still sits immediately before the caret.
+     *
+     * The preceding text is confirmed through every source the editor offers before anything is
+     * written, and the replacement then re-selects exactly that span so a mismatch can still be
+     * caught and aborted. If no source corroborates the original, nothing is touched.
+     */
+    private fun replaceBeforeCursor(ic: InputConnection, original: String, replacement: String): Boolean {
+        if (original.isEmpty()) return false
+        val before = runCatching { ic.getTextBeforeCursor(original.length, 0)?.toString() }.getOrNull()
+        val extracted = runCatching {
+            ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)
+        }.getOrNull()
+        val collapsed = extracted == null || extracted.selectionStart == extracted.selectionEnd
+        if (!collapsed) return false
+        val extractedBefore = extracted?.let { e ->
+            val text = e.text ?: return@let null
+            text.substring(0, e.selectionEnd.coerceIn(0, text.length))
+        }
+        val surroundingBefore = surroundingBeforeCursor(ic, original.length)
+        if (!ProofreadApply.beforeCursorMatches(original, before, extractedBefore, surroundingBefore)) return false
+        val cursor = extracted?.let { it.startOffset + it.selectionEnd }
+        if (cursor != null && cursor >= original.length) {
+            return replaceBySelection(ic, cursor, original, replacement)
+        }
+        // No absolute anchor was available, so delete the verified prefix and commit in one batch.
+        return runCatching {
+            ic.beginBatchEdit()
+            try {
+                if (!ic.deleteSurroundingText(original.length, 0)) false
+                else { ic.commitText(replacement, 1); true }
+            } finally { ic.endBatchEdit() }
+        }.getOrDefault(false)
+    }
+
+    private fun replaceBySelection(ic: InputConnection, cursor: Int, original: String, replacement: String): Boolean =
+        runCatching {
+            ic.beginBatchEdit()
+            try {
+                if (!ic.setSelection(cursor - original.length, cursor)) {
+                    false
+                } else if (selectedText(ic) != original) {
+                    ic.setSelection(cursor, cursor); false
+                } else if (ic.commitText(replacement, 1)) {
+                    true
+                } else {
+                    ic.setSelection(cursor, cursor); false
+                }
+            } finally { ic.endBatchEdit() }
+        }.getOrDefault(false)
+
+    /**
+     * Text before the caret from the API 31+ surrounding-text API.
+     *
+     * WebView and a few OEM connections answer getTextBeforeCursor with null while still exposing
+     * surrounding text, so this is the last source consulted before giving up.
+     */
+    private fun surroundingBeforeCursor(ic: InputConnection, length: Int): String? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return null
+        val surrounding = runCatching { ic.getSurroundingText(length, 0, 0) }.getOrNull() ?: return null
+        val text = surrounding.text?.toString() ?: return null
+        return text.substring(0, surrounding.selectionStart.coerceIn(0, text.length))
+    }
+
+    /**
+     * Applies a result handed back by the proofreading screen once the editor is ready.
+     *
+     * Returning from an Activity does not guarantee [currentInputConnection] is live yet, so a
+     * missing connection is retried briefly rather than dropping the result. The apply closure
+     * re-verifies the target itself, and a hostile or throwing InputConnection is contained so the
+     * IME stays up.
+     */
+    private fun tryApplyProofreadResult() {
+        val result = ProofreadRequest.result ?: return
+        val apply = ProofreadRequest.apply
+        if (apply == null) { ProofreadRequest.clear(); return }
+        if (currentInputConnection == null && proofreadApplyAttempts < PROOFREAD_APPLY_MAX_ATTEMPTS) {
+            proofreadApplyAttempts++
+            mainHandler.postDelayed(proofreadApplyRetry, PROOFREAD_APPLY_RETRY_MS)
+            return
+        }
+        val applied = runCatching { apply(result) }.getOrDefault(false)
+        ProofreadRequest.clear()
+        proofreadApplyAttempts = 0
+        Toast.makeText(
+            this,
+            if (applied) "校正結果を適用しました"
+            else "入力欄の文章が変わったため適用できませんでした。コピーをご利用ください",
+            Toast.LENGTH_LONG,
+        ).show()
     }
 
     private fun handleEditCommand(command: String) {
@@ -1628,6 +1797,10 @@ class ZinnaImeService : InputMethodService() {
         private const val KARUKAN_CONTEXT_CHARS = 320
         private const val KARUKAN_CONTEXT_WINDOW_CHARS = 192
         private const val KARUKAN_CANDIDATE_COUNT = 5
+
+        /** How long to wait for the editor connection to return before applying a proofread result. */
+        private const val PROOFREAD_APPLY_MAX_ATTEMPTS = 25
+        private const val PROOFREAD_APPLY_RETRY_MS = 40L
         private val CONVERSION_RANGE_COLOR = Color.argb(72, 255, 152, 0)
         private val CONVERSION_FOCUSED_COLOR = Color.argb(184, 255, 122, 0)
     }

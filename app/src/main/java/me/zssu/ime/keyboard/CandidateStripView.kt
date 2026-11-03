@@ -75,6 +75,31 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     private var normalHeight = 0
     private var emojiPanel: View? = null
 
+    /**
+     * What to draw when the tool menu is closed, if it was opened over something else.
+     *
+     * The host installs this when the menu is opened from the always-visible bar button so a menu
+     * opened during conversion returns to the candidate list instead of dumping the user on the
+     * tool icons. Null means "no previous view": the menu closes back to the default toolbar.
+     */
+    private var restoreAfterMenu: (() -> Unit)? = null
+
+    /**
+     * Opens the tool menu from outside the scrolling strip (the fixed bar button).
+     *
+     * [restore] is invoked instead of the default toolbar when the menu is closed.
+     */
+    fun showMenu(restore: (() -> Unit)? = null) {
+        restoreAfterMenu = restore
+        showToolMenu()
+    }
+
+    private fun closeToolMenu() {
+        val restore = restoreAfterMenu
+        restoreAfterMenu = null
+        if (restore != null) restore() else showTools()
+    }
+
     private fun resizeEmojiPanel(viewportWidth: Int) {
         val panel = emojiPanel ?: return
         if (panel.parent !== container || viewportWidth <= 0) return
@@ -282,7 +307,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         container.removeAllViews()
         setContainerFillWidth(true)
         scrollTo(0, 0)
-        container.addView(iconButton(R.drawable.ic_tool_menu, "ツールメニュー", true) { showToolMenu() })
+        // The menu button itself lives in the fixed bar beside this strip (see the host), so it
+        // stays reachable while conversion candidates are showing. Only the tools live in here.
         val visibleTools = toolOrder().filter {
             toolPrefs.getBoolean("visible_" + it.name, true) &&
                 (it != ToolAction.MEETS_BEAM || me.zssu.ime.settings.MeetsBeamSettings.enabled(context))
@@ -309,7 +335,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             setPadding(dp(8), 0, dp(8), dp(4))
         }
         val header = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() }, LinearLayout.LayoutParams(dp(40), dp(36)))
+        header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { closeToolMenu() }, LinearLayout.LayoutParams(dp(40), dp(36)))
         header.addView(TextView(context).apply {
             text = if (editing) "先頭5件を上部に表示" else "ツール"
             textSize = 13f; setTextColor(theme.candidateTextColor); gravity = Gravity.CENTER_VERTICAL

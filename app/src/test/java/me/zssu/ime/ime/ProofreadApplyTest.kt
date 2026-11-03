@@ -16,4 +16,20 @@ class ProofreadApplyTest {
         assertFalse(ProofreadApply.matches("原文", false, "選択", "原文"))
         assertFalse(ProofreadApply.matches("原文", false, null, null))
     }
+
+    @Test fun beforeCursorAcceptsAnyReliableSource() {
+        // getTextBeforeCursor alone is enough when present.
+        assertTrue(ProofreadApply.beforeCursorMatches("誤字", "誤字", null, null))
+        // WebView returns null there; ExtractedText carries the same evidence.
+        assertTrue(ProofreadApply.beforeCursorMatches("誤字", null, "前の文誤字", null))
+        // Android 12+ SurroundingText is the last resort.
+        assertTrue(ProofreadApply.beforeCursorMatches("誤字", null, null, "前の文誤字"))
+    }
+
+    @Test fun beforeCursorRefusesWhenNoSourceStillMatches() {
+        assertFalse(ProofreadApply.beforeCursorMatches("誤字", "文字", null, null))
+        assertFalse(ProofreadApply.beforeCursorMatches("誤字", null, null, null))
+        // Empty original is never a valid target: there is nothing to verify against.
+        assertFalse(ProofreadApply.beforeCursorMatches("", "", "", ""))
+    }
 }

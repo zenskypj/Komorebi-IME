@@ -163,6 +163,17 @@ private fun SettingsScreen() {
                 onClick = { context.startActivity(Intent(context, EngineDictActivity::class.java)) },
             )
             SettingsListItem(
+                icon = Icons.Filled.AutoAwesome,
+                title = "AI 文章校正モデル",
+                subtitle = "Qwen3 校正モデルの取得・削除。zenzai-plus（変換用）とは別です",
+                onClick = {
+                    // Fresh state every time: this entry only manages the model.
+                    me.zssu.ime.ime.ProofreadRequest.clear()
+                    me.zssu.ime.ime.ProofreadRequest.modelManagement = true
+                    context.startActivity(Intent(context, me.zssu.ime.ime.ProofreadActivity::class.java))
+                },
+            )
+            SettingsListItem(
                 icon = Icons.Filled.TouchApp,
                 title = "入力方式",
                 subtitle = "フリック・QWERTY・ガイド表示の設定",

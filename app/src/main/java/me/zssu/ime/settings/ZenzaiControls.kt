@@ -59,11 +59,25 @@ internal fun ZenzaiControls() {
                 }
             }
 
+            val modelReady = plusState is ZenzPlusModel.State.Ready
+            val canEnable = available && modelReady
             Text("zenzai-plus 変換を使用")
-            Switch(checked = enabled && available, enabled = available, onCheckedChange = {
+            Switch(checked = enabled && canEnable, enabled = canEnable, onCheckedChange = {
                 enabled = it; settings.zenzaiPlusEnabled = it
             })
-            if (enabled && available) {
+            if (!canEnable) {
+                // Say why the switch is dead instead of leaving it silently unresponsive.
+                Text(
+                    if (!available) {
+                        "この端末では zenzai-plus の学習ランタイムを利用できません。"
+                    } else {
+                        "上のモデルをダウンロードすると有効にできます。"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (enabled && canEnable) {
                 Text("文節の区切りと候補選択には Mozc を使用します。")
                 var autoLearning by remember { mutableStateOf(prefs.getBoolean("zenzai_auto_learning_enabled", true)) }
                 Text("入力から自動学習（確定した読み・表記と直前の文脈）")

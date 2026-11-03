@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.ZinnaIme" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+      The proofreading screen is a bottom-anchored floating window rather than a full-screen
+      activity: it sits above the editor as a compact panel so the text being corrected stays
+      visible behind it. The transparent window background lets the panel's own rounded surface
+      and the dim scrim show through.
+    -->
+    <style name="Theme.ZinnaIme.Proofread" parent="Theme.ZinnaIme">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>
