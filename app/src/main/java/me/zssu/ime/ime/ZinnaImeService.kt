@@ -111,6 +111,10 @@ class ZinnaImeService : InputMethodService() {
     private var lastCandidates: List<MozcSession.Candidate> = emptyList()
     private var lastFocusedCandidateIndex: Int = -1
     private var karukanConversionActive = false
+    private var karukanSuggestionPending: Runnable? = null
+    private var karukanSuggestionActive = false
+    private var karukanSuggestionCandidate: MozcSession.Candidate? = null
+    private var zenzaiFallbackPending: Runnable? = null
     private var karukanReading = ""
 
     /**
@@ -946,6 +950,7 @@ class ZinnaImeService : InputMethodService() {
     override fun onDestroy() {
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
         mainHandler.removeCallbacks(proofreadApplyRetry)
+        cancelKarukanSuggestions()
         zenzai.close()
         clipboardManager?.removePrimaryClipChangedListener(clipboardListener)
         clipboardManager = null
@@ -1448,6 +1453,7 @@ class ZinnaImeService : InputMethodService() {
             return
         }
 
+        cancelKarukanSuggestions()
         zenzai.cancel()
         zenzaiCandidate = null
         if (state.committedText.isNotEmpty() && !suppressPartialLearning && !fieldPolicy.incognito &&
@@ -1618,22 +1624,75 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun requestZenzai(state: MozcSession.State) {
-        if (state.isConverting || !ZenzaiConversion.canConvert(session.zenzaiEnabled, state.hasComposition,
-                layout?.inputStyle?.fullWidthSpace == true, fieldPolicy.incognito)) return
+        if (state.isConverting || !state.hasComposition || layout?.inputStyle?.fullWidthSpace != true || fieldPolicy.incognito) return
         val reading = state.preeditReading
         val preceding = session.clientContext?.precedingText.orEmpty()
-        val prompt = ZenzaiConversion.prompt(reading, preceding) ?: return
-        val registered = zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
-            .map { MozcSession.Candidate(-100, it.word, directCommit = true) }
+        val prompt = if (session.zenzaiEnabled) ZenzaiConversion.prompt(reading, preceding) else null
+        val registered = if (prompt != null) zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
+            .map { MozcSession.Candidate(-100, it.word, directCommit = true) } else emptyList()
         val base = (registered + state.candidates).distinctBy { it.text }
-        candidateView?.setCandidates(base, state.focusedCandidateIndex)
-        zenzai.request(prompt) { candidate ->
-            if (zenzaiState !== state || !isComposing) return@request
-            zenzaiCandidate = candidate
-            lastCandidates = ZenzaiConversion.candidates(base, candidate)
-            lastFocusedCandidateIndex = 0
-            candidateView?.setCandidates(lastCandidates, 0)
+        var neural: MozcSession.Candidate? = null
+        var karukan: List<MozcSession.Candidate> = emptyList()
+        fun publish() {
+            if (zenzaiState !== state || !isComposing || isConverting) return
+            val combined = (karukan + base).distinctBy { it.text }
+            karukanSuggestionCandidate = karukan.firstOrNull()
+            lastCandidates = neural?.let { ZenzaiConversion.candidates(combined, it) } ?: combined
+            lastFocusedCandidateIndex = if (neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
+            candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex)
         }
+        fun fallback() {
+            zenzaiFallbackPending?.let { mainHandler.removeCallbacks(it) }
+            zenzaiFallbackPending = null
+            if (!canUseKarukan(aiCandidateAvailable = false)) return
+            requestKarukanSuggestions(state) { candidates ->
+                karukan = candidates.mapIndexed { index, value -> MozcSession.Candidate(-20_000 - index, value, inputReading = reading, directCommit = true) }
+                publish()
+            }
+        }
+        publish()
+        if (prompt == null) { fallback(); return }
+        if (settings.conversionEngine == ImeSettings.ConversionEngine.KARUKAN) fallback()
+        else if (settings.conversionEngine == ImeSettings.ConversionEngine.AUTO) {
+            val timeout = Runnable { if (zenzaiState === state && neural == null) fallback() }
+            zenzaiFallbackPending = timeout
+            mainHandler.postDelayed(timeout, 1500)
+        }
+        zenzai.request(prompt, onUnavailable = { if (zenzaiState === state) fallback() }) { candidate ->
+            if (zenzaiState !== state || !isComposing) return@request
+            zenzaiFallbackPending?.let { mainHandler.removeCallbacks(it) }
+            zenzaiFallbackPending = null
+            neural = candidate
+            zenzaiCandidate = candidate
+            publish()
+        }
+    }
+
+    private fun requestKarukanSuggestions(state: MozcSession.State, onResult: (List<String>) -> Unit) {
+        // Keep the same Japanese-reading eligibility as zenzai; don't infer over unfinished Latin text.
+        if (ZenzaiConversion.prompt(state.preeditReading, "") == null) return
+        if (karukanSuggestionPending != null || karukanSuggestionActive) return
+        val pending = Runnable {
+            karukanSuggestionPending = null
+            if (zenzaiState !== state || !isComposing || isConverting || !canUseKarukan(false)) return@Runnable
+            karukanSuggestionActive = true
+            karukanEngine.convert(state.preeditReading, KarukanContextWindow.extract(session.clientContext?.precedingText.orEmpty(), state.preeditReading, KARUKAN_CONTEXT_WINDOW_CHARS), KARUKAN_CANDIDATE_COUNT) { result ->
+                karukanSuggestionActive = false
+                if (zenzaiState === state && isComposing && !isConverting && result is KarukanEngine.Result.Success) onResult(result.candidates)
+            }
+        }
+        karukanSuggestionPending = pending
+        mainHandler.postDelayed(pending, 600)
+    }
+
+    private fun cancelKarukanSuggestions() {
+        zenzaiFallbackPending?.let { mainHandler.removeCallbacks(it) }
+        zenzaiFallbackPending = null
+        karukanSuggestionCandidate = null
+        karukanSuggestionPending?.let { mainHandler.removeCallbacks(it) }
+        karukanSuggestionPending = null
+        if (karukanSuggestionActive) karukanEngine.invalidate()
+        karukanSuggestionActive = false
     }
 
     /**
@@ -1658,22 +1717,24 @@ class ZinnaImeService : InputMethodService() {
         candidateView?.clear()
     }
 
-    private fun shouldUseKarukan(): Boolean =
-        !settings.zenzaiPlusEnabled && activeProfile?.neuralEnabled != false &&
-        layout?.inputStyle?.fullWidthSpace == true &&
-        isComposing && !isConverting &&
-            !fieldPolicy.incognito &&
-            settings.conversionEngine == ImeSettings.ConversionEngine.KARUKAN &&
-            KarukanModelStore.files(this).ready &&
-            karukanEngine.isNativeAvailable
+    private fun canUseKarukan(aiCandidateAvailable: Boolean): Boolean = KarukanFallbackPolicy.shouldUse(
+        mode = settings.conversionEngine,
+        ready = KarukanModelStore.files(this).ready && karukanEngine.isNativeAvailable,
+        permitted = activeProfile?.neuralEnabled != false && layout?.inputStyle?.fullWidthSpace == true && !fieldPolicy.incognito &&
+            (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0,
+        aiCandidateAvailable = aiCandidateAvailable,
+    )
+
+    private fun shouldUseKarukan(): Boolean = isComposing && !isConverting &&
+        canUseKarukan(session.zenzaiEnabled && zenzaiCandidate != null)
 
     /**
      * Runs only explicit conversion through Karukan. Mozc continues to own the flick/12-key
      * composition, so dakuten, small kana, cursor editing and every fallback remain dependable.
      */
     private fun startKarukanConversion() {
-        val stopped = session.stopKeyToggling()
-        if (stopped != null) render(stopped)
+        // convertOrSpace owns stopping the toggle and opening the first candidate. Doing it
+        // here as well can open conversion early and make that call advance to candidate two.
         val reading = session.currentPreedit()
         if (reading.isEmpty()) {
             handleMozcSpace()
@@ -1748,7 +1809,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun submitCurrentComposition() {
-        zenzaiCandidate?.takeIf { isComposing }?.let { render(session.selectCandidate(it)); return }
+        (zenzaiCandidate ?: karukanSuggestionCandidate)?.takeIf { isComposing }?.let { render(session.selectCandidate(it)); return }
         if (karukanConversionActive) {
             val candidate = lastCandidates.getOrNull(lastFocusedCandidateIndex)
                 ?: lastCandidates.firstOrNull()
@@ -1767,6 +1828,7 @@ class ZinnaImeService : InputMethodService() {
         clearReading: Boolean = true,
         revertMozc: Boolean = true,
     ) {
+        cancelKarukanSuggestions()
         // Hybrid conversion leaves Mozc's baseline candidate window open behind the neural UI.
         // Before ordinary typing/backspace, restore the literal reading so Mozc cannot commit its
         // focused candidate as a side effect of handling the new key.

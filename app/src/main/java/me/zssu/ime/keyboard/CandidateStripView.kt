@@ -33,7 +33,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { SNIPPETS, CLIPBOARD, EMOJI, ONE_HAND_CYCLE, SETTINGS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, PROOFREAD }
+    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -341,8 +341,15 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         val header = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
         header.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { closeToolMenu() }, LinearLayout.LayoutParams(dp(40), dp(36)))
         header.addView(TextView(context).apply {
-            text = if (editing) "先頭5件を上部に表示" else "ツール"
+            text = if (editing) "標準順に戻す" else "ツール"
             textSize = 13f; setTextColor(theme.candidateTextColor); gravity = Gravity.CENTER_VERTICAL
+            if (editing) setOnClickListener {
+                toolPrefs.edit().apply {
+                    remove("order")
+                    ToolAction.entries.forEach { remove("visible_" + it.name) }
+                }.apply()
+                showToolMenu(true)
+            }
         }, LinearLayout.LayoutParams(0, dp(36), 1f))
         header.addView(TextView(context).apply {
             text = if (editing) "完了" else "編集"
@@ -394,12 +401,16 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
                 }
             }
             grid.addView(tile, android.widget.GridLayout.LayoutParams().apply {
-                width = 0; height = dp(40)
+                width = 0; height = dp(48)
                 columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
                 setMargins(dp(3), dp(3), dp(3), dp(3))
             })
         }
-        panel.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        val menuScroll = android.widget.ScrollView(context).apply {
+            isFillViewport = true
+            addView(grid)
+        }
+        panel.addView(menuScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         emojiPanel = panel
         container.addView(panel, LinearLayout.LayoutParams(width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
     }

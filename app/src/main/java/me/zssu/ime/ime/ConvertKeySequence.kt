@@ -20,6 +20,32 @@ internal object ConvertKeySequence {
             listOf(KeyEvent.SpecialKey.SPACE)
         }
 
+    /** The first press opens on candidate zero; later presses advance exactly once. */
+    fun convert(
+        composing: Boolean,
+        wasConverting: Boolean,
+        stop: () -> MozcSession.State?,
+        send: (KeyEvent.SpecialKey) -> MozcSession.State?,
+        highlight: (Int) -> MozcSession.State?,
+    ): MozcSession.State? {
+        fun first(state: MozcSession.State): MozcSession.State {
+            if (wasConverting || !state.isConverting || state.focusedCandidateIndex == 0) return state
+            val candidate = state.candidates.firstOrNull()?.takeUnless { it.directCommit } ?: return state
+            return highlight(candidate.id) ?: state
+        }
+        val stopped = stop()
+        if (!stopped?.committedText.isNullOrEmpty()) return stopped
+        if (!wasConverting && reachedConversion(stopped)) return first(stopped!!)
+        var last: MozcSession.State? = stopped
+        val keys = if (wasConverting) listOf(KeyEvent.SpecialKey.SPACE) else order(composing)
+        for (key in keys) {
+            last = send(key)
+            if (reachedConversion(last)) return first(last!!)
+            if (!canRetry(last)) break
+        }
+        return last
+    }
+
     /** True once Mozc has actually opened a conversion, which is what we were trying to reach. */
     fun reachedConversion(state: MozcSession.State?): Boolean = state?.isConverting == true
 

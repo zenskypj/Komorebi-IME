@@ -49,7 +49,9 @@ class KarukanEngine(context: Context) : Closeable {
         callback: (Result) -> Unit,
     ): Long {
         val generation = invalidate()
+        if (closed.get()) return generation
         executor.execute {
+            if (closed.get() || generation != latestGeneration.get()) return@execute
             val result = runCatching {
                 check(KarukanNative.isAvailable) { "この端末のCPUではKarukanを利用できません" }
                 val files = KarukanModelStore.files(appContext)
@@ -70,6 +72,7 @@ class KarukanEngine(context: Context) : Closeable {
                     check(handle != 0L) { "Karukanモデルを読み込めませんでした" }
                     loadedFingerprint = fingerprint
                 }
+                if (closed.get() || generation != latestGeneration.get()) return@execute
                 KarukanNative.nativeConvert(
                     handle,
                     reading,

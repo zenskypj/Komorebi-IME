@@ -104,8 +104,17 @@ private fun EngineDictScreen() {
                         Text("変換エンジン", style = MaterialTheme.typography.titleMedium)
                     }
                     EngineChoice(
+                        title = "自動（おすすめ）",
+                        subtitle = "AI候補がないときは導入済みKarukanを使用。未導入ならMozc",
+                        selected = engine == ImeSettings.ConversionEngine.AUTO,
+                        onClick = {
+                            engine = ImeSettings.ConversionEngine.AUTO
+                            settings.conversionEngine = engine
+                        },
+                    )
+                    EngineChoice(
                         title = "Mozc",
-                        subtitle = "高速・省電力。端末内の辞書と学習履歴で変換",
+                        subtitle = "Karukanを使用せず、端末内の辞書と学習履歴で変換",
                         selected = engine == ImeSettings.ConversionEngine.MOZC,
                         onClick = {
                             engine = ImeSettings.ConversionEngine.MOZC
@@ -114,7 +123,7 @@ private fun EngineDictScreen() {
                     )
                     EngineChoice(
                         title = "Karukan ニューラル変換（実験的）",
-                        subtitle = "文脈を考慮した高精度変換。明示変換時のみ端末内AIを使用",
+                        subtitle = "AI有効時もKarukan候補を生成。変換キーでもKarukanを使用",
                         selected = engine == ImeSettings.ConversionEngine.KARUKAN,
                         enabled = modelState is KarukanModelManager.State.Installed &&
                             KarukanPlatform.isSupported,
@@ -288,6 +297,8 @@ private fun describeEngine(
         selected == ImeSettings.ConversionEngine.KARUKAN &&
             modelState is KarukanModelManager.State.Installed ->
             "Karukan変換 / 端末内推論 / Mozcかな入力"
+        selected == ImeSettings.ConversionEngine.AUTO && modelState is KarukanModelManager.State.Installed ->
+            "自動 / AI候補がないときはKarukan / Mozcかな入力"
         else -> "Mozc / オフライン動作中 / 辞書 v${engine.dataVersion.ifEmpty { "unknown" }}"
     }
 }

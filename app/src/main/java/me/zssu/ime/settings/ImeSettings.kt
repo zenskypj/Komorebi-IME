@@ -22,7 +22,7 @@ class ImeSettings(context: Context) {
 
     enum class OneHandMode { OFF, LEFT, RIGHT }
     enum class FlickInputMode { FLICK_ONLY, FLICK_AND_TOGGLE }
-    enum class ConversionEngine { MOZC, KARUKAN }
+    enum class ConversionEngine { AUTO, MOZC, KARUKAN }
     var zenzaiPlusEnabled: Boolean
         get() = prefs.getBoolean("zenzai_plus_enabled", false)
         set(value) { prefs.edit().putBoolean("zenzai_plus_enabled", value).apply(); bumpRevision() }
@@ -236,9 +236,9 @@ class ImeSettings(context: Context) {
     var conversionEngine: ConversionEngine
         get() = runCatching {
             ConversionEngine.valueOf(
-                prefs.getString(KEY_CONVERSION_ENGINE, ConversionEngine.MOZC.name)!!
+                prefs.getString(KEY_CONVERSION_ENGINE, ConversionEngine.AUTO.name)!!
             )
-        }.getOrDefault(ConversionEngine.MOZC)
+        }.getOrDefault(ConversionEngine.AUTO)
         set(value) {
             prefs.edit().putString(KEY_CONVERSION_ENGINE, value.name).apply()
             bumpRevision()

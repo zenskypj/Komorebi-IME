@@ -97,6 +97,7 @@ class MozcSession(
 
     /** Current preedit text from the last state. Empty when not composing. */
     private var currentPreeditText: String = ""
+    private var currentIsConverting = false
 
     fun currentPreedit(): String = currentPreeditText
 
@@ -206,19 +207,15 @@ class MozcSession(
      * an unconsumed result still lets the client insert an ordinary space. See [ConvertKeySequence].
      */
     fun convertOrSpace(): State? {
-        stopKeyToggling()
-        // HENKAN is only meaningful on the kana planes. On the latin/numeric planes Space must stay
-        // Space — Mozc commits the alphanumeric composition and inserts a space — so the
-        // convert-first sequence is reserved for Japanese.
-        val japanese = currentStyle?.fullWidthSpace == true
-        val keys = ConvertKeySequence.order(japanese && currentPreeditText.isNotEmpty())
-        var last: State? = null
-        for (key in keys) {
-            last = sendSpecialKey(key)
-            if (ConvertKeySequence.reachedConversion(last)) return last
-            if (!ConvertKeySequence.canRetry(last)) break
-        }
-        return last
+        val wasConverting = currentIsConverting
+        val japaneseComposition = currentStyle?.fullWidthSpace == true && currentPreeditText.isNotEmpty()
+        return ConvertKeySequence.convert(
+            composing = japaneseComposition,
+            wasConverting = wasConverting,
+            stop = ::stopKeyToggling,
+            send = { sendSpecialKey(it) },
+            highlight = ::highlightCandidate,
+        )
     }
 
     /**
@@ -366,6 +363,7 @@ class MozcSession(
         if (displayedPreedit.isNotEmpty() && !convertingOutput) {
             lastInputReading = displayedPreedit
         }
+        currentIsConverting = convertingOutput
         val reading =
             if (convertingOutput && lastInputReading.isNotEmpty()) lastInputReading
             else displayedPreedit

@@ -59,9 +59,9 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
         ui.removeCallbacksAndMessages(null)
     }
 
-    fun request(prompt: String, onResult: (MozcSession.Candidate) -> Unit) {
+    fun request(prompt: String, onUnavailable: () -> Unit = {}, onResult: (MozcSession.Candidate) -> Unit) {
         cancel()
-        if (!enabled || !nativeReady || failed) return
+        if (!enabled || !nativeReady || failed) { onUnavailable(); return }
         val ticket = generation
         cache[prompt]?.let { candidate ->
             ui.post { if (ticket == generation && enabled) onResult(candidate) }
@@ -79,14 +79,18 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
                 val result = ZenzaiNative.generate(handle, bytes, 192, ticket)
                     ?.toString(Charsets.UTF_8)?.let(ZenzaiConversion::candidate)
                 InputPerformance.record(app, "ai", System.nanoTime() - started)
-                if (result != null) ui.post {
-                    if (ticket == generation && enabled) { cache[prompt] = result; onResult(result) }
+                ui.post {
+                    if (ticket == generation && enabled) {
+                        if (result != null) { cache[prompt] = result; onResult(result) }
+                        else onUnavailable()
+                    }
                 }
             } catch (_: Exception) {
                 ui.post {
                     if (ticket == generation && enabled && !failed) {
                         failed = true
                         onError()
+                        onUnavailable()
                     }
                 }
             }
