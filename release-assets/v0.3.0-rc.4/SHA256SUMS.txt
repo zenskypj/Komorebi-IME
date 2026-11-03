@@ -1,1 +1,2 @@
 57a01595a2dbb4ddcd2af14a7a5da4196e802a6941f93f01fc56490f2f8b290f  Komorebi-IME-0.3.0-rc.4-arm64-v8a-debug.apk
+0f72c6de3b54c6a65595085d95bffd4f1bb4074f2a097a7d893d21b43b6c30d1  Komorebi-IME-0.3.0-rc.4-universal-debug.apk
