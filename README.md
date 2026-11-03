@@ -13,10 +13,11 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate（`0.3.0-rc.4`）です。自動テストを通過した
+> 現在は正式版に向けた Release Candidate（`0.3.0-rc.21-dev`）です。自動テストを通過した
 > ビルドでも、公開前に複数Android世代・ナビゲーション方式・実機での確認が必要です。
-> 変更点と検証結果は[リリースノート](docs/releases/v0.3.0-rc.4.md)、正式版までに必要な
-> 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
+> 変更点と入手方法は [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、
+> 正式版までに必要な人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
+> 現在公開しているテスト用APKはすべて pre-release（debug 署名）です。
 
 ## 特長
 
@@ -25,6 +26,10 @@
 - **Mozc / Karukan切り替え** — 高速・省電力なMozcと、文脈を考慮する実験的な
   Karukanニューラル変換を設定から選べます。Karukanは約32 MBのモデルを明示操作で取得し、
   推論は端末内で行います。
+- **端末内のAI文章校正** — 選択した文章、またはカーソル直前の600文字を、任意で取得する
+  Qwen3モデル（0.6B / 1.7B）で校正します。書き換えの種類（誤字・文法／丁寧／簡潔／自然／
+  自由指示）を選べ、結果を元の文章との差分で確認してから「適用／適用しない／コピー」を
+  選べます。文章は端末の外へ送信しません。
 - **3 種類の入力方式** — かな/英字ともフリック、かな/英字とも QWERTY、かなフリック
   + 英字 QWERTY から選べます。
 - **実用的な日本語変換** — Mozc の学習・予測変換に加え、キーと方向の類似度による
@@ -55,7 +60,8 @@
 ## インストールと初期設定
 
 Release Candidate のテスト用APKは
-[GitHub Releases](https://github.com/netstartjp/Komorebi-IME/releases) から取得できます。
+[GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases) から取得できます
+（いずれも pre-release・debug 署名版のため、正式版用の署名ではありません）。
 自分でビルドする場合は[開発者向けビルド](#開発者向けビルド)を参照してください。
 
 インストール後は次の順に設定します。
@@ -292,6 +298,12 @@ Hugging Face上の公開モデルで、ユーザーが設定画面で開始し�
   未登録の意味を自動生成したりはしません。
 - Karukanニューラル変換は実験的機能で、現在は `arm64-v8a` の明示変換だけに対応します。
   ライブ候補、かな編集、非対応CPUではMozcを使用します。
+- AI文章校正は任意のQwen3モデル（約397 MB / 約1.11 GB、`arm64-v8a`）の取得が必要で、
+  品質は保証しません。小さいモデルは指示に従わない・意味を変える場合があるため、差分を
+  確認してから適用してください。入力先アプリによっては対象文章を安全に確認できず、
+  適用できないことがあります（その場合はコピーを利用できます）。
+- 公開中のテスト用APKはすべて debug 署名の pre-release です。正式版とは application ID が
+  異なります（debug 版は `me.zssu.ime.debug`）。
 - 暗号化した Mozc ストレージは 64 MB を超えるファイルを読み込めません。
 - Keystore を使う Android 固有の暗号化経路は、実機での継続的な検証が必要です。
 - Release Candidate 中は設定形式や内部ファイル形式が変更される可能性があります。
