@@ -55,7 +55,10 @@ object BundledDictionaries {
             }.onFailure { Log.e(TAG, "cannot read $assetName", it) }.getOrNull() ?: continue
 
             // Clear legacy user copies of words now compiled into mozc.data.
-            val systemDictionary = assetName in system
+            // English lookup is provided by the app only for an exact reading. Bulk user
+            // dictionary import gives these words a personal-word cost advantage, including
+            // during typo correction. Empty imports also migrate existing installations.
+            val systemDictionary = assetName in system || assetName == "katakana-english.txt"
             val output = engine.eval(
                 Input.newBuilder()
                     .setType(Input.CommandType.IMPORT_USER_DICTIONARY)

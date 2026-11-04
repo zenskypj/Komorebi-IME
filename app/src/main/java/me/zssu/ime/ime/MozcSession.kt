@@ -83,6 +83,7 @@ class MozcSession(
         val priorityMatch: PriorityMatch = PriorityMatch.NONE,
         /** Client-generated kana spelling that commits directly instead of addressing a Mozc id. */
         internal val directCommit: Boolean = false,
+        internal val canonicalSpelling: Boolean = false,
     )
     data class Segment(val text: String, val highlighted: Boolean, val reading: String = "")
 
@@ -444,6 +445,7 @@ class MozcSession(
                 correction = corrected,
                 prediction = differentReading && !corrected,
                 priorityMatch = priorityLookup(reading, value),
+                canonicalSpelling = SupplementaryLexicons.isCanonical(metadata?.key.orEmpty().ifEmpty { reading }, value),
             )
         }
         val candidates = if (convertingOutput && candidateMetadata.isNotEmpty()) {
@@ -495,8 +497,14 @@ class MozcSession(
         }
 
         val focusedId = ConversionOutput.focusedId(this)
+        val supplementary = if (currentStyle?.fullWidthSpace == true && reading.isNotEmpty() &&
+            (!convertingOutput || segments.size <= 1)) SupplementaryLexicons.english(reading).mapIndexed { index, value ->
+            Candidate(-40_000 - index, value, inputReading = reading, sourceReading = reading,
+                priorityMatch = priorityLookup(reading, value), directCommit = true)
+        } else emptyList()
+        val combinedCandidates = (candidates + supplementary).distinctBy { it.text }
         val reorderedFocused =
-            focusedId?.let { id -> candidates.indexOfFirst { it.id == id } } ?: -1
+            focusedId?.let { id -> combinedCandidates.indexOfFirst { it.id == id } } ?: -1
 
         return State(
             committedText = if (hasResult()) result.value else "",
@@ -506,7 +514,7 @@ class MozcSession(
             preedit = displayedPreedit,
             preeditReading = reading,
             preeditCursor = displayedPreedit.offsetByCodePoints(0, cursor.coerceIn(0, displayedPreedit.codePointCount(0, displayedPreedit.length))),
-            candidates = candidates,
+            candidates = combinedCandidates,
             focusedCandidateIndex = reorderedFocused,
             segments = segments,
             isConverting = convertingOutput,
@@ -539,7 +547,7 @@ internal object FlickTableInput {
  * keeping genuine recovery candidates ahead of speculative completions.
  */
 internal object CandidateRanking {
-    const val MAX_LIVE_POOL_SIZE = 32
+    const val MAX_LIVE_POOL_SIZE = 64
     private const val LATIN_USER_DICTIONARY_PENALTY = 6
     private const val LANE_STRIDE = 1_000
 
@@ -569,10 +577,12 @@ internal object CandidateRanking {
     private fun lane(candidate: MozcSession.Candidate): Int = when {
         candidate.priorityMatch == PriorityMatch.EXACT -> 0
         candidate.priorityMatch == PriorityMatch.SIMILAR -> 1
+        isLatinFromKana(candidate) -> 8
         hasKatakanaGrammarInPrediction(candidate) -> 7
         candidate.fromUserHistory && isFullReadingConversion(candidate) -> 2
         isFullReadingConversion(candidate) -> 3
         !candidate.correction && !candidate.prediction -> 4
+        candidate.correction && candidate.canonicalSpelling -> 4
         candidate.correction -> 5
         else -> 6
     }
@@ -637,6 +647,10 @@ internal object CandidateRanking {
         candidate.fromUserDictionary &&
             candidate.text.any { it in 'A'..'Z' || it in 'a'..'z' } &&
             !containsJapaneseScript(candidate.text)
+
+    private fun isLatinFromKana(candidate: MozcSession.Candidate): Boolean =
+        candidate.inputReading.any { it in '\u3041'..'\u3096' || it in '\u30a1'..'\u30fa' } &&
+            candidate.text.any { it in 'A'..'Z' || it in 'a'..'z' } && !containsJapaneseScript(candidate.text)
 
     private fun isKanjiOrHiragana(ch: Char): Boolean =
         ch in '\u3040'..'\u309f' ||

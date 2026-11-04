@@ -22,7 +22,8 @@ internal object DictionaryPriority {
 
     /** The first individually specified candidate for [reading], in list order. */
     fun firstSpecified(candidates: List<MozcSession.Candidate>, reading: String): MozcSession.Candidate? =
-        candidates.firstOrNull { isSpecified(it, reading) }
+        candidates.firstOrNull { it.priorityMatch == PriorityMatch.EXACT }
+            ?: candidates.firstOrNull { isSpecified(it, reading) }
 
     /**
      * Orders the live candidate list. Without a specified entry the neural candidate leads exactly
@@ -39,7 +40,7 @@ internal object DictionaryPriority {
             return if (neural == null) base else ZenzaiConversion.candidates(base, neural, reading)
         }
         val rest = base.filterNot { it.id == specified.id && it.text == specified.text }
-        return if (neural == null) listOf(specified) + rest
+        return if (neural == null || neural.text == specified.text) listOf(specified) + rest
         else listOf(specified) + ZenzaiConversion.candidates(rest, neural, reading)
     }
 

@@ -177,7 +177,7 @@ private fun EngineDictScreen() {
                         }.apply { isDaemon = true }.start()
                     }
                     HorizontalDivider()
-                    SwitchRow("カタカナ語→英語", "カタカナ外来語の英語表記を表示", checked = true, enabled = false) {}
+                    SwitchRow("カタカナ語→英語", "読みが完全一致したときだけ候補に表示。誤入力補正には使いません", checked = true, enabled = false) {}
                 }
             }
         }

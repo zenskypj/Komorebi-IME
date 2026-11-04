@@ -51,3 +51,11 @@
   `third_party/mozc`へ適用するため、直下に置くとlibmozcが再ビルドされ互換指紋が変わる。
 - 統合データセット（`neologd`／`skk`／`all`）は複数の変換結果を`(reading,lid,surface)`の
   最小コストで統合してから1回のBazelビルドで作る。上限件数での切り捨ては行わない。
+
+## 作業用PCの資源
+
+- 2026-11-05にPCの占有が指摘された。通常のAPK作成は`--no-daemon --max-workers=1`
+  と`-Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.compiler.execution.strategy=in-process`を使う。
+- 不要な大規模辞書・nativeの再生成をしない。必要な生成も同時実行を増やさない。
+- 作業が終わった隔離checkoutのBazel常駐は`bazelisk shutdown`で解放する。
+  他アプリ・データベースや、別作業中のプロセスは停止しない。

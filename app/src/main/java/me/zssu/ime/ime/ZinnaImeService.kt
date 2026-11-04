@@ -168,6 +168,7 @@ class ZinnaImeService : InputMethodService() {
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboardManager?.addPrimaryClipChangedListener(clipboardListener)
         session = ConversionSession(this, priorityCandidates::match)
+        SupplementaryLexicons.load(this)
         zenzai = ZenzaiEngine(this)
         enginePreferences.registerOnSharedPreferenceChangeListener(enginePreferenceListener)
         refreshZenzai()
@@ -649,6 +650,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleToolAction(action: CandidateStripView.ToolAction) {
+        synchronizeEditorComposition()
         if (!fieldPolicy.incognito &&
             (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
             val stats = getSharedPreferences("input_statistics", Context.MODE_PRIVATE)
@@ -931,6 +933,10 @@ class ZinnaImeService : InputMethodService() {
         zenzaiState = null
         zenzaiCandidate = null
         meaningPopup?.hide(notify = false)
+        lastCandidates = emptyList()
+        lastFocusedCandidateIndex = -1
+        renderedPreedit = ""
+        conversionInteraction.reset()
         cancelKarukanConversion(clearReading = true, revertMozc = false)
         // Anything half-composed at this point can no longer be committed anywhere sensible.
         session.resetContext()
@@ -1006,10 +1012,44 @@ class ZinnaImeService : InputMethodService() {
                 newSelStart.toLong() in liveStart.toLong()..(liveStart.toLong() + renderedPreedit.length)) return
         }
 
-        // Clear the guard first: finishComposingText can synchronously cause another selection
-        // callback in some editors.
+        discardExternalComposition()
+    }
+
+    /** Some chat editors clear a sent message without dispatching a selection callback. */
+    private fun synchronizeEditorComposition(): Boolean {
+        if (!isComposing || editorStateUpdateInProgress) return false
+        val ic = currentInputConnection ?: return false
+        val request = android.view.inputmethod.ExtractedTextRequest().apply { flags = InputConnection.GET_TEXT_WITH_STYLES }
+        val extracted = runCatching { ic.getExtractedText(request, 0) }.getOrNull()
+        val complete = extracted != null && extracted.startOffset == 0 &&
+            extracted.partialStartOffset < 0 && extracted.partialEndOffset < 0 && extracted.text != null
+        if (!complete) {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return false
+            val surrounding = runCatching { ic.getSurroundingText(1, 1, 0) }.getOrNull() ?: return false
+            if (surrounding.offset != 0 || surrounding.selectionStart != 0 ||
+                surrounding.selectionEnd != 0 || surrounding.text.isNotEmpty()) return false
+            discardExternalComposition()
+            return true
+        }
+        // An empty partial patch, or an unsupported connection returning null, is not evidence
+        // that the editor discarded text. Only a complete, empty field proves external clearing.
+        if (extracted?.text?.isEmpty() != true) return false
+        discardExternalComposition()
+        return true
+    }
+
+    private fun discardExternalComposition() {
+        // Clear the guard before any InputConnection calls, which can synchronously notify us.
         isComposing = false
         isConverting = false
+        zenzai.cancel()
+        zenzaiState = null
+        zenzaiCandidate = null
+        renderedPreedit = ""
+        lastCandidates = emptyList()
+        lastFocusedCandidateIndex = -1
+        conversionInteraction.reset()
+        segmentEditing = false
         segmentBar?.visibility = View.GONE
         currentSegmentCount = 0
         renderedPreeditCursor = 0
@@ -1049,6 +1089,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleKeyOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {
+        synchronizeEditorComposition()
         val clientContext = org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context.newBuilder()
         if (fieldPolicy.incognito) {
             clientContext.inputFieldType = org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context.InputFieldType.PASSWORD
@@ -1429,6 +1470,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleEditCommand(command: String) {
+        synchronizeEditorComposition()
         val ic = currentInputConnection ?: return
         when (command) {
             "all" -> { ic.performContextMenuAction(android.R.id.selectAll); return }
@@ -1460,6 +1502,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {
+        synchronizeEditorComposition()
         if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
         if (
@@ -1715,12 +1758,20 @@ class ZinnaImeService : InputMethodService() {
         val prompt = if (session.zenzaiEnabled) ZenzaiConversion.prompt(reading, preceding) else null
         val registered = if (prompt != null) zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
             .map { MozcSession.Candidate(DictionaryPriority.REGISTERED_DICTIONARY_ID, it.word, inputReading = reading, directCommit = true) } else emptyList()
+        // Pins are explicit commitments, even when Mozc's bounded live pool or either AI did
+        // not return that value. Match the complete reading; never use fuzzy pins to override AI.
         val base = (registered + state.candidates).distinctBy { it.text }
         var neural: MozcSession.Candidate? = null
         var karukan: List<MozcSession.Candidate> = emptyList()
         fun publish() {
             if (zenzaiState !== state || !isComposing || isConverting) return
-            val combined = (karukan + base).distinctBy { it.text }
+            val pinned = priorityCandidates.forReading(reading).mapIndexed { index, entry ->
+                MozcSession.Candidate(-30_000 - index, entry.value, inputReading = reading,
+                    sourceReading = reading, priorityMatch = PriorityMatch.EXACT, directCommit = true)
+            }
+            val combined = (pinned + karukan + base).distinctBy { it.text }.map {
+                it.copy(priorityMatch = priorityCandidates.match(reading, it.text))
+            }
             karukanSuggestionCandidate = karukan.firstOrNull()
             // A user/network dictionary entry the user registered or pinned outranks the neural
             // converters; everything else keeps the neural candidate first.
@@ -1901,6 +1952,8 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun commitCandidate(candidate: MozcSession.Candidate, partial: Boolean = isConverting && currentSegmentCount > 1 && !candidate.directCommit) {
+        if (lastCandidates.none { it.id == candidate.id && it.text == candidate.text }) return
+        if (synchronizeEditorComposition()) return
         learningCandidate = candidate
         suppressPartialLearning = partial
         try {
@@ -1918,7 +1971,9 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun submitCurrentComposition() {
-        if (isComposing && !isConverting && (zenzaiCandidate != null || karukanSuggestionCandidate != null)) {
+        if (synchronizeEditorComposition()) return
+        if (isComposing && !isConverting && (zenzaiCandidate != null || karukanSuggestionCandidate != null ||
+                lastCandidates.firstOrNull()?.priorityMatch == PriorityMatch.EXACT)) {
             lastCandidates.firstOrNull()?.let { commitCandidate(it); return }
         }
         if (karukanConversionActive) {
@@ -1971,7 +2026,8 @@ class ZinnaImeService : InputMethodService() {
             )
             .map { it.value }
         lastFocusedCandidateIndex =
-            focusedId?.let { id -> lastCandidates.indexOfFirst { it.id == id } } ?: -1
+            if (!isConverting && lastCandidates.any { it.priorityMatch == PriorityMatch.EXACT }) 0
+            else focusedId?.let { id -> lastCandidates.indexOfFirst { it.id == id } } ?: -1
         candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
     }
 

@@ -112,3 +112,11 @@ Full source inputs, conversion scripts and per-file processing reports accompany
 the v0.3.0-rc.33-dev GitHub Release. Dynamic SKK programs, unresolved
 inflections and inspection-only records are reported rather than silently used
 as nouns. See docs/extra-dictionaries/README.md.
+
+The APK also contains a small canonical noun spelling index derived from the
+three NEologd orthographic-variant seeds at abc61e33d8be3d0ead202e6b1df064c72d5ccf11
+(Apache-2.0). It recognizes canonical Mozc candidates, without replacing text or
+lemmatizing conjugated forms. Rebuild: scripts/extra_dictionary/gen_orthographic_corrections.py.
+Upstream COPYING and all acknowledgements: assets/legal/system-dictionaries/neologd-variants.txt.
+The pre-existing CC-BY-SA-3.0 katakana-English TSV is used as an exact-reading
+lookup; its original source notices and adapted data are preserved.

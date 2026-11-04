@@ -75,6 +75,12 @@ class PriorityCandidateRepository(context: Context) {
         return if (similar) PriorityMatch.SIMILAR else PriorityMatch.NONE
     }
 
+    fun forReading(reading: String): List<Entry> {
+        val normalized = ReadingSimilarity.normalize(reading)
+        if (normalized.isEmpty()) return emptyList()
+        return entries().asReversed().filter { ReadingSimilarity.normalize(it.reading) == normalized }
+    }
+
     private fun ensureIndex(): Map<String, List<Entry>> {
         indexByValue?.let { return it }
         val idx = entries().groupBy { it.value }
