@@ -33,7 +33,15 @@ Mozcのword trieの22bit制限（2^22未満）に対して4,280,389となり生�
 （`patches/dictionary-generation/0001-relax-value-trie-id-limit.patch`）を当て、
 crammedでない形式が元々使える3バイト（24bit）まで格納できるようにして生成します。
 出力形式は変えないため、アプリ同梱のlibmozcは無改修で読み出せます（互換指紋も不変）。
-統合後の追加語彙の異なり数は2^24未満に収まります。各データセットには標準Mozcも含まれます。
+crammed形式の上位6bitが全て1になるidは、トークン先頭バイトが終端フラグ`0xff`と衝突するため、
+パッチはその場合だけ3バイト形式を使います。統合後の追加語彙の異なり数は2^24未満に収まります。
+各データセットには標準Mozcも含まれます。
+
+| 統合データセット | 収録する単体辞書 | 保存 | 取得 |
+| --- | --- | --- | --- |
+| NEologd 統合 (`neologd`) | neologd-main + neologd-variants | 78.4 MiB | 47.6 MiB |
+| SKK 統合 (`skk`) | skk-gpl + skk-cc + skk-unicode + skk-permissive | 25.9 MiB | 17.3 MiB |
+| 全部入り (`all`) | 上記すべて（6データセット） | 85.6 MiB | 51.9 MiB |
 
 SKKは固定コミットにある全`SKK-JISYO.*`と郵便番号2辞書を処理します。
 `.header`は辞書のメタ情報として保持し、独立した語彙としては重複処理しません。

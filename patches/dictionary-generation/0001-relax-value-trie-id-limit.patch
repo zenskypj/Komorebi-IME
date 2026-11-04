@@ -1,6 +1,6 @@
 --- a/src/dictionary/system/codec.cc
 +++ b/src/dictionary/system/codec.cc
-@@ -59,8 +59,10 @@
+@@ -59,8 +59,11 @@
  constexpr int kPosMax = 0x0fff;
  // 15 bits
  constexpr int kCostMax = 0x7fff;
@@ -8,31 +8,34 @@
 -constexpr int kValueTrieIdMax = 0x3fffff;
 +// 24 bits: the non-crammed form stores the id in 3 bytes.
 +constexpr int kValueTrieIdMax = 0xffffff;
-+// 22 bits: the crammed form keeps 2 bytes plus the lower 6 flag bits.
++// 22 bits: the crammed form keeps 2 bytes plus the lower 6 flag bits. Ids whose upper
++// 6 bits are all ones are kept non-crammed so the flag byte cannot become 0xff.
 +constexpr int kCrammedIdMax = 0x3fffff;
  
  //// Constants for value ////
  // Unused for now.
-@@ -156,7 +158,7 @@
+@@ -156,7 +159,8 @@
  //  2) lower 6 bits are not used.
  //   - Set CRAM_VALUE_FLAGS and use lower 6 bits.
  //     We need another 2 bytes to store the id in the trie.
 -//     Note that we are assuming each id in the trie is less than 22 bits.
-+//     Crammed ids stay under 22 bits; larger ids use the 3-byte form.
++//     Crammed ids stay under 22 bits and never fill the upper 6 flag bits;
++//     larger ids use the 3-byte form.
  // Lower 6 bits of flags field are used to store upper part of id
  // in value trie.
  constexpr uint8_t kCrammedIDFlag = 0x40;
-@@ -293,7 +295,8 @@
+@@ -293,7 +297,9 @@
          << "First token cannot become the SameAsPrevValue.";
    }
  
 -  if ((flags & kUpperCrammedIDMask) == 0) {
 +  if ((flags & kUpperCrammedIDMask) == 0 &&
-+      token_info.id_in_value_trie <= kCrammedIdMax) {
++      token_info.id_in_value_trie <= kCrammedIdMax &&
++      ((token_info.id_in_value_trie >> 16) & kUpperCrammedIDMask) != kUpperCrammedIDMask) {
      // Lower 6bits are available. Use it for value trie id.
      flags |= kCrammedIDFlag;
    }
-@@ -689,7 +692,7 @@
+@@ -689,7 +695,7 @@
  //  For frequent pos, 1 byte
  //  For pos of left id == right id, 2 bytes
  //  For other pos-es left id + right id 3 bytes

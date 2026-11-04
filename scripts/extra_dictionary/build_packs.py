@@ -22,7 +22,7 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MOZC_COMMIT = "3f235b4eb6fcff7d14ef5f0fb8ee56de7ee4c732"
 BASE_SHA = "fbb9a23419d677a33968145cfe1979dac6e7d3c28712d469854b4707a5965ed1"
-RELEASE = "v0.3.0-rc.33-dev"
+RELEASE = "v0.3.0-rc.35-dev"
 
 # (id, name, input dir under work/, license, dataVersion tag)
 SOURCES = [
@@ -161,15 +161,40 @@ def lexicon_for(work, output, job):
     return merged
 
 
+def write_catalog(output, packs):
+    catalog = {"schemaVersion": 1, "packs": packs}
+    (ROOT / "mozc/src/main/assets/system-dictionaries.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
+    (output / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
+
+
+def load_pack(output, job):
+    """Read an already-built pack, backfilling fields added after that build."""
+    pack = json.loads((output / (job["id"] + ".json")).read_text())
+    if pack.get("sourceIds") != job["sourceIds"]:
+        pack["sourceIds"] = job["sourceIds"]
+        (output / (job["id"] + ".json")).write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n")
+    return pack
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work", type=pathlib.Path, default=ROOT / "build/extra-dictionary")
     parser.add_argument("--only", choices=[job["id"] for job in jobs()])
+    parser.add_argument("--catalog-only", action="store_true",
+                        help="Rebuild the catalog from existing pack metadata without running Bazel")
     args = parser.parse_args()
     work = args.work.resolve()
-    checkout = work / "checkout/src"
     output = work / "packs"
     output.mkdir(exist_ok=True)
+    if args.catalog_only:
+        try:
+            packs = [load_pack(output, job) for job in jobs()]
+        except FileNotFoundError as error:
+            raise SystemExit(f"error: {error.filename} not found; build that dataset first")
+        write_catalog(output, packs)
+        print(f"catalog written with {len(packs)} packs", flush=True)
+        return
+    checkout = work / "checkout/src"
     if sha(ROOT / "mozc/src/main/assets/mozc.data") != BASE_SHA:
         raise ValueError("Standard dataset changed; re-establish matching Mozc source first")
     if not checkout.is_dir():
@@ -186,7 +211,7 @@ def main():
         metadata = output / (job["id"] + ".json")
         if args.only and args.only != job["id"]:
             if metadata.exists():
-                packs.append(json.loads(metadata.read_text()))
+                packs.append(load_pack(output, job))
             continue
         started = time.monotonic()
         shutil.copyfile(lexicon_for(work, output, job), checkout / "data/dictionary_oss/dictionary10.txt")
@@ -221,9 +246,7 @@ def main():
         packs.append(pack)
         print(job["id"], data.stat().st_size, archive.stat().st_size, flush=True)
     if len(packs) == len(jobs()):
-        catalog = {"schemaVersion": 1, "packs": packs}
-        (ROOT / "mozc/src/main/assets/system-dictionaries.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
-        (output / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
+        write_catalog(output, packs)
 
 
 if __name__ == "__main__":

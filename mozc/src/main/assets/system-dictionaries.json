@@ -14,7 +14,10 @@
       "dataSha256": "e5efd748ad684a26ea25952ba1c8d7e7eded467cce701b6d4a904c41d7c5fe3d",
       "dataVersion": "24.11.komorebi-neologd-abc61e33-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/neologd-main.txt"
+      "notice": "legal/system-dictionaries/neologd-main.txt",
+      "sourceIds": [
+        "neologd-main"
+      ]
     },
     {
       "id": "neologd-variants",
@@ -29,7 +32,10 @@
       "dataSha256": "63cc76a05a76a12ce306e17b184d3f2c2b66dcf985b9aca363c2f8344ccd8dd7",
       "dataVersion": "24.11.komorebi-neologd-variants-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/neologd-variants.txt"
+      "notice": "legal/system-dictionaries/neologd-variants.txt",
+      "sourceIds": [
+        "neologd-variants"
+      ]
     },
     {
       "id": "skk-gpl",
@@ -44,7 +50,10 @@
       "dataSha256": "43b23a14b2e215b1575090704be98ba2b1c736311b6ca91603655d5fe2895e10",
       "dataVersion": "24.11.komorebi-skk-gpl-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/skk-gpl.txt"
+      "notice": "legal/system-dictionaries/skk-gpl.txt",
+      "sourceIds": [
+        "skk-gpl"
+      ]
     },
     {
       "id": "skk-cc",
@@ -59,7 +68,10 @@
       "dataSha256": "f0f6ca90384eeef16099b636ec52e58324d0402af9944fb22d2b9026892ec113",
       "dataVersion": "24.11.komorebi-skk-cc-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/skk-cc.txt"
+      "notice": "legal/system-dictionaries/skk-cc.txt",
+      "sourceIds": [
+        "skk-cc"
+      ]
     },
     {
       "id": "skk-unicode",
@@ -74,7 +86,10 @@
       "dataSha256": "49016beb8ff977d13d782c03ff0de900ccd3da0518251299be39afa5432dd0c5",
       "dataVersion": "24.11.komorebi-skk-unicode-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/skk-unicode.txt"
+      "notice": "legal/system-dictionaries/skk-unicode.txt",
+      "sourceIds": [
+        "skk-unicode"
+      ]
     },
     {
       "id": "skk-permissive",
@@ -89,7 +104,73 @@
       "dataSha256": "8b93c294c8b1e066ffbdbb976f442a31cb54d50e6f665a12f1de90965eeb2b11",
       "dataVersion": "24.11.komorebi-skk-permissive-v1",
       "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
-      "notice": "legal/system-dictionaries/skk-permissive.txt"
+      "notice": "legal/system-dictionaries/skk-permissive.txt",
+      "sourceIds": [
+        "skk-permissive"
+      ]
+    },
+    {
+      "id": "neologd",
+      "name": "NEologd 統合（新語・固有名詞＋表記ゆれ・活用語）",
+      "version": "2026-11-04 / v1",
+      "license": "Apache-2.0（原典の条件を保持）",
+      "source": "NEologd abc61e33",
+      "sourceIds": [
+        "neologd-main",
+        "neologd-variants"
+      ],
+      "url": "https://github.com/zenskypj/Komorebi-IME/releases/download/v0.3.0-rc.35-dev/neologd.data.gz",
+      "compressedBytes": 49923749,
+      "compressedSha256": "72c77d587fab3fb9d1bab1fec001d58a580a8c3ef37a72e1c2ab7ef5a9dd0fbd",
+      "dataBytes": 82218524,
+      "dataSha256": "651405c721e215d37eb4cd22950ed3057897ca3106ca1ff6397a881fb04673b6",
+      "dataVersion": "24.11.komorebi-neologd-bundle-v1",
+      "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
+      "notice": "legal/system-dictionaries/neologd.txt"
+    },
+    {
+      "id": "skk",
+      "name": "SKK 統合（総合・英和・絵文字・その他）",
+      "version": "2026-11-04 / v1",
+      "license": "GPL-2.0 / CC-BY-SA-3.0 / Unicode License / Public Domain（原典の条件を保持）",
+      "source": "SKK 0a164e6b",
+      "sourceIds": [
+        "skk-gpl",
+        "skk-cc",
+        "skk-unicode",
+        "skk-permissive"
+      ],
+      "url": "https://github.com/zenskypj/Komorebi-IME/releases/download/v0.3.0-rc.35-dev/skk.data.gz",
+      "compressedBytes": 18189864,
+      "compressedSha256": "0b465947e11b00f293e9eade5e1da1dc1cea12250a2efd2cc58a4345f198c2a5",
+      "dataBytes": 27209416,
+      "dataSha256": "d2cfaa2664a4de0f4a0256cbfbede4cec263438266048dcaa4d731460eb0f0b5",
+      "dataVersion": "24.11.komorebi-skk-bundle-v1",
+      "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
+      "notice": "legal/system-dictionaries/skk.txt"
+    },
+    {
+      "id": "all",
+      "name": "NEologd＋SKK 全部入り",
+      "version": "2026-11-04 / v1",
+      "license": "各原典の条件を保持（Apache-2.0 / GPL-2.0 / CC-BY-SA-3.0 / Unicode License / Public Domain）",
+      "source": "NEologd abc61e33 + SKK 0a164e6b (6 データセット)",
+      "sourceIds": [
+        "neologd-main",
+        "neologd-variants",
+        "skk-gpl",
+        "skk-cc",
+        "skk-unicode",
+        "skk-permissive"
+      ],
+      "url": "https://github.com/zenskypj/Komorebi-IME/releases/download/v0.3.0-rc.35-dev/all.data.gz",
+      "compressedBytes": 54373173,
+      "compressedSha256": "311771cc35f59e03cba0057fea8a4e9583ba80560407363d6490e0777af59d3f",
+      "dataBytes": 89790720,
+      "dataSha256": "f6ac62ccd3452dfd4d188d23441f808c39d05d90cf593fa2be5f129fa58d5a43",
+      "dataVersion": "24.11.komorebi-all-bundle-v1",
+      "runtime": "a438df0a87052010e08cdbdedba60cc03400293c582f97e099176dacc1182fd5",
+      "notice": "legal/system-dictionaries/all.txt"
     }
   ]
 }
