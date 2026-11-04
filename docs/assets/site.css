@@ -120,7 +120,7 @@ a:hover { text-decoration: underline; }
 
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  display: flex; align-items: center; gap: 4px;
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 4px;
   height: var(--topbar-h);
   padding: 0 16px;
   background: var(--surface);
@@ -130,13 +130,15 @@ a:hover { text-decoration: underline; }
 
 .brand {
   display: inline-flex; align-items: center; gap: 10px;
-  min-height: 48px; padding: 0 8px;
+  min-width: 0; min-height: 48px; padding: 0 8px;
+  white-space: nowrap;
   color: var(--on-surface);
   font-size: 1.125rem; font-weight: 500;
 }
 .brand:hover { text-decoration: none; }
 .brand svg { width: 20px; height: 22px; flex: none; color: var(--primary); }
-.brand small { color: var(--on-surface-variant); font-size: 0.8125rem; font-weight: 400; }
+.brand-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand small { color: var(--on-surface-variant); font-size: 0.8125rem; font-weight: 400; white-space: nowrap; }
 
 .topbar .spacer { flex: 1; }
 
@@ -147,6 +149,7 @@ a:hover { text-decoration: underline; }
   border: none; border-radius: var(--shape-full);
   background: transparent; color: var(--on-surface-variant);
   font: inherit; font-size: 0.875rem; font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 .iconbtn:hover { background: var(--surface-container); }
@@ -165,7 +168,11 @@ a:hover { text-decoration: underline; }
 .sidebar {
   position: sticky; top: var(--topbar-h); align-self: start;
   height: calc(100vh - var(--topbar-h));
+  height: calc(100dvh - var(--topbar-h));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
   padding: 12px;
   background: var(--surface);
   border-right: 1px solid var(--outline-variant);
@@ -204,6 +211,8 @@ a:hover { text-decoration: underline; }
   color: var(--on-surface-variant);
   font-size: 0.875rem; font-weight: 500;
   line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 .nav-list a:hover { background: var(--surface-container); }
@@ -255,7 +264,11 @@ a:hover { text-decoration: underline; }
 
 /* ---------------- prose ---------------- */
 
-.prose { max-width: var(--measure); overflow-wrap: break-word; }
+.prose {
+  max-width: var(--measure);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .prose > :first-child { margin-top: 0; }
 .prose h2 {
   margin: 40px 0 12px;
@@ -352,6 +365,8 @@ a:hover { text-decoration: underline; }
   align-self: start;
   max-height: calc(100vh - var(--topbar-h) - 48px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   font-size: 0.8125rem;
 }
 .toc h2 {
@@ -521,8 +536,8 @@ a:hover { text-decoration: underline; }
   border-radius: var(--shape-sm);
 }
 .doclist a:hover { background: var(--surface-container-low); }
-.doclist .t { display: block; font-size: 0.9375rem; font-weight: 500; color: var(--on-surface); }
-.doclist .d { display: block; margin-top: 2px; font-size: 0.8125rem; color: var(--on-surface-variant); }
+.doclist .t { display: block; font-size: 0.9375rem; font-weight: 500; color: var(--on-surface); word-break: keep-all; overflow-wrap: anywhere; }
+.doclist .d { display: block; margin-top: 2px; font-size: 0.8125rem; color: var(--on-surface-variant); word-break: keep-all; overflow-wrap: anywhere; }
 
 .steps { margin: 0; padding-left: 20px; }
 .steps li { margin: 6px 0; }
@@ -536,6 +551,7 @@ a:hover { text-decoration: underline; }
   color: var(--on-surface-variant);
   font-size: 0.75rem;
 }
+.footnote a { white-space: nowrap; }
 
 /* ---------------- states ---------------- */
 
@@ -586,7 +602,10 @@ a:hover { text-decoration: underline; }
   .sidebar {
     position: fixed; inset: var(--topbar-h) auto 0 0;
     width: min(86vw, var(--drawer-w));
-    height: auto; z-index: 50;
+    height: calc(100dvh - var(--topbar-h));
+    z-index: 50;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--surface);
     border-right: 1px solid var(--outline-variant);
     box-shadow: var(--elev-1);
@@ -595,6 +614,7 @@ a:hover { text-decoration: underline; }
     transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
   }
   body[data-drawer="open"] .sidebar { transform: none; visibility: visible; }
+  body[data-drawer="open"] { overflow: hidden; }
   body[data-drawer="open"] .scrim {
     display: block; position: fixed; inset: var(--topbar-h) 0 0 0; z-index: 45;
     border: 0; background: rgb(0 0 0 / 0.32);
@@ -625,6 +645,12 @@ a:hover { text-decoration: underline; }
   .prose h2 { font-size: 1.25rem; }
   .prose pre { font-size: 0.8125rem; }
   .doclist a { padding: 10px 4px; }
+}
+
+/* Very narrow phones: the wordmark would crowd the three actions. Keep the shield only. */
+@media (max-width: 400px) {
+  .brand-text { display: none; }
+  .brand { padding: 0 2px; }
 }
 
 @media print {

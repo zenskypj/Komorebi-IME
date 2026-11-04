@@ -30,6 +30,8 @@ class SystemDictionaryManager private constructor(context: Context) {
     private val ui = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "system-dictionary-download") }
     private val listeners = CopyOnWriteArrayList<(State) -> Unit>()
+    /** id → byte length already hash-verified in this process. Avoids re-hashing ~80 MB per switch. */
+    private val verified = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val runtime = app.assets.open("mozc-runtime.sha256").bufferedReader().use { it.readText().trim() }
     val packs: List<Pack> = app.assets.open("system-dictionaries.json").bufferedReader().use { reader ->
         val array = JSONObject(reader.readText()).getJSONArray("packs")
@@ -116,6 +118,7 @@ class SystemDictionaryManager private constructor(context: Context) {
                 check(DictionaryDataFiles.sha256(archive) == pack.compressedSha256) { "取得ファイルのSHA-256が一致しません" }
                 update { it.copy(message = "展開・整合性確認中") }
                 DictionaryDataFiles.installGzip(archive, file(pack), pack.dataBytes, pack.dataSha256)
+                verified[pack.id] = pack.dataBytes
                 update { it.copy(downloading = null, received = pack.compressedBytes, message = "導入済み。「使用する」で切り替えます") }
             } catch (error: Exception) {
                 update { it.copy(downloading = null, message = error.message ?: "取得できませんでした。再試行できます") }
@@ -160,8 +163,12 @@ class SystemDictionaryManager private constructor(context: Context) {
         val pack = packs.firstOrNull { it.id == id && compatible(it) }
         return try {
             checkNotNull(pack) { "アプリ更新により辞書の互換性が変わりました" }
-            DictionaryDataFiles.verify(file(pack), pack.dataBytes, pack.dataSha256)
-            Selection(pack.id, file(pack), pack.dataVersion)
+            val data = file(pack)
+            if (verified[pack.id] != data.length()) {
+                DictionaryDataFiles.verify(data, pack.dataBytes, pack.dataSha256)
+                verified[pack.id] = data.length()
+            }
+            Selection(pack.id, data, pack.dataVersion)
         } catch (error: Exception) {
             fallback(error.message ?: "追加辞書を読み込めません")
             null
@@ -184,6 +191,7 @@ class SystemDictionaryManager private constructor(context: Context) {
         packs.filter { preferences.getBoolean("delete_" + it.id, false) }.forEach { pack ->
             if (state.applied != null && state.applied != pack.id && state.requested != pack.id) {
                 if (!file(pack).exists() || file(pack).delete()) {
+                    verified.remove(pack.id)
                     preferences.edit().remove("delete_" + pack.id).apply()
                     update { it.copy(message = "辞書を削除しました") }
                 }

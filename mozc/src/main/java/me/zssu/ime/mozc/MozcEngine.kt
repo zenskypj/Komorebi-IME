@@ -54,7 +54,6 @@ class MozcEngine private constructor(private val dictionaries: SystemDictionaryM
                     return@execute
                 }
                 evalLocked(Input.newBuilder().setType(Input.CommandType.SYNC_DATA))
-                evalLocked(Input.newBuilder().setType(Input.CommandType.RELOAD_AND_WAIT))
                 deleteSession()
                 val response = evalLocked(Input.newBuilder().setType(Input.CommandType.SEND_ENGINE_RELOAD_REQUEST)
                     .setEngineReloadRequest(EngineReloadRequest.newBuilder()
@@ -66,9 +65,13 @@ class MozcEngine private constructor(private val dictionaries: SystemDictionaryM
                 }
                 pendingDataRequest = true
             }
-            // ACCEPTED is only queue acknowledgement. Probe solely while no editor/composition
-            // uses the session. A new editor resumes the old engine and leaves this pending.
-            repeat(300) {
+            // ACCEPTED is only queue acknowledgement. The engine swaps datasets inside
+            // CreateSession (Engine::MaybeReloadEngine), so each probe has to build and tear down
+            // one session. Probe quickly at first, then back off: a fixed 100 ms tick for 30 s
+            // rebuilt that session 300 times and made switching feel stalled.
+            var waitMs = 40L
+            var remainingMs = 12_000L
+            while (remainingMs > 0) {
                 synchronized(lock) {
                     if (inputActive || composing || dictionaries.currentState().requested != requested) return@execute
                     ensureSessionLocked()
@@ -79,7 +82,9 @@ class MozcEngine private constructor(private val dictionaries: SystemDictionaryM
                         return@execute
                     }
                 }
-                Thread.sleep(100)
+                Thread.sleep(waitMs)
+                remainingMs -= waitMs
+                waitMs = (waitMs * 2).coerceAtMost(250L)
             }
             dictionaries.fallback("辞書の適用を完了できませんでした")
             if (requested.isNotEmpty()) requestDictionaryApply()
