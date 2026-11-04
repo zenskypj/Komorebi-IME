@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "group": "main",
+  "files": {
+    "mecab-user-dict-seed.20200910.csv.xz": {
+      "sourceRows": 3224584,
+      "pos:exact": 3224584
+    }
+  },
+  "baselinePairs": 1085365,
+  "uniqueBeforeBaselineDedup": 3183023,
+  "baselineDuplicateAnalyses": 0,
+  "outputRows": 3183023,
+  "outputBytes": 227959180,
+  "outputSha256": "ba0360dc3d0c70ed2ca68a565824c83f95e0bbfdf0e7f3b84fc58cf59af2f4d0",
+  "seconds": 29.803,
+  "peakRssKiB": 250108,
+  "costFormula": "9000 + floor(clamp(MeCabCost, -6000, 12000) / 4)",
+  "rejectedBytes": 0
+}

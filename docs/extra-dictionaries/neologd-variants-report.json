@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "group": "variants",
+  "files": {
+    "neologd-adjective-exp-dict-seed.20151126.csv.xz": {
+      "sourceRows": 1051146,
+      "pos:exact": 1051146
+    },
+    "neologd-adjective-std-dict-seed.20151126.csv.xz": {
+      "sourceRows": 507812,
+      "pos:exact": 501538,
+      "pos:classical-adjective-shared-connection": 6274
+    },
+    "neologd-adjective-verb-dict-seed.20160324.csv.xz": {
+      "sourceRows": 20268,
+      "pos:exact": 20268
+    },
+    "neologd-adverb-dict-seed.20150623.csv.xz": {
+      "sourceRows": 139792,
+      "pos:exact": 139792
+    },
+    "neologd-common-noun-ortho-variant-dict-seed.20170228.csv.xz": {
+      "sourceRows": 152869,
+      "pos:exact": 152869
+    },
+    "neologd-date-time-infreq-dict-seed.20190415.csv.xz": {
+      "sourceRows": 16866,
+      "pos:exact": 16866
+    },
+    "neologd-ill-formed-words-dict-seed.20170127.csv.xz": {
+      "sourceRows": 60616,
+      "pos:exact": 50657,
+      "pos:classical-adjective-shared-connection": 9906,
+      "pos:ii-adjective-lexical-connection": 53
+    },
+    "neologd-interjection-dict-seed.20170216.csv.xz": {
+      "sourceRows": 4701,
+      "pos:exact": 4701
+    },
+    "neologd-noun-sahen-conn-ortho-variant-dict-seed.20160323.csv.xz": {
+      "sourceRows": 26058,
+      "pos:exact": 26058
+    },
+    "neologd-proper-noun-ortho-variant-dict-seed.20161110.csv.xz": {
+      "sourceRows": 138379,
+      "pos:exact": 138379
+    },
+    "neologd-quantity-infreq-dict-seed.20190415.csv.xz": {
+      "sourceRows": 229216,
+      "pos:exact": 229216
+    }
+  },
+  "baselinePairs": 1085365,
+  "uniqueBeforeBaselineDedup": 2256892,
+  "baselineDuplicateAnalyses": 0,
+  "outputRows": 2256892,
+  "outputBytes": 137769953,
+  "outputSha256": "b9d5533a971a99aa1efd220e2cc85f982e8247ceedbaa5feea58dd56dc8c07f9",
+  "seconds": 19.49,
+  "peakRssKiB": 161916,
+  "costFormula": "9000 + floor(clamp(MeCabCost, -6000, 12000) / 4)",
+  "rejectedBytes": 0
+}

@@ -124,6 +124,18 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         if (params.width != target) { params.width = target; panel.layoutParams = params }
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // Palettes can be opened before this view has its final width (including one-hand mode).
+        // Constrain their child before measuring; onSizeChanged alone leaves a stale first frame
+        // when only the palette changes and the outer view keeps the same width.
+        val panel = emojiPanel?.takeIf { it.parent === container }
+        val available = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+        if (panel != null && available > 0 && MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.UNSPECIFIED) {
+            panel.layoutParams.width = available
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         resizeEmojiPanel(w)

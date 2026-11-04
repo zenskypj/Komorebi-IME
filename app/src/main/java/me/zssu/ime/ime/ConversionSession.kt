@@ -28,14 +28,14 @@ internal class ConversionSession(private val context: Context, private val prior
         set(value) { field = value; if (usesMozc) native().clientContext = value }
     val isAvailable get() = zenzaiEnabled || native().isAvailable
 
-    private fun native(): MozcSession = mozc ?: MozcSession(context, priorityLookup).also {
+    private fun native(): MozcSession = (mozc ?: MozcSession(context, priorityLookup).also {
         mozc = it
         it.applyInputStyle(style)
         it.clientContext = clientContext
         it.setIncognitoMode(incognito)
         it.setPhoneToggleEnabled(phoneToggle)
         it.setTypingCorrectionEnabled(typingCorrection)
-    }
+    }).also { it.applyInputStyle(style) }
 
     fun setZenzaiEnabled(enabled: Boolean, alongside: Boolean) {
         if (enabled == zenzaiEnabled && alongside == mozcAlongside) return

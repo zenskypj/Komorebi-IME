@@ -168,9 +168,7 @@ class ZinnaImeService : InputMethodService() {
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboardManager?.addPrimaryClipChangedListener(clipboardListener)
         session = ConversionSession(this, priorityCandidates::match)
-        zenzai = ZenzaiEngine(this) {
-            Toast.makeText(this, "zenzai-plusを利用できません。かな入力は継続できます", Toast.LENGTH_LONG).show()
-        }
+        zenzai = ZenzaiEngine(this)
         enginePreferences.registerOnSharedPreferenceChangeListener(enginePreferenceListener)
         refreshZenzai()
         karukanEngine = KarukanEngine(this)
@@ -572,6 +570,49 @@ class ZinnaImeService : InputMethodService() {
                 })
             }
             val choices = LinearLayout(this)
+            fun showLayoutChoices() {
+                chooser.removeAllViews()
+                chooser.addView(android.widget.TextView(this).apply {
+                    text = "キーボード配列を選ぶ"; textSize = 18f
+                    setTextColor(theme.candidateTextColor)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                })
+                val layouts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                val styles = listOf(
+                    me.zssu.ime.keyboard.KeyboardStyle.FLICK to "フリック（かな・英字）",
+                    me.zssu.ime.keyboard.KeyboardStyle.QWERTY to "QWERTY（かな・英字）",
+                    me.zssu.ime.keyboard.KeyboardStyle.MIXED to "英字だけQWERTY（かなはフリック）",
+                    me.zssu.ime.keyboard.KeyboardStyle.KANA_QWERTY to "かなだけQWERTY（英字はフリック）",
+                )
+                styles.forEach { (style, label) ->
+                    layouts.addView(android.widget.TextView(this).apply {
+                        text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL
+                        setTextColor(theme.candidateTextColor)
+                        background = background(theme.keyColor)
+                        setPadding(dp(12), dp(8), dp(12), dp(8))
+                        isFocusable = true
+                        setOnClickListener {
+                            settings.keyboardStyle = style
+                            settings.activeLayoutId = null
+                            onboarding.edit().putBoolean("flick_onboarding_done", true).apply()
+                            root.removeView(chooser)
+                            switchLayout(style.defaultLayoutId)
+                        }
+                    }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(0, dp(6), 0, 0)
+                    })
+                    (layouts.getChildAt(layouts.childCount - 1)).minimumHeight = dp(48)
+                }
+                chooser.addView(android.widget.ScrollView(this).apply { addView(layouts) },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(216)))
+                chooser.addView(android.widget.TextView(this).apply {
+                    text = "あとから入力設定で変更できます"; textSize = 12f
+                    setTextColor(theme.candidateTextColor)
+                })
+                chooser.layoutParams = (chooser.layoutParams as FrameLayout.LayoutParams).apply {
+                    height = FrameLayout.LayoutParams.WRAP_CONTENT
+                }
+            }
             fun option(title: String, description: String, mode: ImeSettings.FlickInputMode) {
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
@@ -589,8 +630,7 @@ class ZinnaImeService : InputMethodService() {
                     setOnClickListener {
                         settings.flickInputMode = mode
                         session.setPhoneToggleEnabled(mode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE)
-                        onboarding.edit().putBoolean("flick_onboarding_done", true).apply()
-                        root.removeView(chooser)
+                        showLayoutChoices()
                     }
                 }
                 choices.addView(card, LinearLayout.LayoutParams(0, dp(76), 1f).apply { setMargins(dp(3), dp(10), dp(3), dp(6)) })
@@ -788,8 +828,14 @@ class ZinnaImeService : InputMethodService() {
         return if (settings.pureBlack) sized.asPureBlack() else sized
     }
 
+    override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(info, restarting)
+        me.zssu.ime.mozc.MozcEngine.get(this)?.setInputActive(true)
+    }
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        me.zssu.ime.mozc.MozcEngine.get(this)?.setInputActive(true)
         tryApplyProofreadResult()
         editAnchor = null
         priorityCandidates.invalidate()
@@ -896,6 +942,7 @@ class ZinnaImeService : InputMethodService() {
         keyboardView?.isConversionAvailable = false
         currentInputConnection?.finishComposingText()
         candidateView?.clear()
+        me.zssu.ime.mozc.MozcEngine.get(this)?.setInputActive(false)
     }
 
     /**

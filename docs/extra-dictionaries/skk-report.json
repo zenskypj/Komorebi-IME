@@ -1,0 +1,379 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "SKK-JISYO.JIS2": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 237,
+      "sourceCandidates": 3483,
+      "staticCandidates": 3483,
+      "baselineDuplicateAnalyses": 7
+    },
+    "SKK-JISYO.JIS2004": {
+      "encoding": "euc_jis_2004",
+      "group": "gpl",
+      "sourceRows": 33,
+      "okuri-block-marker": 20,
+      "sourceCandidates": 13,
+      "staticCandidates": 13,
+      "baselineDuplicateAnalyses": 8
+    },
+    "SKK-JISYO.JIS3_4": {
+      "encoding": "euc_jis_2004",
+      "group": "gpl",
+      "sourceRows": 8079,
+      "sourceCandidates": 19229,
+      "unresolved-okuri": 2424,
+      "okuri-block-marker": 1212,
+      "knownOkuriCandidates": 4,
+      "baselineDuplicateAnalyses": 185,
+      "staticCandidates": 16798,
+      "numeric-template": 65,
+      "empty-or-control-character": 3,
+      "duplicateAnalyses": 4
+    },
+    "SKK-JISYO.L": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 175791,
+      "sourceCandidates": 237390,
+      "unresolved-okuri": 16438,
+      "knownOkuriCandidates": 6344,
+      "baselineDuplicateAnalyses": 164492,
+      "duplicateAnalyses": 1762,
+      "unresolved-inflection-id": 8,
+      "okuri-block-marker": 1059,
+      "staticCandidates": 214592,
+      "numeric-template": 566,
+      "empty-or-control-character": 5,
+      "dynamic-lisp": 3
+    },
+    "SKK-JISYO.L.unannotated": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 175791,
+      "sourceCandidates": 238449,
+      "unresolved-okuri": 16445,
+      "knownOkuriCandidates": 6359,
+      "baselineDuplicateAnalyses": 165117,
+      "duplicateAnalyses": 111874,
+      "unresolved-inflection-id": 8,
+      "staticCandidates": 215629,
+      "numeric-template": 566,
+      "empty-or-control-character": 5,
+      "dynamic-lisp": 3
+    },
+    "SKK-JISYO.M": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 8346,
+      "sourceCandidates": 12826,
+      "knownOkuriCandidates": 723,
+      "baselineDuplicateAnalyses": 15005,
+      "unresolved-okuri": 1118,
+      "duplicateAnalyses": 3018,
+      "unresolved-inflection-id": 1,
+      "staticCandidates": 10984
+    },
+    "SKK-JISYO.ML": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 48750,
+      "sourceCandidates": 67342,
+      "unresolved-okuri": 4279,
+      "knownOkuriCandidates": 1202,
+      "baselineDuplicateAnalyses": 60957,
+      "duplicateAnalyses": 12962,
+      "unresolved-inflection-id": 3,
+      "staticCandidates": 61858
+    },
+    "SKK-JISYO.S": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 3379,
+      "sourceCandidates": 6763,
+      "knownOkuriCandidates": 524,
+      "baselineDuplicateAnalyses": 8899,
+      "unresolved-okuri": 768,
+      "duplicateAnalyses": 1848,
+      "unresolved-inflection-id": 1,
+      "staticCandidates": 5470
+    },
+    "SKK-JISYO.assoc": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 5950,
+      "sourceCandidates": 16225,
+      "staticCandidates": 16124,
+      "duplicateAnalyses": 1080,
+      "numeric-template": 49,
+      "dynamic-lisp": 99,
+      "okuri-block-marker": 1543,
+      "unsupported-string-escape": 2,
+      "baselineDuplicateAnalyses": 459
+    },
+    "SKK-JISYO.china_taiwan": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 178,
+      "sourceCandidates": 220,
+      "staticCandidates": 220,
+      "duplicateAnalyses": 24,
+      "baselineDuplicateAnalyses": 51
+    },
+    "SKK-JISYO.edict": {
+      "encoding": "euc_jp",
+      "group": "cc",
+      "sourceRows": 21006,
+      "sourceCandidates": 61735,
+      "staticCandidates": 61735
+    },
+    "SKK-JISYO.edict2": {
+      "encoding": "utf-8",
+      "group": "cc",
+      "sourceRows": 25041,
+      "sourceCandidates": 86588,
+      "staticCandidates": 86588,
+      "duplicateAnalyses": 58753
+    },
+    "SKK-JISYO.emoji": {
+      "encoding": "utf-8",
+      "group": "unicode",
+      "sourceRows": 4566,
+      "sourceCandidates": 11945,
+      "staticCandidates": 11945
+    },
+    "SKK-JISYO.fullname": {
+      "encoding": "euc_jis_2004",
+      "group": "gpl",
+      "sourceRows": 26325,
+      "sourceCandidates": 26921,
+      "staticCandidates": 26921,
+      "baselineDuplicateAnalyses": 4276
+    },
+    "SKK-JISYO.geo": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 112049,
+      "sourceCandidates": 124287,
+      "unresolved-okuri": 2,
+      "numeric-template": 138,
+      "staticCandidates": 124285,
+      "baselineDuplicateAnalyses": 74032
+    },
+    "SKK-JISYO.hukugougo": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 7759,
+      "sourceCandidates": 7788,
+      "staticCandidates": 7788,
+      "baselineDuplicateAnalyses": 33,
+      "duplicateAnalyses": 25
+    },
+    "SKK-JISYO.itaiji": {
+      "encoding": "euc_jp",
+      "group": "permissive",
+      "sourceRows": 1520,
+      "sourceCandidates": 2156,
+      "staticCandidates": 2156,
+      "baselineDuplicateAnalyses": 6,
+      "duplicateAnalyses": 9
+    },
+    "SKK-JISYO.itaiji.JIS3_4": {
+      "encoding": "euc_jis_2004",
+      "group": "gpl",
+      "sourceRows": 917,
+      "sourceCandidates": 1134,
+      "staticCandidates": 1134,
+      "duplicateAnalyses": 10
+    },
+    "SKK-JISYO.ivd": {
+      "encoding": "utf-8",
+      "group": "unicode",
+      "sourceRows": 15264,
+      "sourceCandidates": 29303,
+      "staticCandidates": 29303
+    },
+    "SKK-JISYO.jinmei": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 19948,
+      "sourceCandidates": 39259,
+      "staticCandidates": 39259,
+      "baselineDuplicateAnalyses": 30322,
+      "duplicateAnalyses": 230,
+      "okuri-block-marker": 15
+    },
+    "SKK-JISYO.law": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 12211,
+      "sourceCandidates": 12398,
+      "unresolved-okuri": 19,
+      "knownOkuriCandidates": 2,
+      "baselineDuplicateAnalyses": 1687,
+      "staticCandidates": 12377,
+      "duplicateAnalyses": 1205,
+      "numeric-template": 8
+    },
+    "SKK-JISYO.lisp": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 48,
+      "numeric-template": 17,
+      "sourceCandidates": 106,
+      "dynamic-lisp": 106
+    },
+    "SKK-JISYO.mazegaki": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 3023,
+      "sourceCandidates": 3023,
+      "staticCandidates": 3023
+    },
+    "SKK-JISYO.noregist": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 1835,
+      "inspectionOnlyRows": 1835
+    },
+    "SKK-JISYO.not_wrong": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 103,
+      "sourceCandidates": 116,
+      "unresolved-okuri": 23,
+      "okuri-block-marker": 1,
+      "knownOkuriCandidates": 7,
+      "baselineDuplicateAnalyses": 87,
+      "duplicateAnalyses": 54,
+      "numeric-template": 1,
+      "staticCandidates": 85,
+      "unsupported-string-escape": 1
+    },
+    "SKK-JISYO.notes": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 20344,
+      "sourceCandidates": 10092,
+      "unresolved-okuri": 6943,
+      "okuri-block-marker": 16897,
+      "knownOkuriCandidates": 582,
+      "baselineDuplicateAnalyses": 7538,
+      "duplicateAnalyses": 564,
+      "staticCandidates": 2567
+    },
+    "SKK-JISYO.okinawa": {
+      "encoding": "euc_jp",
+      "group": "permissive",
+      "sourceRows": 5117,
+      "sourceCandidates": 5548,
+      "staticCandidates": 5548,
+      "baselineDuplicateAnalyses": 4244
+    },
+    "SKK-JISYO.pinyin": {
+      "encoding": "utf-8",
+      "group": "gpl",
+      "sourceRows": 28294,
+      "sourceCandidates": 41248,
+      "staticCandidates": 41248,
+      "duplicateAnalyses": 21
+    },
+    "SKK-JISYO.propernoun": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 9154,
+      "sourceCandidates": 12489,
+      "unresolved-okuri": 13,
+      "staticCandidates": 11702,
+      "dynamic-lisp": 774,
+      "okuri-block-marker": 1198,
+      "baselineDuplicateAnalyses": 3409,
+      "numeric-template": 234
+    },
+    "SKK-JISYO.pubdic+": {
+      "encoding": "euc_jp",
+      "group": "permissive",
+      "sourceRows": 58,
+      "sourceCandidates": 59,
+      "staticCandidates": 59,
+      "baselineDuplicateAnalyses": 49,
+      "okuri-block-marker": 1
+    },
+    "SKK-JISYO.requested": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 12583,
+      "sourceCandidates": 12728,
+      "unresolved-okuri": 1015,
+      "knownOkuriCandidates": 138,
+      "baselineDuplicateAnalyses": 5595,
+      "okuri-block-marker": 360,
+      "duplicateAnalyses": 165,
+      "numeric-template": 217,
+      "staticCandidates": 11570,
+      "empty-or-control-character": 2,
+      "dynamic-lisp": 3
+    },
+    "SKK-JISYO.station": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 21472,
+      "sourceCandidates": 22210,
+      "staticCandidates": 22210,
+      "baselineDuplicateAnalyses": 19272,
+      "duplicateAnalyses": 63
+    },
+    "SKK-JISYO.wrong": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 1641,
+      "inspectionOnlyRows": 1641
+    },
+    "SKK-JISYO.wrong.annotated": {
+      "encoding": "euc_jp",
+      "group": "gpl",
+      "sourceRows": 1641,
+      "inspectionOnlyRows": 1641
+    },
+    "zipcode/SKK-JISYO.office.zipcode": {
+      "encoding": "euc_jis_2004",
+      "group": "permissive",
+      "sourceRows": 22233,
+      "sourceCandidates": 22442,
+      "staticCandidates": 22442
+    },
+    "zipcode/SKK-JISYO.zipcode": {
+      "encoding": "euc_jis_2004",
+      "group": "permissive",
+      "sourceRows": 120394,
+      "sourceCandidates": 126869,
+      "staticCandidates": 126869
+    }
+  },
+  "groups": {
+    "gpl": {
+      "outputRows": 308185,
+      "outputBytes": 13396380
+    },
+    "cc": {
+      "outputRows": 89570,
+      "outputBytes": 3047925
+    },
+    "unicode": {
+      "outputRows": 41248,
+      "outputBytes": 1161106
+    },
+    "permissive": {
+      "outputRows": 152766,
+      "outputBytes": 9974029
+    }
+  },
+  "seconds": 6.752,
+  "limitations": [
+    "Dynamic Lisp and numeric templates cannot be finite system words.",
+    "Okuri without a verified Mozc conjugation class is retained in unresolved.jsonl.",
+    "Static entries without POS metadata use noun/symbol classes; source-specific names use proper noun classes.",
+    "wrong/wrong.annotated/noregist are inspection inputs, not conversion words."
+  ]
+}

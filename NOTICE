@@ -99,3 +99,16 @@ https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF    (Qwen3.5-0.8B-Q4_K_M.gguf)
 https://huggingface.co/unsloth/Qwen3-1.7B-GGUF      (Qwen3-1.7B-Q4_K_M.gguf)
 https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF  (gemma-4-E2B-it-Q4_K_M.gguf)
 Proofreading runtime uses llama.cpp (MIT), source revision 66afb885a8ddcc0511798aec9fb5a01017941018.
+
+Optional complete system dictionary datasets (separate explicit downloads):
+- NEologd: neologd/mecab-ipadic-neologd abc61e33d8be3d0ead202e6b1df064c72d5ccf11.
+  Apache-2.0 with the upstream COPYING and its source acknowledgements preserved.
+- SKK official dictionaries: skk-dev/dict 0a164e6b990c5eb5b59eb7d8789f08865dc2f644.
+  Independent datasets preserve their GPL-2.0, CC-BY-SA-3.0, Unicode,
+  public-domain and Pubdic+ conditions; these are not one blanket license.
+Detailed original headers, complete license texts and standard Mozc notices:
+app/src/main/assets/legal/system-dictionaries/.
+Full source inputs, conversion scripts and per-file processing reports accompany
+the v0.3.0-rc.33-dev GitHub Release. Dynamic SKK programs, unresolved
+inflections and inspection-only records are reported rather than silently used
+as nouns. See docs/extra-dictionaries/README.md.

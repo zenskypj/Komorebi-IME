@@ -252,6 +252,7 @@ private fun KeyboardStyle.displayName(): String = when (this) {
     KeyboardStyle.FLICK -> "フリック"
     KeyboardStyle.QWERTY -> "QWERTY"
     KeyboardStyle.MIXED -> "かなフリック + 英字QWERTY"
+    KeyboardStyle.KANA_QWERTY -> "かなQWERTY + 英字フリック"
 }
 
 private fun ImeSettings.OneHandMode.displayName(): String = when (this) {

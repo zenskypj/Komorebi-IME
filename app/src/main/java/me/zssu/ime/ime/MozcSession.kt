@@ -89,6 +89,7 @@ class MozcSession(
     private var requestedStyle: InputStyle? = null
     var clientContext: org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context? = null
     private var currentStyle: InputStyle? = null
+    private var styleGeneration = -1L
     private var configApplied = false
     private var configuredFullWidthSpace: Boolean? = null
     private var incognito = false
@@ -107,6 +108,14 @@ class MozcSession(
 
     fun applyInputStyle(style: InputStyle) {
         requestedStyle = style
+        val engine = engine ?: return
+        if (!engine.ensureSession()) return
+        if (styleGeneration != engine.sessionGeneration) {
+            currentStyle = null
+            configApplied = false
+            configuredFullWidthSpace = null
+            styleGeneration = engine.sessionGeneration
+        }
         val effectiveStyle = if (phoneToggleEnabled && style == InputStyle.FLICK_HIRAGANA) {
             InputStyle.TOGGLE_FLICK_HIRAGANA
         } else {
@@ -114,7 +123,6 @@ class MozcSession(
         }
         if (effectiveStyle == currentStyle) return
         readingBoundary.clear()
-        val engine = engine ?: return
         val request = Request.newBuilder()
             .setSpecialRomanjiTable(
                 Request.SpecialRomanjiTable.forNumber(effectiveStyle.mozcTableNumber)

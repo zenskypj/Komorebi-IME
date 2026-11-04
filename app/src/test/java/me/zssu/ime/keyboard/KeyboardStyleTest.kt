@@ -45,6 +45,17 @@ class KeyboardStyleTest {
     }
 
     @Test
+    fun kanaOnlyQwertyUsesFlickForEnglishAndResolvesBothSwitchDirections() {
+        with(KeyboardStyle.KANA_QWERTY) {
+            assertEquals("qwerty_kana", defaultLayoutId)
+            assertEquals("qwerty_kana", resolve("flick_kana"))
+            assertEquals("flick_ascii", resolve("qwerty_ascii"))
+            assertEquals("qwerty_kana", resolve("qwerty_kana"))
+            assertEquals("flick_ascii", resolve("flick_ascii"))
+        }
+    }
+
+    @Test
     fun symbolPagesAreNeverRedirected() {
         for (style in KeyboardStyle.entries) {
             for (id in listOf("flick_symbol", "qwerty_symbol", "qwerty_symbol2")) {

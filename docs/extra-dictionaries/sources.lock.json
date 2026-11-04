@@ -1,0 +1,795 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "COPYING",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/COPYING",
+      "bytes": 4085,
+      "gitBlob": "43d83b44ffb88a799a3c485908ead4ea7f3c9e4a",
+      "sha256": "428ad012b9b7baf3af430fb730998791da30458e4f88fbcd8ef5ac75a0eed81e"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "README.ja.md",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/README.ja.md",
+      "bytes": 23577,
+      "gitBlob": "ea0b0f6f460fe068c8c9b0a5ef8a651dc56220f3",
+      "sha256": "e8c484e0d790843ebcfcbf30a020cb5fddbd029381aabef2bd54d1cf2586d28f"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "README.md",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/README.md",
+      "bytes": 14411,
+      "gitBlob": "2bbe44134e34dd33fc6d6dcb9ec7661055cb379d",
+      "sha256": "2be417572b2f2fb766deafb77d028908c1ee798053229da9fceeff34d504cd74"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/mecab-user-dict-seed.20200910.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/mecab-user-dict-seed.20200910.csv.xz",
+      "bytes": 41116376,
+      "gitBlob": "4f05d9e235af92c7d37e2abaf5918af5d640b2c0",
+      "sha256": "471ae4ac077a7d5f5b40ac5c3d097cdf5d658a71b1cc042db5bdb176790ba2c5"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-adjective-exp-dict-seed.20151126.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-adjective-exp-dict-seed.20151126.csv.xz",
+      "bytes": 3497160,
+      "gitBlob": "c841d93e02bea76ff763fdf0491d1f5b22a07331",
+      "sha256": "daf4a82187bcac9051e3233d63978ed776583ca90d9b9da5c170b1833171c156"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-adjective-std-dict-seed.20151126.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-adjective-std-dict-seed.20151126.csv.xz",
+      "bytes": 1839584,
+      "gitBlob": "ede23abb8f6075774a6691680d67d22ea9612325",
+      "sha256": "25ae0b12e459328d8e08254d16c5e5b292a2fbdce676c6f592ac8e5d93a2e2d0"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-adjective-verb-dict-seed.20160324.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-adjective-verb-dict-seed.20160324.csv.xz",
+      "bytes": 138512,
+      "gitBlob": "96ad1adaaaf7ec6392fefa7f1a8ca16065aecb00",
+      "sha256": "9334b0ef67512893c4eccf7755abf7391b9a3601434726789d36a3cd0eacac5c"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-adverb-dict-seed.20150623.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-adverb-dict-seed.20150623.csv.xz",
+      "bytes": 602968,
+      "gitBlob": "6f701b7ca20404b4d1a83f7eaf80508383cf8603",
+      "sha256": "a2e73f966c7a624f8d455fccb19bc9e32bb9e34fa77b5a4be0bc756247e37786"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-common-noun-ortho-variant-dict-seed.20170228.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-common-noun-ortho-variant-dict-seed.20170228.csv.xz",
+      "bytes": 1034128,
+      "gitBlob": "8b65d75fdb506201cc2b4b4214d8fcac2a47c449",
+      "sha256": "fd16899eba60ac4c211867ee4c7ebd6a3c0343f0fba95d29d5796b22aa13ce38"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-date-time-infreq-dict-seed.20190415.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-date-time-infreq-dict-seed.20190415.csv.xz",
+      "bytes": 141004,
+      "gitBlob": "2fdd69c40f68bab1a0b0c60a6ccbbcfc457784ef",
+      "sha256": "a4684f9c1e6377783eec5d3fd00f56a3bf16b6a74305f3ce6a5b375e5a35ef32"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-ill-formed-words-dict-seed.20170127.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-ill-formed-words-dict-seed.20170127.csv.xz",
+      "bytes": 256464,
+      "gitBlob": "1a55abca2ca39856d7542faf48ec6adb9848b2af",
+      "sha256": "c63c98787aab824a815ba2587a3c39f442b35e42b51c6245ffdb628ff237078f"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-interjection-dict-seed.20170216.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-interjection-dict-seed.20170216.csv.xz",
+      "bytes": 24640,
+      "gitBlob": "f25683f3e9d51a2898e63d3d6a454196f4742254",
+      "sha256": "8dccf413780dd60a34377e3ce027a00a0e380f942447358457f5205d0b4317ba"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-noun-sahen-conn-ortho-variant-dict-seed.20160323.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-noun-sahen-conn-ortho-variant-dict-seed.20160323.csv.xz",
+      "bytes": 175736,
+      "gitBlob": "9a5a56b21924a18aea47ab090ebe780687f93a63",
+      "sha256": "6e1586502f624bdb54b8bc4e2ea9a8091b18947749c7991be2451863404363f5"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-proper-noun-ortho-variant-dict-seed.20161110.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-proper-noun-ortho-variant-dict-seed.20161110.csv.xz",
+      "bytes": 946604,
+      "gitBlob": "7f2bb35ed61a30b805269ffb28f71b3558e884c3",
+      "sha256": "22e4abe473b961cd66f3752674d1e9a55f1d4524d23b8b4615def817fee192c4"
+    },
+    {
+      "source": "neologd",
+      "repository": "neologd/mecab-ipadic-neologd",
+      "commit": "abc61e33d8be3d0ead202e6b1df064c72d5ccf11",
+      "path": "seed/neologd-quantity-infreq-dict-seed.20190415.csv.xz",
+      "url": "https://raw.githubusercontent.com/neologd/mecab-ipadic-neologd/abc61e33d8be3d0ead202e6b1df064c72d5ccf11/seed/neologd-quantity-infreq-dict-seed.20190415.csv.xz",
+      "bytes": 1429580,
+      "gitBlob": "dcf7a8bdfd6ff01b84b284afb315307fb84242ce",
+      "sha256": "33f650ca3732106b4ca4f3997c70154f9eda86646a304ac6c2c3323718420437"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "Makefile",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/Makefile",
+      "bytes": 11062,
+      "gitBlob": "b230725c227189d0ca2120546d329104070a16fd",
+      "sha256": "16fdec027bb43d68d421813218408cf8d85caa4141b63f61883a5f7ee303b50a"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "README.md",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/README.md",
+      "bytes": 2508,
+      "gitBlob": "3a156a0e1f2aa6658a553f0ee5e6750ae3889066",
+      "sha256": "c99915c182092b31bc8c79396d845e0f10b063ec7a89b728f3138745bc1eac08"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.JIS2",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.JIS2",
+      "bytes": 13972,
+      "gitBlob": "ba4b6349af01961de89fb02ba1efe08eb5a94759",
+      "sha256": "3efd0c7b6fdbd2b8e1102863fff7537995e3982339164f28d7b98f1ffff9fa44"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.JIS2004",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.JIS2004",
+      "bytes": 2933,
+      "gitBlob": "b004918da380101947c3e6caf05516840bb2e028",
+      "sha256": "5c90675fbacfd4046a44ae807cb47b1acaafff61be65c5c3372dadee2790fc13"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.JIS3_4",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.JIS3_4",
+      "bytes": 226238,
+      "gitBlob": "67962de566d82b0afb763e03a632843436e7fd2a",
+      "sha256": "356f6be023a19b8d9e0dc190ea69ba2ff49bbd149521d05db0b125debaa6a183"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.L",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.L",
+      "bytes": 4489815,
+      "gitBlob": "87f846bd57174ed0968475c7015c520abf32558f",
+      "sha256": "c791f578d1b4040fce282db29bc22b2cc7ea46f83e269fab2e0fa779e2967e40"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.L.unannotated",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.L.unannotated",
+      "bytes": 4076447,
+      "gitBlob": "37c571d18041ee2a48a53aa8e73a1804106c548d",
+      "sha256": "2212c2e95a65ddfa3c167875b8a611bfcbbb8af6de940649165c4cc5fdebddb1"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.M",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.M",
+      "bytes": 144468,
+      "gitBlob": "cb99d3ddb9eaac006685dea6ffc18d6a99d64380",
+      "sha256": "b7758c1d8f89ee3dd98a059542ac5c4db076a818c64cc0bec13ad92a71ba925f"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.ML",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.ML",
+      "bytes": 952884,
+      "gitBlob": "8e779f84482e1ae78d265f135d3b37f74091edc7",
+      "sha256": "c171229dd49c1c48a3be4e245d767b1c6580c16d8406a3652483429e9beaad98"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.S",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.S",
+      "bytes": 55683,
+      "gitBlob": "69938a41470e4e9afa5dc37f1e2b19135bc223f3",
+      "sha256": "9899d5a204bfd5e84d4bf3d52d52bcea724dadea7f5b416f2712a65411cb9285"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.assoc",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.assoc",
+      "bytes": 327770,
+      "gitBlob": "1a50c097fb98ae400155c469eaa21b278d0f37a1",
+      "sha256": "251b607fcd345f438e112b2ec4f77835f4fbe728864af4dcaf8df3a5ba552b5d"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.china_taiwan",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.china_taiwan",
+      "bytes": 7962,
+      "gitBlob": "956eca53be291d060ef39570a603f926680bf25b",
+      "sha256": "b1e1df81f0b3292e798dd7442c993c63b243c0dc8b20ce9e300e548c14993c17"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.china_taiwan.header",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.china_taiwan.header",
+      "bytes": 971,
+      "gitBlob": "1bb4437ef8d7eb7786f32e63356fa88ab21cbf0e",
+      "sha256": "95a95ff3d4cdcd2eb1c93d99e78b314d865f0075676c695cec23c221308bbf92"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.edict",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.edict",
+      "bytes": 694872,
+      "gitBlob": "84740f79e7c78a323b8be8a2d69aa85dc2eb5048",
+      "sha256": "918635d016c958819a220d29d10440233d6ca3e3c6d225a30dc6cabd01b63cef"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.edict2",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.edict2",
+      "bytes": 1166321,
+      "gitBlob": "cbe2c42ec845603f546face2ced06abaa5fb38fd",
+      "sha256": "46ccbdb0facf43276370685df46c22c54d34f72651b5ad9ca56bc49d1257e077"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.emoji",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.emoji",
+      "bytes": 253878,
+      "gitBlob": "b4570e0602b147d90266093dd3115ef4e5840683",
+      "sha256": "5075de6beade66f02ab8c4ebd32511e5811c1c7f11557b22269a3d65cf335877"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.fullname",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.fullname",
+      "bytes": 1387968,
+      "gitBlob": "37376656b971ebaa025dff67cae225986ecdfe37",
+      "sha256": "b034502fe69b91aee8e68d93d82558136856ec6a4d8f2e92d153a6284363a8b3"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.geo",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.geo",
+      "bytes": 2857056,
+      "gitBlob": "775e172053c46ae5054880e7f69bdeb6a1346dfa",
+      "sha256": "02499290a221703678e0bd07803980b6bcf8481149dc1f982f7ab512b327d078"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.hukugougo",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.hukugougo",
+      "bytes": 249004,
+      "gitBlob": "94d48e46a5d33d0ae3c2308524c1a8817e6facf7",
+      "sha256": "8926e08f7b54f914b84bec074702d8b2c03691e30622eb0c18d211b8c8310be1"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.itaiji",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.itaiji",
+      "bytes": 16925,
+      "gitBlob": "7dab211b83dfae2f8981ccacd2d610a4a1086739",
+      "sha256": "14999937504eac810742bcc6cc1f8f2adfb9fcbe90118f497d680848fd5b0f89"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.itaiji.JIS3_4",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.itaiji.JIS3_4",
+      "bytes": 20333,
+      "gitBlob": "31e4df65abbc99efc99a22cfbaab0aa5bcb22e10",
+      "sha256": "a1a8fa2b4414fdfaa2c8b605a5d9f836b01512cba0b2ffcc09e99bd788340597"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.ivd",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.ivd",
+      "bytes": 1194545,
+      "gitBlob": "60e8f2a9dd1fddbc2d838fb6eca4d9d5c85507ad",
+      "sha256": "f7c2c92dd08201d6272b8b44c359c99eac9ccbb1512a4d10320d0315014a6ba7"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.jinmei",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.jinmei",
+      "bytes": 627829,
+      "gitBlob": "b83b752e43e6500ca3735fc96581ae95be786b9d",
+      "sha256": "4da9ae6277170f9a3a493cfa1b529442a97585b648dddb0e6c4e4090f32c8224"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.law",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.law",
+      "bytes": 397203,
+      "gitBlob": "e847855696883a342de0be780dbcb2710bda11c5",
+      "sha256": "11c674dfc8b106d12ba216e07fb8762e7d89df15a81fa79cc8e48984a6af03be"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.lisp",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.lisp",
+      "bytes": 18326,
+      "gitBlob": "d521950165b98b2a9273d48ada201e6d16d64ee1",
+      "sha256": "2302f15c96e8ee9348c5ace2a39cc15e95bc926b9b37d5c90f90f3ec944ef451"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.mazegaki",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.mazegaki",
+      "bytes": 63718,
+      "gitBlob": "52ab37b96203ae943f583e80afb8836efe2435f7",
+      "sha256": "dbbb22dcc74cacad16af4301e977127524429c5cb2b17264c9c679f7bec92394"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.noregist",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.noregist",
+      "bytes": 121306,
+      "gitBlob": "3008605e710f4a372d60463cdf7fc59afed49eaf",
+      "sha256": "23b8f5bbefcc827b922dd52f1745c9e1fca4b980260e3ec882a824048db4dfb0"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.not_wrong",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.not_wrong",
+      "bytes": 9199,
+      "gitBlob": "8030cdbf224dd434d7d0ad829ced24b14185a330",
+      "sha256": "019a50153f63a8a9e67184e5428b3f93d7fc17d71a1e29eb575d55b8a3c2913f"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.notes",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.notes",
+      "bytes": 894842,
+      "gitBlob": "e1ed58cbad698fcb8912bf164e09191dd763fc49",
+      "sha256": "84c730ad84bd8af91aa3a3ce4a6b192a7bb1f1cdc340c2e5b5a1a51a9836cc23"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.okinawa",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.okinawa",
+      "bytes": 248001,
+      "gitBlob": "89e71b534234dac5f3462ac8d50f8425e291a4ae",
+      "sha256": "88faa23b60bb2ad56aff6a68b5827f783f27af78f8851ab90b33aca5fc239dfd"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.pinyin",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.pinyin",
+      "bytes": 600621,
+      "gitBlob": "6af779f5d2ae728d10536f3be8506948126d9fea",
+      "sha256": "d1c78e7f526446a0760191898983926e65829f08a94e38f5e5a18f330b94c74f"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.propernoun",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.propernoun",
+      "bytes": 497518,
+      "gitBlob": "b31a13d7b8ae3a9e6fba3c12ec7da9b92482cacd",
+      "sha256": "1522693c2c7a009e159aed06c4d1d5ed07c7616903a53a947f505e96cc9db428"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.pubdic+",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.pubdic+",
+      "bytes": 2674,
+      "gitBlob": "4704eea27f043a9aae08e50ef5a2611e0d3e7b35",
+      "sha256": "370238ae98bc2b8d8767281b9ada19f919cc87bd9b8a9209df2ac8cbb7440cc6"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.requested",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.requested",
+      "bytes": 375059,
+      "gitBlob": "1950d59c58de8b6c055309a07c8f22b158800673",
+      "sha256": "19da3add197a05d4bedba7cf7a72ece3cc12c08e8d1c0d139f1a5632d8b6a3d9"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.station",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.station",
+      "bytes": 536697,
+      "gitBlob": "e3c86be645c8b2416d7a21f316c3b8813b2f89dd",
+      "sha256": "000708bf1b678c4b5365ebfa0415bfe72d29c0d7cdcca908880d2207fe4c34be"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.wrong",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.wrong",
+      "bytes": 36852,
+      "gitBlob": "fdc19de2e81b445b4a74255f6d61ac8ea55c2801",
+      "sha256": "7aca5762082710851c413858f89df9b9d57a5dfb357cc37012bc877bdd715a43"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "SKK-JISYO.wrong.annotated",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/SKK-JISYO.wrong.annotated",
+      "bytes": 73811,
+      "gitBlob": "5b35311c4d308619ad060cbc132747c7c9715a3f",
+      "sha256": "347539dc14b7de204ae7f7024435edddba5549b8e8e549416b55e47425765fe2"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "committers.md",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/committers.md",
+      "bytes": 16945,
+      "gitBlob": "2ba36aef75d9812143687e3fd609e3b449a469ce",
+      "sha256": "eb13db671542b8b9f1d1e5bde09d043fced6719a35e1daa513d1ea0372290cc9"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "edict_doc.html",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/edict_doc.html",
+      "bytes": 22157,
+      "gitBlob": "2418c3a1f6a7928d17692b8d77e49b3e184af897",
+      "sha256": "59a8279737ab1307e24a83666801b6b3f03e4b94f02513a2192ac73c148ff8ea"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.JIS2.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.JIS2.yaml",
+      "bytes": 980,
+      "gitBlob": "df2d05e637c269904228d505db764890149b9ba8",
+      "sha256": "5f55811d2d6c5459479a46e9b15547b9e346347ff196742d70bc002ae3fdf6a2"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.L.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.L.yaml",
+      "bytes": 2513,
+      "gitBlob": "a1988c773ea52d66cf04e1367fbb7aa4fbb30277",
+      "sha256": "b201a6708f0ecc7d0a783aa7a9aa91c9d57df3e6bdd4c187fe822a28494922b1"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.M.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.M.yaml",
+      "bytes": 1158,
+      "gitBlob": "fc764da3413f3848074a670d3faeb843bbfeb8f2",
+      "sha256": "40d2dbb6924c5249638dd0a9781314a2b3b7260c5b70081411b014243882232c"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.ML.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.ML.yaml",
+      "bytes": 2004,
+      "gitBlob": "4064b083d3192b1ff348ed747dff3115824a4e04",
+      "sha256": "92e86244ce11f7a344b5d10c20cf646dfd9e30c4fcfcacab1fb4136a0fffa5f7"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.S.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.S.yaml",
+      "bytes": 1111,
+      "gitBlob": "5ac34f0fcf42f3d7fb79ee2c665f4460afba0c1b",
+      "sha256": "b46e12d95f730a0ba61d71921eee59f0c1c08c9ba75be0376af2a4d4624f1c4d"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.assoc.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.assoc.yaml",
+      "bytes": 10356,
+      "gitBlob": "e87e79217239ecccda92dd02991dcb3017ce21ac",
+      "sha256": "aa37660dce183b7cd5a343f4c8a7eba6e6d42ba96c9998a97f36acddeb7fcd46"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.china_taiwan.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.china_taiwan.yaml",
+      "bytes": 861,
+      "gitBlob": "21a994509c1b937518cd07beaad09b680e6d3bd8",
+      "sha256": "1a95ec14b90c61c65de9bbf15cd9ad756723d6a2382ec8e267e6258149e2c05f"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.edict.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.edict.yaml",
+      "bytes": 1152,
+      "gitBlob": "570f190fb539ec4be6c9fee3ed78e34bc985f5ce",
+      "sha256": "7f5a5705c9f46b0f0eab91b82ca4b8209bd976078f1dbaa727d20d4294da1519"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.edict2.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.edict2.yaml",
+      "bytes": 1094,
+      "gitBlob": "c0c099408f4060de8c4fd2fd79e271dcccb719f8",
+      "sha256": "7202528078c627270fc916ded838cf8ad5ba0616d418fdda36e00665a8da8404"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.emoji.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.emoji.yaml",
+      "bytes": 2389,
+      "gitBlob": "ae778ba4b87ea2f9ce99011b80e154d1ac068368",
+      "sha256": "f9c164fe08d31b0f1feba9f18dd115d7ccc0d95bb90fb36516d4874920df8a2b"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.fullname.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.fullname.yaml",
+      "bytes": 1847,
+      "gitBlob": "60a7c9a633a605fd8941e47a7388426790802b6f",
+      "sha256": "416a545661379d1e0b78848b4b6cb780588402ffe30071668b914913ab7a0451"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.geo.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.geo.yaml",
+      "bytes": 2146,
+      "gitBlob": "db12de949ad9b2cba9c3e86ee909d4a6757104b8",
+      "sha256": "d866603fb3596c8411cbfdf17cea77571e9ae62d231dbcce3990e9fd67ab9f19"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.hukugougo.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.hukugougo.yaml",
+      "bytes": 2480,
+      "gitBlob": "99e7b842f226ba4e90175b28df0744af72190d2b",
+      "sha256": "37ef1e62c5cffc4b620b891dad9376c8ee80d967abd976d5e2771236924b5bb5"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.itaiji.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.itaiji.yaml",
+      "bytes": 383,
+      "gitBlob": "be96de071d490422956f6c23c8376d7b06f104a8",
+      "sha256": "7c83774a2304f6b31374f00dc6e9c7a47b31be26fd84501acfaa4c467ae47a46"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.jinmei.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.jinmei.yaml",
+      "bytes": 1389,
+      "gitBlob": "4fd8bdd9bc631a76b7a6654c60f45904a753b087",
+      "sha256": "b6ac4d30fc1d8ee1b906a9aea8de31c83f87af85630f21f5fb02953a845c1c5b"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.law.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.law.yaml",
+      "bytes": 1727,
+      "gitBlob": "ec5b510e24b674ee8e99120280edf4eff26562ad",
+      "sha256": "0d0a94065622fb7f917494bc81edb401ac912dc9a74b3725db11270cdb406c78"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.mazegaki.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.mazegaki.yaml",
+      "bytes": 858,
+      "gitBlob": "e89b1ac6303ef25e00453d34781dbe60d2894ea7",
+      "sha256": "ce017c885d3f629537a7e021c7ead55abbcc4a5445633b70ef3828eccdd8d4d6"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.okinawa.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.okinawa.yaml",
+      "bytes": 1996,
+      "gitBlob": "5b6c0fea2a0e675697e3beb754faf213da0f5278",
+      "sha256": "5204ee3f3c8db60ba2d8c7e614f7e77a76e60b408fb98448bcc9823465392d8a"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.pinyin.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.pinyin.yaml",
+      "bytes": 1113,
+      "gitBlob": "96c0f99d7c26f63bba97f6c333960e06029153d5",
+      "sha256": "e1bf8ceb34d671ae37397ddf5edaa99bb7f3e7da9614f21a26f906c1bf75eb76"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.propernoun.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.propernoun.yaml",
+      "bytes": 6364,
+      "gitBlob": "7b19d271e1ea002da74e32ff24014df0ca0b67a3",
+      "sha256": "3e11f478ca521845f6f3edc8862d3d1e4773044456a12d8c697aebd481edc274"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.pubdic+.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.pubdic+.yaml",
+      "bytes": 917,
+      "gitBlob": "d2fab543e19d7f74458500f31e32f68322138198",
+      "sha256": "8a2079d459b0cee37ef8189b24ee1133062c9079e7a973cf9e172c17aa90656b"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "meta/SKK-JISYO.station.yaml",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/meta/SKK-JISYO.station.yaml",
+      "bytes": 1746,
+      "gitBlob": "f4c049b62b6ce115d0353374ceef4682e6ea84a3",
+      "sha256": "116f32eb36424015c00eac59b74df1d2eb00800dcea8845302151f696321640e"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "zipcode/README.md",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/zipcode/README.md",
+      "bytes": 10291,
+      "gitBlob": "fbf974bf817ef262c3940914848a46a60d84e84a",
+      "sha256": "ca14065542d8527a3c638c5ea1723c0f361221c43afa06709ceb46c3fd4cdede"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "zipcode/SKK-JISYO.office.zipcode",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/zipcode/SKK-JISYO.office.zipcode",
+      "bytes": 1649514,
+      "gitBlob": "54602e4c1f99153f0bd5546edd7eac184fd84df5",
+      "sha256": "1d971b00163564565a659ac2335a9da410e8353f5ce3d81f3421d586046a24c1"
+    },
+    {
+      "source": "skk",
+      "repository": "skk-dev/dict",
+      "commit": "0a164e6b990c5eb5b59eb7d8789f08865dc2f644",
+      "path": "zipcode/SKK-JISYO.zipcode",
+      "url": "https://raw.githubusercontent.com/skk-dev/dict/0a164e6b990c5eb5b59eb7d8789f08865dc2f644/zipcode/SKK-JISYO.zipcode",
+      "bytes": 4130604,
+      "gitBlob": "7bfda57f4916e441d59804dc7216452229af2322",
+      "sha256": "0bffb758f22e4f0fbaa1f9cdcc0b623991ffae343ade26c0eafe93af958b99c4"
+    }
+  ]
+}

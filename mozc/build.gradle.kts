@@ -1,4 +1,5 @@
 import com.google.protobuf.gradle.id
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.library)
@@ -31,6 +32,7 @@ android {
 
     sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")
     sourceSets["main"].assets.srcDirs("src/main/assets")
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/runtimeAssets"))
 
     testOptions.unitTests.isReturnDefaultValues = true
 
@@ -73,6 +75,9 @@ val verifyMozcRuntime by tasks.registering {
         "src/main/jniLibs/x86_64/libmozc.so",
     ).map(::file)
     inputs.files(runtimeFiles)
+    val runtimeRoot = projectDir
+    val fingerprint = layout.buildDirectory.file("generated/runtimeAssets/mozc-runtime.sha256")
+    outputs.file(fingerprint)
 
     doLast {
         val missing = inputs.files.files.filterNot { it.isFile }
@@ -85,6 +90,12 @@ val verifyMozcRuntime by tasks.registering {
                 }
             )
         }
+        fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256")
+            .digest(bytes).joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        val identity = runtimeFiles.joinToString("\n") {
+            it.relativeTo(runtimeRoot).invariantSeparatorsPath + ":" + sha256(it.readBytes())
+        }
+        fingerprint.get().asFile.apply { parentFile.mkdirs(); writeText(sha256(identity.toByteArray()) + "\n") }
     }
 }
 

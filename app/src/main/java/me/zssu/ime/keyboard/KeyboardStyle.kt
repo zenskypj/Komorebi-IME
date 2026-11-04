@@ -15,7 +15,8 @@ package me.zssu.ime.keyboard
 enum class KeyboardStyle(private val kana: String, private val ascii: String) {
     FLICK(kana = FLICK_KANA, ascii = FLICK_ASCII),
     QWERTY(kana = QWERTY_KANA, ascii = QWERTY_ASCII),
-    MIXED(kana = FLICK_KANA, ascii = QWERTY_ASCII);
+    MIXED(kana = FLICK_KANA, ascii = QWERTY_ASCII),
+    KANA_QWERTY(kana = QWERTY_KANA, ascii = FLICK_ASCII);
 
     /** The plane the keyboard opens on. */
     val defaultLayoutId: String get() = kana

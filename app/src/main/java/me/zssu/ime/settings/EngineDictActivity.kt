@@ -95,6 +95,7 @@ private fun EngineDictScreen() {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             ZenzaiControls()
+            SystemDictionaryControls()
             // Engine selector and optional on-device model
             Card(shape = RoundedCornerShape(14.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

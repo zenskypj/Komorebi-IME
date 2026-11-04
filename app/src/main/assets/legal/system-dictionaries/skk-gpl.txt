@@ -1,0 +1,2331 @@
+SKK 総合・人名・地名・専門語
+ライセンス: GPL-2.0（原典の条件を保持）
+
+標準Mozcと追加語彙を結合したデータ全体を切り替えます。別データセットとの同時使用はできません。
+変換品質・端末動作の追加検証は実施していない試験版です。
+NEologdは全12 seedを新語・固有名詞と表記ゆれ・活用語の2データセットで提供します。
+SKKは公式個別辞書も全件処理します。動的Lisp・数値テンプレート・活用が未解決の行は生成報告へ保持し、候補にはしません。
+誤登録検査用wrong/wrong.annotated/noregistは候補にしません。
+品詞情報のない静的語は名詞を基本とし、人名・地名などは原典の種類に応じて扱います。
+個人辞書・学習履歴を大量辞書の保存先として使用しません。
+
+Mozc source: https://github.com/google/mozc/tree/3f235b4eb6fcff7d14ef5f0fb8ee56de7ee4c732
+SKK source: https://github.com/skk-dev/dict/tree/0a164e6b990c5eb5b59eb7d8789f08865dc2f644
+
+
+--- SKK-JISYO.JIS2 ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; JIS LEVEL 2 Kanji dictionary for SKK system
+;;
+;; Copyright (C) 1991 Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;;
+;; Acknowlegements: This dictionary was originally contributed by
+;; Ryoichi Hashimoto (gnu@ipri.go.jp)
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.JIS2004 ---
+;; -*- mode: fundamental; coding: euc-jis-2004 -*-
+;; JIS2004 UCS Compatibility Kanji dictionary for SKK system
+;; Copyright (C) 2007 Yano Keisuke <yano@moon.email.ne.jp>
+;;                    SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;;  この辞書は JIS X 0213:2004 で追加された「表外漢字UCS互換」文字を含む
+;;  語彙のみを収録した SKK 辞書です。本辞書作成時点では当該符号化文字に
+;;  対応していない環境が多いため別ファイルとしていますが、将来的には
+;;  SKK-JISYO.JIS3_4 に統合されるかもしれません。
+;;
+;;  「表外漢字UCS互換」の文字とその面区点番号を下記に示します。
+;;
+;;   俱 (1-14-1), 剝 (1-15-94), 𠮟 (1-47-52), 吞 (1-47-94), 噓 (1-84-7)
+;;   姸 (1-94-90), 屛 (1-94-91), 幷 (1-94-92), 瘦 (1-94-93), 繫 (1-94-94)
+;;
+;;
+;;  <参考情報>
+;;
+;;  JIS X 0213:2004 対応の Mule-UCS については
+;;
+;;   http://www.meadowy.org/~shirai/
+;;
+;;  から情報が得られます。
+;;
+;;  JIS X 0213 対応のビットマップフォントは下記のサイトから入手できます。
+;;
+;;   http://www12.ocn.ne.jp/~imamura/jisx0213.html
+;;
+;;  また、Debian の xfonts-jisx0213 パッケージには、K12-2000 の K12-1 に、
+;;  K14-2004-1 から変換された 10 文字が追加されており、ソースパッケージには
+;;  そのためのパッチ (K12-1-to-2004.patch) が含まれています。
+;;
+;;   http://packages.qa.debian.org/xfonts-jisx0213
+;;
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.JIS3_4 ---
+;; -*- mode: fundamental; coding: euc-jis-2004 -*-
+;; JIS LEVEL 3 and 4 Kanji dictionary for SKK system
+;;
+;; Copyright (C) 1993 Wnn Consortium
+;;               2000 KAWABATA, Taichi <batta@beige.ocn.ne.jp>
+;;               2000 もりみつじゅんじ <earthian@tama.or.jp>
+;; Author: OMRON SOFTWARE Co., Ltd. <freewnn@rd.kyoto.omronsoft.co.jp>
+;;         KAWABATA, Taichi <batta@beige.ocn.ne.jp>
+;;         もりみつじゅんじ <earthian@tama.or.jp>
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;;  この辞書は JIS 第三、第四水準の文字のみを収録した SKK 辞書です。
+;;  この辞書は、下記の複数のコンテンツを含んでおりますが、辞書構成に
+;;  ついては独自に行われたものです。問い合わせについては、まず SKK
+;;  Development Team <skk@ring.gr.jp> にお願いいたします。
+;;
+;;  この辞書は
+;;
+;;   (1) KAWABATA, Taichi <batta@beige.ocn.ne.jp> さんによる
+;;      「JIS X 0213 漢字辞書  (最終更新:2000/3/5)」(tankan3.u 及び
+;;       kigou.u) (http://sr3.xoom.com/golconda_99/jisx0213/index.html,
+;;       http://www.m17n.org/index.ja.html) 及び
+;;
+;;   (2) もりみつじゅんじ <earthian@tama.or.jp> さんによる
+;;       jisx0213code.txt (http://www.jca.apc.org/~earthian/aozora/0213.html).
+;;
+;; をベースに SKK 辞書形式に変換し、加筆、修正したものです。
+;;
+;; 上記の前者のパッケージ中、tankan3.u については OMRON SOFTWARE Co.,
+;; Ltd. により元来 GPL に基づき配布されていたものであり、kigou.u は川
+;; 幡さんのオリジナルです。川幡さんには kigou.u の GPL に基づく配布を
+;; ご快諾いただきました。
+;; なお、hojo.u については、イニューシステム (http://www.yinu.co.jp/)
+;; が販売している補助漢字フォントの付属をベースにして製作されていると
+;; のことで、イニューシステムに問合せをしましたが、回答が得られません
+;; でしたのでこれを含めていません。従い hojo.u を直接変換する形でこの
+;; ファイルに候補を取り込むことは見合わせたいと思います。
+;; イニューシステムへの問合せについては、hojo.u の作者である Hirofumi
+;; Fujiwara <fuji@timedia.co.jp> さんにお世話になりました。
+;;
+;; また、上記のパッケージ中、後者については、もりみつじゅんじ
+;; <earthian@tama.or.jp> さんに GPL に基づく配布をご快諾いただきました。
+;; Yano Keisuke <yano@moon.email.ne.jp> さんに情報提供をいただく他、辞
+;; 書形式の変換や配布条件の確認などのお手伝いをいただきました。
+;;
+;; 関係された皆様に厚く感謝申し上げます。
+;;
+;;
+;;  <参考情報>
+;;
+;;  JIS X 0213 対応のビットマップフォントは下記のサイトから入手できます。
+;;
+;;   http://www12.ocn.ne.jp/~imamura/jisx0213.html
+;;
+;;
+;;; Memorandum A:
+;;
+;; * どんな語彙を収録してゆくか？
+;;
+;; ・記号類・役物
+;;
+;;     L辞書と同程度の記号入力ができる程度に収録します。
+;;
+;;         enter /⏎/
+;;         eszett /ß/
+;;         eth /ð/
+;;         euro /€/
+;;
+;; ・発音記号
+;;
+;;     記号類のうち、IPAの発音記号については、"ipa", "vowel",
+;;     "consonant", "diacritic" の見出しで全て入力できるほか、
+;;     調音点(nasal)または調音法(retroflex)からも入力可能です。
+;;     形(m)からも入力はできますので、使いやすいものをどうぞ。
+;;
+;;         nasal /ɱ;labiodental/ɳ;retroflex/ɲ;palatal/ŋ;velar/
+;;         retroflex /ɳ;nasal/ʈ;plosive/ɖ;voiced plosive/ʂ;fricative/ʐ;voiced fricative/ɽ;tap/ɭ;lateral approximant/ɻ;approximant/
+;;         m /ḿ;m'/ⓜ;(m)/ɯ;[IPA]/ɱ;[IPA]/ɰ;[IPA]/ʍ;[IPA] (turned W)/
+;;         creaky /̰;(diacritic)/
+;;
+;; ・人名用漢字
+;;
+;;     今後実際にこれらの文字を含んだ人名が使われてゆくはずですから優
+;;     先的に入力の便宜を図ります。
+;;
+;;     単漢字としての登録順を優遇する他、熟語を入力して目的の文字を取
+;;     り出せるよう、これらの文字を含む現代語も適宜収録します。
+;;
+;;         まいにち /每日;「毎」旧字(人名用漢字)/
+;;
+;;     また、これらの文字を使用した人名(下の名前)も順次収録してゆきた
+;;     いと考えています。(見かけたらご一報をお願いします)
+;;
+;; ・その他の漢字
+;;
+;;         こうそんさん /公孫瓚;[三国志]/
+;;         つづらかわ /𧃴川;愛媛県松山市/
+;;         びていこつ /尾骶骨/
+;;
+;;     その文字を含む、その文字がなければ表現できない（旧字・異体字で
+;;     ない）語彙、特に人名・地名は積極的に採録します。
+;;     文字へのアクセスという観点から、最低限でも、全ての文字について
+;;     その文字を含む熟語が一つは収録されている状態を理想とします。
+;;
+;;     第3・第4水準自体がそうした語彙の存在を前提に選定されているので、
+;;     どこかに資料があるはずなのですが……
+;;
+;; ・用言(okuri-ari)
+;;
+;;         もg /捥;‖ガ行五段[gi]/𢪸;‖ガ行五段[gi]/
+;;
+;;     この辞書に含まれていたokuri-nasiエントリのうち、用言と思われる
+;;     ものは機械的操作で可能な限りokuri-ari化しています。
+;;     ある程度の動詞・形容詞などは入力できるようになっているのではと
+;;     思いますが、おかしいものや抜けているものも多いはずです。
+;;
+;;     送る位置については、時代や書き手によって大きな揺らぎがあること
+;;     もあり、かなりの幅を持たせています。SKKではokuri位置はユーザが
+;;     指定するので、このことによるデメリットはさほどないと考えていま
+;;     す。（もちろん、明らかにおかしいものは削除します）
+;;
+;;     各文字の基本的な訓は網羅しておきたいと思います。複合動詞などに
+;;     手を広げるかは難しいところです。（もっとも、日本語で複合動詞が
+;;     多用されるようになったのは比較的最近になってからだったようです）
+;;
+;;
+;; ・歴史的仮名遣い（旧仮名）
+;;
+;;     収録されている文字の性質を鑑み、歴史的仮名遣いを見出しにしたエ
+;;     ントリも適宜収録します。
+;;
+;;
+;; * annotation
+;;
+;; ・(人名用漢字)
+;;
+;;     戸籍法施行規則に定める人名用漢字にはこのannotationを付与してい
+;;     ます。子どもの名づけに使える文字です。
+;;
+;;         http://law.e-gov.go.jp/htmldata/S22/S22F00501000094.html
+;;
+;; ・旧字,異体字,本字
+;;
+;;     人名用漢字については全てに異体字関係を明記しています。
+;;
+;; ・旧互換
+;;
+;;     83JISで字体が大きく変えられた29字
+;;       唖焔鴎噛侠躯鹸麹屡繍蒋醤蝉掻騨箪掴填顛祷涜嚢溌醗頬麺莱蝋攅
+;;     に対応する第3水準漢字(所謂「旧互換」)にはこのannotationを付け
+;;     たいと思います。
+;;
+;; ・‖
+;;
+;;         ゆづr /㐮;‖ラ行五段[rt]/祛;‖ラ行五段[rt]/
+;;
+;;     SKK-JISYO.notesの書式で文法情報のannotationを添えています。
+;;     SKK-JISYO.JIS3_4.notesに分離してもいいのですが、誤りが発見され
+;;     やすいよう、当面はこちらに付与しておこうと思います。
+;;
+;; ・機種互換文字
+;;
+;;         わっと /㍗;<機種互換文字>/
+;;
+;;     本来は他のグリフの組み合わせで表現されるべきであるとされ、使用
+;;     の推奨されていないいわゆる「機種互換文字」にはこのannotationを
+;;     添えています。
+;;
+;;; Memorandum B:
+;;
+;; * 機種依存文字(機種互換文字)
+;;
+;;     ㍉㌔㌢㍍㌘㌧㌃㌶㍑㍗㌍㌦㌣㌫㍊㌻㎜㎝㎞㎎㎏㏄㎡
+;;     ㍻
+;;     №㏍℡㊤㊥㊦㊧㊨㈱㈲㈹㍾㍽㍼
+;;     (1-13-32~54,63,66~79)
+;;
+;; などはいわゆる「機種依存文字」なので、積極的に入力の便宜を図るのは
+;; 違うかもしれません。
+;;
+;;
+;; * 人名用漢字
+;;
+;; おそらくこれら人名用漢字が第3・第4水準漢字で最も必要性の高いものでしょう。
+;;
+;; ・表外漢字字体表の文字
+;; 俠(侠) 塡(填) 摑(掴) 焰(焔) 禱(祷)
+;; 簞(箪) 繡(繍) 萊(莱) 蔣(蒋) 蠟(蝋)
+;; 醬(醤) 頰(頬) 顚(顛) 鷗(鴎)
+;;
+;; 焔鴎侠繍蒋醤箪掴顛祷頬蝋莱填
+;; 唖噛躯鹸麹屡蝉掻騨涜嚢溌醗麺攅
+;; 倶呑痩繋 蝉
+;;
+;; ・旧字(新字)
+;; 緣(縁) 橫(横) 溫(温) 渴(渇) 寬(寛)
+;; 薰(薫) 揭(掲) 擊(撃) 黃(黄) 黑(黒)
+;; 緖(緒) 涉(渉) 狀(状) 瀨(瀬) 巢(巣)
+;; 增(増) 卽(即) 徵(徴) 德(徳) 晚(晩)
+;; 步(歩) 每(毎) 賴(頼) 綠(緑) 淚(涙)
+;; 曆(暦) 歷(歴) 鍊(錬) 郞(郎) 錄(録)
+;;
+;; 逸(逸) 謁(謁) 禍(禍) 悔(悔) 海(海)
+;; 漢(漢) 祈(祈) 器(器) 響(響) 勤(勤)
+;; 謹(謹) 穀(穀) 祉(祉) 視(視) 社(社)
+;; 者(者) 煮(煮) 臭(臭) 祝(祝) 暑(暑)
+;; 署(署) 諸(諸) 祥(祥) 神(神) 節(節)
+;; 祖(祖) 僧(僧) 層(層) 憎(憎) 贈(贈)
+;; 懲(懲) 敏(敏) 勉(勉) 虜(虜) 練(練)
+;; 朗(朗)
+;;
+;; 渚(渚) 猪(猪) 琢(琢) 祐(祐) 禎(禎)
+;;
+;;
+;; * 2004年改定による(包摂を外れた)追加10文字
+;;
+;; (三田の環境では)フォントがなかったりiconvが失敗したりするので
+;; 現段階では辞書に含めていません。
+;;
+;;          (元の字)
+;; 1-14-1   (倶)
+;; 1-15-94  (剥)
+;; 1-47-52  (叱)
+;; 1-47-94  (呑) <人名用漢字>
+;; 1-84-7   (嘘)
+;; 1-94-90  (妍)
+;; 1-94-91  (屏)
+;; 1-94-92  (并)
+;; 1-94-93  (痩) <人名用漢字>
+;; 1-94-94  (繋)
+;;
+;;
+;; * 遺漏
+;;
+;; 「渚」など、JISX0213の文字のうち、この辞書に含まれていないもののあ
+;; ることが確認されています。人名用漢字は埋めましたが、他にもあるもの
+;; と想像されます。
+;;
+;;
+;;
+;;; TODO:
+;;
+;; ・熟語の充実 - 語彙単位の入力をできる辞書にする
+;;   最低限、どの文字も一つは二字以上の熟語に含まれている状態が望ましい
+;;
+;; ・第3・第4水準の漢字の大半はある特定の語(特に地名・人名)のために選定されて
+;;   いるはずなので、それらの語をピックアップして入れる
+;;
+;; ・用言のokuri-ari化 (全部か、ポピュラーなものだけか？) [50%くらい完了]
+;;
+;; ・旧字・異体字関係のannotation
+;;   機種依存文字やUnicodeにない文字もannotateする?
+;;
+;; ・IPA(国際音声記号)の、競合の少ないエントリ作成
+;; ・(web) この辞書用のフォームを用意 (rubyでは無理かも……)
+;; ・(code) \キーによる面区点コード入力 (C-u \ はあまりに面倒)
+;; ・(code) ある候補がこの辞書由来か判別できるようにする
+;;          あるいはJISX0213の文字を自動検出する
+;; ・(code) 記号類はクリックパレットのようなものの方が便利?
+;; ・協力者超募集中
+;;
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.L ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Large size dictionary for SKK system
+;; Copyright (C) 1988-1995, 1997, 1999-2014
+;;
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;; NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>
+;; MITA Yuusuke <clefs@mail.goo.ne.jp>
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 59 Temple Place - Suite 330,
+;; Boston, MA 02111-1307, USA.
+;;
+;; ACKNOWLEDGEMENT
+;;
+;; この辞書は、SKK 原作者の佐藤雅彦先生が、第 1 版作成のために東北大学
+;; 電気通信研究所佐藤研究室 (当時) の学生さん達とともに scratch から作
+;; 成されたのをその起源とし、その後、無数のユーザからのユーザ辞書の提
+;; 供やフォームによる追加・校閲によって今尚日々メンテナンスされている日
+;; 本で最大規模の、GPL による copy free の辞書です。
+;;
+;; この辞書の作成にご尽力頂いた全ての方に感謝すると共に、これをお読み
+;; のあなたのご協力を是非ともお待ちしております。
+;;
+;;   https://github.com/skk-dev/dict
+;;
+;; にアクセスし、Issue や Pull request をお寄せください。
+;;
+;; 辞書の編集方針は committers.md をご参照下さい。
+;; そこに記載のない事項、またその変更については、その都度 github.com/skk-dev/dict/Issue
+;; で話し合いで決められます。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.L.unannotated ---
+;; -*- text -*-
+;; SKK-JISYO.L.unannotated was generated automatically by unannotation.awk at Wed Jan 17 20:59:09 2024
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Large size dictionary for SKK system
+;; Copyright (C) 1988-1995, 1997, 1999-2014
+;;
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;; NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>
+;; MITA Yuusuke <clefs@mail.goo.ne.jp>
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 59 Temple Place - Suite 330,
+;; Boston, MA 02111-1307, USA.
+;;
+;; ACKNOWLEDGEMENT
+;;
+;; この辞書は、SKK 原作者の佐藤雅彦先生が、第 1 版作成のために東北大学
+;; 電気通信研究所佐藤研究室 (当時) の学生さん達とともに scratch から作
+;; 成されたのをその起源とし、その後、無数のユーザからのユーザ辞書の提
+;; 供やフォームによる追加・校閲によって今尚日々メンテナンスされている日
+;; 本で最大規模の、GPL による copy free の辞書です。
+;;
+;; この辞書の作成にご尽力頂いた全ての方に感謝すると共に、これをお読み
+;; のあなたのご協力を是非ともお待ちしております。
+;;
+;;   https://github.com/skk-dev/dict
+;;
+;; にアクセスし、Issue や Pull request をお寄せください。
+;;
+;; 辞書の編集方針は committers.md をご参照下さい。
+;; そこに記載のない事項、またその変更については、その都度 github.com/skk-dev/dict/Issue
+;; で話し合いで決められます。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.M ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Medium size dictionary for SKK system
+;; Copyright (C) 1988-1995, 1999-2001, 2003, 2004
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.ML ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Medium-Large size dictionary for SKK system
+;;
+;; Copyright (C) 1988-1995, 1997, 1999-2006
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;; Mikio NAKAJIMA <minakaji@osaka.email.ne.jp>
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: April 13, 2003
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;; M 辞書と L 辞書の中間サイズの辞書、という意味で ML 辞書と名付けまし
+;; た。PDA などハードディスク (メモリ) が限られた機種でも使用できるよ
+;; う、1MB を超えないサイズを維持することを目標としたいと思います。
+;; この辞書の origin は、L 辞書です。
+;;
+;; (1)L 辞書から広辞苑第四版に掲載されている語を抜き出し、
+;; (2)L 辞書から接頭辞、接尾辞を抜き出し、
+;; (3)ひらがな 10 文字以上のエントリを削除し、
+;; (4)都道府県、県庁所在地を追加し、
+;; (5)記号類をいくつか追加し、
+;; (6)更に S 辞書のコンテンツを追加
+;;
+;; して作成しました。加除のご希望は、理由を添えて skk@ring.gr.jp
+;; まで。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.S ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Small size dictionary for SKK system
+;; Copyright (C) 1988-1995, 1997, 1999-2003
+;;
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.assoc ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; SKK association and abbreviation dictionary.
+;; Copyright (C) 2002 NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>
+;;               2005-2006 MITA Yuusuke <clefs@mail.goo.ne.jp>
+;;               SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: Nov. 16, 2002
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;; この辞書は、見出し語を単純に変換して得られる候補ではなく、見出し
+;; 語と候補との間に一定の連想関係があるエントリを集めたものです。
+;;
+;; 特に、次のような変換をサポートしています。
+;;
+;; ・略語変換
+;;    一般的に通用している略語から、正式名称などに変換します。
+;;    アルファベットの略語では、見出しは小文字です。
+;;      「npo /非営利組織/Non-Profit Organization/NPO/ＮＰＯ/」
+;;      「ちさい /地裁/地方裁判所/」
+;;      「やぶへび /藪蛇/藪をつついて蛇を出す/」
+;;      「ようりほう /容リ法/容器包装リサイクル法/容器包装に係る分別収集及び再商品化の促進等に関する法律/」
+;;    TODO: このタイプのエントリは大いに増強の余地があります。乞助力
+;;
+;; ・日本式カタカナ略語 (基本的に、L辞書にあるものから)
+;;    略語変換の亜種で、外国語を「日本式に」切って作られた略語から、
+;;    原綴や原形に近いカタカナ語に戻す変換です。
+;;      「appli /アプリ/application/アプリケーション/」
+;;      「あぷり /application/アプリケーション/アプリ;appli/」
+;;
+;; ・元素名変換
+;;    元素記号から、日本語・英語・独語の元素名に変換します。
+;;    annotation には原子番号が付与されています。
+;;    見出しは大文字・小文字の区別があります。
+;;    （L辞書にも小文字で入っています）
+;;      「Mn /マンガン;[元素]25/manganese/Mangan/」
+;;      「U /ウラン;[元素]92/ウラニウム/uranium/Uran/」
+;;    NOTE: 日本語の「マンガン」「ウラン」などは独語由来です
+;;
+;; ・化学式変換
+;;    分子式や示性式などから、物質名などに変換します。
+;;    見出しは全て小文字になっています。（shift押すの大変なので。）
+;;      「c2h2 /アセチレン/acethylene/エチン/ethyne/C2H2/CH≡CH/」
+;;      「h+ /水素イオン/hydrogen ion/proton/H+/」
+;;      「mg(oh)2 /水酸化マグネシウム/magnesium hydroxide/Mg(OH)2/」
+;;      「nacl /塩化ナトリウム/sodium chloride/食塩/NaCl/」
+;;      「nh3 /アンモニア/ammonia/NH3/」
+;;    数値の入った化学式は、CVS版DDSKKなどの、数値入り見出しの
+;;    リテラル変換に対応したクライアントでしか利用できないと思われ
+;;    ます。悪しからず……
+;;
+;; ・ccTLD(国別ドメイン)・TLD・SLD変換
+;;    URLなどで使われる国別ドメイン名から、その国名に変換します。
+;;    見出しは小文字です。「.dk」「dk」双方で収録してあります（競合対策）
+;;      「google.dk」 → 「.dk /デンマーク;[ccTLD]/丁抹/Denmark/」
+;;    ccTLDはL辞書の国名ペアにもannotateしてあります。
+;;      「luxembourg /ルクセンブルク;.lu/」
+;;    NOTE: ドットなしは削除する方が良い？
+;; 
+;; ・IATA都市コード・空港コード変換
+;;    旅行業などで使われている、IATAの三文字コードから主要な都市名・
+;;    空港名に変換します。
+;;    見出しは小文字です。（NOTE:大文字の方が良い？）
+;;      「bkk /バンコク;[IATA]タイ/Bangkok/」
+;;
+;; ・楽器名略語変換
+;;    主要な楽器の略語から楽器名に変換します。
+;;    見出しは小文字で、ピリオドで終わっています。
+;;      「cl. /クラリネット/clarinet/」
+;;
+;; ・星座名変換
+;;    天文学などで使われている三文字の略語から、星座名に変換します。
+;;    大文字・小文字の区別があります。
+;;      「UMa /大熊座/おおぐま座/Ursa Major/」
+;;    なお、L辞書で星座名（「おおぐまざ」）を変換すると、annotation に
+;;    この略語が表示されます。
+;;    
+;; ・アスキー記号変換
+;;    いわゆる半角英数記号から、その呼び名に変換します。
+;;    JIS X 0201 で定義されている呼び名が必ず最初に、コード付きで出ます。
+;;      「& /アンパサンド;26/ampersand/アンド/and/(concat "&amp\073")/＆/」
+;;
+;; ・HTML Latin-1 実体参照変換
+;;    digraph風略号からHTMLの実体参照に変換します。
+;;      「e' /(concat "&eacute\073");[HTML]233/」
+;;      「gt /(concat "&gt\073")/」
+;;
+;; ・HTTP/1.1 status-codes
+;;    HTTP/1.1の status-codes から reason-phrase に変換します。
+;;      「404 /Not Found;[HTTP]/」
+;;    NB:数値再変換(#4)ペアとは相性が悪いかもしれません。
+;;
+;; ・合州国50州の二文字コード変換
+;;    米国で使われている州コードから州名に変換します。
+;;    （L辞書から抽出したものです。）
+;;    見出しは小文字です。
+;;      「fl /フロリダ;[USA]/Florida/」
+;;
+;; ・メジャーリーグ(MLB)チーム名略号変換
+;;    新聞・テレビなどで使われている、球団名の略語からチーム名を出せます。
+;;    見出しは小文字です。
+;;      「nyy /ニューヨーク・ヤンキース;[MLB]/ヤンキース/New York YANKEES/」
+;;
+;; ・単位・定数
+;;    主要な単位や定数の記号や名称から、定数の数値そのものに変換します。
+;;    単位記号を見出しにしたペアは競合しがちな難点があります。
+;;      「F /ファラデー定数/96485.3383 C／mol/」
+;;      「ふぁらでーていすう /ファラデー定数/Faraday constant/96485.3383 C／mol/」
+;;    実測に基づく物理定数などは数値が変わってしまう場合もありますので
+;;    ご注意下さい。誤りや変更に気付いたらご一報をお願いします。
+;;
+;; ・民間放送局の略称・コールサイン
+;;    国内(一部海外)の主要な放送局名を略称やコールサインから入力できます。
+;;    通例、略称はアルファベット３文字、コールサインはjoで始まる４文字です。
+;;      「ncb /文化放送;[放送局略称]/」
+;;      「joqr /文化放送;[放送局コールサイン]/」
+;;    NHK地方放送局のコールサインについては数が膨大な上、エントリとしての
+;;    有用性にも疑問がありましたので割愛しています。
+;;    TODO: 周波数とURLの annotation
+;;
+;; ・フルネーム変換
+;;    著名人の通り名から原綴・英綴もしくはカタカナのフルネームに変換します。
+;;      「dostoevskii /ドストエフスキー/Достоевский/Фёдор Михайлович Достоевский/Fyodor Mihaylovich Dostoevskii;(1821-81) 小説家/フョードル・ミハイロヴィチ・ドストエフスキー/」
+;;      「どすとえふすきー /Dostoevskii/Достоевский/Фёдор Михайлович Достоевский/Fyodor Mihaylovich Dostoevskii;(1821-81) 小説家/フョードル・ミハイロヴィチ・ドストエフスキー/」
+;;
+;; ・ギリシア語・ロシア語名原綴化
+;;    ギリシア語・ロシア語のローマ字表記もしくはカタカナ語表記から
+;;    原綴（になるべく近いもの）に変換します。
+;;    収録する語彙の範囲はL辞書に準じます。
+;;      「aphrodite /アフロディテ/Αφροδιτη/」
+;;      「あふろでぃて /Aphrodite/Αφροδιτη/」
+;;
+;; ・聖書書名の略称
+;;    聖書書名の一般的な（英和辞書などに載っている）略称から書名に変換します。
+;;    一文字目のみ大文字です。
+;;      「Ezek /エゼキエル書;[聖書]/Ezekiel;[聖書]/」
+;;      「Ezekiel /エゼキエル書;[聖書](Ezek)/」
+;;
+;; ・その他、セットで収録されているもの
+;;     ・月   「sep /September/セプテンバー/九月/９月/9月/長月/」
+;;     ・曜日 「fri /Friday/フライデー/金曜日/金曜/金/(金)/」
+;;     ・16方位 「ese /東南東/east-southeast/ESE/」
+;;     ・通貨 「hkd /香港ドル/Hong Kong dollar/」(主要なもののみ)
+;;     ・解像度 「sxga /1280x1024/super XGA/SXGA/」
+;;     ・アミノ酸 「Gly /glycine/グリシン/」
+;;     ・ビタミン 「v.c /ビタミンC/vitamin C/」
+;;     ・外国語・外国文学
+;;         「どくご /独語/ドイツ語/独逸語/Deutsche/German/」
+;;         「どくぶん /独文/ドイツ文学/独逸文学/」
+;;     ・クラシック音楽の形式のかな引き 「わるつ /円舞曲/waltz/」
+;;     ・文法用語・品詞 「adj. /形容詞/adjectif/adjective/」
+;;     ・拡張子 「.sh /shell/シェル/(concat "#!\057bin\057sh")/」
+;;     ・法人種別の略号 「(とく) /(特)/（特）/特定非営利活動法人/」
+;;
+;; 和英変換、顔文字、純粋に連想だけの関係のペアなど、
+;; これらのどれにも属さない各種ペア・エントリも多数含まれています。
+;;
+;; ・その他の収録例
+;;     ・「じゅうにし /子丑寅卯辰巳午未申酉戌亥/」 まとめて出す変換
+;;     ・「openbsd /OpenBSD/」 入力が繁雑なalphabet文字列の整形
+;;
+;; 連想変換は、エントリの存在を知らなければ使いようがないので、
+;; 積極的な documentation が望まれます。
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.china_taiwan ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; SKK 中国、台湾地名辞書
+;; Copyright (C) 2000 NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.fullname ---
+;; -*- mode: fundamental; coding: euc-jis-2004 -*-
+;; フルネーム辞書 for SKK system
+;; Copyright (C) 2004-2006 Akie Kaidoh <kaidoh@ma.ctk.ne.jp>
+;; Copyright (C) 2004-2006 SKK Development Team <skk@ring.gr.jp>
+;;
+;; Author: Akie Kaidoh <kaidoh@ma.ctk.ne.jp>
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;; 本辞書は、海道昭恵氏の公開されておられる音訳用の人名録
+;;
+;; 　　http://www.ctk.ne.jp/~kaidoh/
+;;
+;; を SKK 辞書形式に変換したものをベースに加除したものです。
+;; 新聞に掲載された同時代の人名、約30,000ペアが収められています。
+;; (NB: 外国人名等が未整理のため現在の実数は 26,940 です)
+;;
+;; オリジナルの人名録にある肩書などの属性はそのまま SKK annotation
+;; として辞書内に含めています。annotation が不要な方は
+;; skk/dic/unannotation.awk を利用して削除して下さい。
+;;
+;; 肩書等は新聞掲載当時のもののため、現況と一致しない場合があります。
+;;
+;; (2011.1.18 追記) このファイルは間違いが含まれている可能性が指摘され
+;; ています。現在積極的メンテナはいません。利用には注意が必要です。
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.geo ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Geographical dictionary for SKK system
+;; Copyright (C) 2001, 2002, 2003-2005
+;;
+;; IIDA Yosiaki <iida@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;; Commentary:
+;;
+;; The original data of this file has come from the Postal Service
+;; Agency (YUUSEI ZIGYOU TYOU), formerly known as the Ministry of
+;; Posts and Telecommunications (YUUSEI SYOU), which disclaims
+;; copyright.  For further detail, consult the following URL
+;; [in Japanese]:
+;; http://www.post.yusei.go.jp/newnumber/readme.htm
+;;
+;; The original data can freely be downloaded from:
+;; http://www.post.yusei.go.jp/newnumber/lzh/
+;;
+;; *
+;;
+;; The webpage above has moved due to the political issues:
+;; http://www.post.japanpost.jp/zipcode/dl/readme.html
+;;
+;; It comes to contain some land names not from the file above
+;; but from SKK registration form:
+;; http://openlab.jp/skk/registdic.cgi
+;;
+;; Yes, you can add to it! We're awaiting your contributions.
+;;
+;; *
+;; 
+;; The script below is used to separate compound names into single ones:
+;; http://aveiro.hp.infoseek.co.jp/skk/skkdic-split-geo.rb
+;;
+;; I'd like to thank the (anonymous) author for the contribution and
+;; generous permission to apply it.  -Mita
+;; 
+;; *
+;;
+;; Foreign place-names consisted of katakana are contained in SKK-JISYO.L.
+;;
+;;     mohenjodaro /モヘンジョダロ;Mohenjo-Daro/
+;;     paris /パリ/
+;;
+;; *
+;;
+;; Final update based on the data of: 2005/09/30
+;; http://www.post.japanpost.jp/zipcode/dl/kogaki/lzh/add_0509.lzh
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.hukugougo ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Barely used compound words once contained in SKK dictionaries.
+;; Copyright (C) 2004-2005 MITA Yuusuke  <clefs@mail.goo.ne.jp>
+;;               SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: July 18, 2004
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;; この辞書は、使用頻度が低く、変換する上での価値も高くないと思われる
+;; 複合語を L辞書から機械的に抽出したものです。
+;; 
+;;
+;; noregist 辞書との最大の違いは、フォーム
+;; 
+;;   http://openlab.jp/skk/registdic.cgi
+;;
+;; から再び登録希望を出せることです。
+;;
+;; フォームに登録希望（復活希望）をお出し頂く際には、
+;; SKK-JISYO.hukugougo 内のペアであることをご明記下さい。
+;; 優先的に取り扱います。
+;;
+;;   % skkdic-expr2 SKK-JISYO.hukugougo ^ .skk-jisyo > hukkatu.txt
+;;
+;; などとすることで、使われていた語がないかをチェックできます。
+;; ご協力をお願い致します。
+;;
+;;
+;; 実際には、低頻度ながらも有用な専門用語なども多数含まれていますので、
+;; 検索用の辞書の一つとしてこの辞書をご利用になるのも良いと思われます。
+;;
+;;
+;; ★2004-07-18 現在の基準は次の通りです。(4069ペア)
+;; (NB:その後、33ペアが復活希望によりL辞書に復帰しました)
+;; - google でヒット数 100件未満
+;; - 変換後 5文字以上
+;; - 変換後の形が広辞苑第五版の前方一致検索でヒットせず
+;;
+;; ★2005-10-16 新規追加分の基準は次の通りです。(3749ペア)
+;; - goo でヒット数 100件未満 (googleよりやや小さいヒット数が出ます)
+;; - 変換後 4文字以上
+;; - 変換後の形が広辞苑第五版・大辞林第二版・大辞泉の前方一致検索でヒットせず
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.itaiji.JIS3_4 ---
+;; -*- mode: fundamental; coding: euc-jis-2004 -*-
+;; JIS X 0213 異体字 dictionary for SKK system.
+;;
+;; Copyright (C) 2000 もりみつじゅんじ <earthian@tama.or.jp>
+;;
+;; This file is made of 参照文字リスト(0213)（variant0213.txt [2000-10-23]）.
+;; Consult the URL below for details:
+;; http://www.jca.apc.org/~earthian/aozora/0213.html
+;; 
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;; 
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;; 
+;;
+;;; Commentary:
+;;
+;; SKK-JISYO.itaiji には収録されていない、JIS X 0213 の文字を含んだ
+;; 異体字辞書です。SKK-JISYO.itaiji と併せてご利用下さい。
+;;
+;; 区点コードをannotationとして添えてあります。SKK-JISYO.itaijiには
+;; これはありませんので、区点コードが表示されれば
+;; JIS X 0208 ⇔ JIS X 0213 の変換をしているとわかります。
+;;
+;; 2004年に改正された戸籍法施行規則に定める人名用漢字には
+;; <人名用漢字> とannotateしてあります。
+;; (Mita)
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.jinmei ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; 人名辞書 for SKK system
+;; Copyright (C) 1993 Wnn Consortium
+;; Copyright (C) 2002, 2003, 2004 SKK Development Team <skk@ring.gr.jp>
+;;
+;; Author: OMRON SOFTWARE Co., Ltd. <freewnn@rd.kyoto.omronsoft.co.jp>
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation Inc., 59 Temple Place - Suite 330, Boston,
+;; MA 02111-1307, USA.
+;;
+;;; Commentary:
+;;
+;; 本辞書は、skk/tools/convert2skk/wnn2skk.awk を利用し「人名辞書
+;; (gerodic) 1.00」を SKK 辞書形式に変換したものをベースに加除した
+;; ものです。
+;;
+;;   % gawk -f wnn2skk.awk gerodic/g-jinmei.u > temp
+;;   % skkdic-expr temp | skkdic-sort > SKK-JISYO.jinmei
+;;
+;; Wnn の品詞データ、コメントは SKK annotation として辞書内に含め
+;; ています。annotation が不要な方は skk/dic/unannotation.awk を利
+;; 用して削除して下さい。
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.law ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; 法律用語辞書 for SKK system
+;; Copyright (C) 1998-1999 小松 弘 Hiroshi Komatsu <sui_feng@highway.ne.jp>
+;; Copyright (C) 2001, 2003, 2004 Mikio NAKAJIMA <minakaji@osaka.email.ne.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;; 本辞書のオリジナルコンテンツは、小松 弘弁護士による「法律用語電子化
+;; 辞書 LKKS」です
+;; (http://home2.highway.ne.jp/sui_feng/kks/index.html) から入手できま
+;; す。(NB:2005年現在は404です)
+;;
+;; 本辞書は、中島がここから SKK-JISYO.L と重複するものを単純に削除した
+;; 後、更にラフな手作業で、法律に特化していないと思われる候補を削除し
+;; たものです。SKK-JISYO.L には法律用語も一部含まれているはずなので、
+;; 少し削りすぎのはずですが、個人的にはまだ、SKK-JISYO.L に移すべき一般
+;; 用語が多く含まれているように感じます。今後、手作業で調整してゆこう
+;; と思います。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.lisp ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Lisp dictionary for SKK system
+;; Copyright (C) 1988-1995, 1997, 1999-2010, 2014-2015
+;;
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi
+;; NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>
+;; MITA Yuusuke <clefs@mail.goo.ne.jp>
+;; Tsuyoshi Kitamoto <tsuyoshi.kitamoto@gmail.com>
+;; SASAKI Nobuyuki <nathancorvussolis@gmail.com>
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 59 Temple Place - Suite 330,
+;; Boston, MA 02111-1307, USA.
+;;
+;;; Commentary:
+;;
+;; SKK-JISYO.L から concat 関数を除く Lisp の関数の候補を抜き出し
+;; skk-relative-date 関数を追加した辞書です。
+;;
+;; concat 関数を含む候補は、SKK 辞書形式における候補の区切りである "/" や
+;; 候補と注釈の区切りである ";" をエスケープする目的で使用されていると
+;; 考えられる為 SKK-JISYO.L に残しています。
+;;
+;; プログラム実行変換で用いられる Lisp の関数を拡張する際はこの辞書を
+;; 更新していって頂ければと思います。
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.mazegaki ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Mazegaki dictionary for SKK system
+;; Copyright (C) 2001 SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either versions 2, or (at your option)
+;; any later version.
+;; 
+;; This dictionary is distributed in the hope that it will be useful
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;; 
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to the Free
+;; Software Foundation Inc., 51 Franklin St, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
+;; 
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.not_wrong ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; SKK not_wrong dictionary.
+;; Copyright (C) 2003 SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: Mar. 16, 2003
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;; この辞書は、cgi 上にて (あるいは ML にて) 誤登録の指摘を受けたが誤
+;; 登録ではないエントリを集めたものです。
+;;
+;; http://openlab.jp/skk/registdic.cgi にて誤登録として登録さ
+;; れているエントリがこの辞書に追加された場合には、そのエントリは誤登
+;; 録ではないと判定されたとみなされ、cgi のログファイルから消されます。
+;;
+;; この辞書にエントリを追加する場合は、誤登録ではないとした考え方、出
+;; 典等を annotation として付けて下さい。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.notes ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; Commentary for SKK dictionary
+;; Copyright (C) 1988-1995, 1997, 1999-2006
+;;
+;; Masahiko Sato <masahiko@kuis.kyoto-u.ac.jp>
+;; Hironobu Takahashi <takahasi@tiny.or.jp>,
+;; Masahiro Doteguchi, Miki Inooka,
+;; Yukiyoshi Kameyama <kameyama@kuis.kyoto-u.ac.jp>,
+;; Akihiko Sasaki, Dai Ando, Junichi Okukawa,
+;; Katsushi Sato and Nobuhiro Yamagishi,
+;; NAKAJIMA Mikio <minakaji@osaka.email.ne.jp>,
+;; MITA Yuusuke <clefs@mail.goo.ne.jp>,
+;; SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;; Commentary:
+;;
+;; L辞書に含まれるペアに付随する情報をL辞書から分離して管理・活用する
+;; ための辞書です。
+;;
+;; tools/filters/conjugation.rb との併用により、品詞・活用情報を用いて
+;; 必要な活用形を補うことができます。
+;;
+;;
+;; Legend:
+;;
+;; §活用・派生情報
+;;
+;; [φiks(gm)] - おもはゆi /面映;‖形容詞[iks(g)]/
+;;   conjugation.rb は、[]の中の文字を okuri として展開します。
+;;   φは okuri なし＝語幹をそのまま okuri-nasi ペアとして生成します。
+;;   ()の中の okuri は、-p オプションが付与された場合のみ展開されます。
+;;
+;; [a-z] - でr /出;‖<base>ダ行下一[a-z]/
+;;   「見る」のように、一段動詞の送り位置が語幹と一致してしまう場合など、
+;;   ほぼ全ての okuri が可能になる場合にはこう書きます。
+;;   キャラクタクラスとして解釈するわけではないので、[c-y]などとは書けません。
+;;
+;; [*] - でてくr /出て来;‖カ変[*]/
+;;   語幹が存在せず、okuri 位置よりも手前から活用してしまう活用語には
+;;   このマークを付けます。前方の品詞情報を基にして展開されます。
+;;   カ変（来る）・サ変（為る）・ア行下二（得る）が該当します。
+;;
+;; [#] - ひき /匹;‖助数詞[φ#]/
+;;   助数詞です。
+;;      ひき /匹/
+;;      #ひき /#3匹/#1匹/#0匹/#2匹/
+;;   のように展開されます。
+;;   「だい# /第#3/」「#がつ#にち /#2月#2日/」のようなペアには未対応です。
+;;
+;; [>] - ふ /不;‖接頭辞[φ>]
+;;   接頭辞、または前接性のある語です。
+;;      ふ /不/
+;;      ふ> /不/
+;;   のように展開されます。
+;;
+;; [<] - せい /性;‖接尾辞[φ<]/
+;;   接尾辞、または後接性のある語です。
+;;      せい /性/
+;;      >せい /性/
+;;   のように展開されます。
+;;
+;;
+;; §品詞
+;;
+;;   品詞そのものは今のところ「[*]」の場合を除き利用されていませんが、
+;;   将来必ず必要になってくるものなので、一定のフォーマットに従って
+;;   記載してあります。
+;;   (例：形容動詞の [s] を生成しないようにする)
+;;   
+;;      ○行五段、○行上一、○行下一、
+;;      (文語) ○行四段、○行上二、○行下二、
+;;      カ変、サ変
+;;      形容詞、形容動詞、副詞、
+;;      名詞、サ変名詞、連体詞、
+;;      人称代名詞、疑問代名詞、
+;;      連語、複合語、成句
+;;
+;;   複数の品詞・活用に跨る場合は適宜併記します。
+;;
+;;   なお、名詞・形容動詞・副詞の境界線は本質的に曖昧なものです。
+;;
+;;
+;; §属性
+;;
+;; <base> - あu /合;(一致) 話が合う‖<base>ワ行五段[wiueot(c)]/
+;;   複合語を作る基本動詞・基本形容詞などのマークです。
+;;   複合動詞などの品詞情報を付与する「基」になります。
+;;   XXX 残念ながら、まだデタラメな状態です。
+;;
+;; <okuri-nasi> - われr /我;‖<okuri-nasi> -ら/
+;;   okuri-nasi としても採録されているものに機械的に付けられた note です。
+;;   適宜、品詞などの情報を付与してやる必要があります。
+;;
+;; <derived> - よk /良;‖<derived>/
+;;   派生形です。他のペアから自動生成されるはずのものではあるのですが、
+;;   登録順制御などのためにあらかじめ入れてある場合があります。
+;; 
+;;
+;; §その他
+;;
+;; (annotation) - わるi /惡;「悪」の旧字‖形容詞[iks(g)]/
+;;   「‖」より手前の annotation は、特に指定がなければ、派生形を生成する
+;;   時にそのまま受け継がれます。
+;;   L辞書の annotation を変更する場合には、こちらにも反映させる必要が
+;;   あります。
+;;
+;; (okuri) - わぎr /輪切;‖名詞(-り)/
+;;   skk-henkan-okuri-strictly を拡張して、これらの情報を活用できると
+;;   良いのですが。
+;;
+;; ¶ - とu /問;‖<base>ワ行五段[wiueo]¶tcなし/
+;;   作業用のメモです。("/paragraph")
+;;
+;;
+;; § 複数の okuri を持つ主要な例
+;;
+;; あu /合;‖ワ行五段[wiueot(c)]/
+;; ひk /引;‖カ行五段[ki]/
+;; いk /行;‖カ行五段(行く)[ktc]/ ;動詞「いく」「ゆく」はカ五だが特殊活用
+;; ゆk /行;‖カ行五段[k] ¶iなし/
+;; こg /漕;‖ガ行五段[gi]/
+;; こm /混;‖マ行五段[mn]/
+;; とb /飛;‖バ行五段[bn]/
+;; はr /貼;‖ラ行五段[rt(cn)]/
+;; でr /出;‖ダ行下一[a-z]/
+;; みr /見;‖マ行上一[a-z]/
+;; ゆめみr /夢見;‖マ行上一[ckmnrstyz]/ ;複合すると接続の可能性が狭まる
+;; あおi /青;‖形容詞[iksgmu]/ ;文法としてはkを原形とした方がエレガント
+;;
+;; くr /来;‖カ変[*]/
+;; うr /得;‖ア行下二[*]/ ;現代に二段活用の残った稀有な例
+;; えr /得;‖ア行下一[(c)kmnrstyz]/
+;; すr /為;‖サ変[*]/ ;恐らく複合は考えなくてよい
+;;
+;; こうみょう /巧妙;‖形容動詞[φdns]/ ;jも考えられる。「巧妙じゃない」
+;; いろいろ /色々;‖形容動詞[φdnt]/
+;; らくらく /楽々;‖副詞[φt]/ ;副詞か形容動詞かは曖昧
+;; けいけい /軽々;‖副詞[φn]/
+;; あい /愛;‖サ変名詞[φs]/
+;;
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.pinyin ---
+;; -*- mode: fundamental; coding: utf-8 -*-
+;; Pinyin to simplified chinese (簡体字) dictionary for SKK system
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Version: $Id: $
+;; Keywords: chinese
+;; Last Modified: $Date: $
+;;
+;; This dictionary was created by converting "pinyin.map" and
+;; "sysphrase.txt" to a SKK dictionary format. These source files are
+;; included in the free package CCE. CCE is available at:
+;;
+;;	http://archive.debian.org/debian/pool/main/c/cce/cce_0.36.orig.tar.gz
+;;
+;; Below is the copyright notice of CCE.
+;;
+;;-----------------------------------------------------------------------------
+;;             Copyright (C) 1999, Rui He, herui@cs.duke.edu
+;;
+;;
+;;                  CCE(Console Chinese Environment) 0.32
+;;
+;; CCE is free software; you can redistribute it and/or modify it under the
+;; terms of the GNU General Public License as published by the Free Software
+;; Foundation; either version 1, or (at your option) any later version.
+;;
+;; CCE is distributed in the hope that it will be useful, but WITHOUT ANY
+;; WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+;; FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+;; details.
+;;
+;; You should have received a copy of the GNU General Public License along with
+;; CCE.  If not, see <https://www.gnu.org/licenses/>.
+;;-----------------------------------------------------------------------------
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- SKK-JISYO.propernoun ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; SKK propernoun dictionary.
+;; Copyright (C) 2003-2006 MITA Yuusuke  <clefs@mail.goo.ne.jp>
+;;               SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: Nov. 09, 2003
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;; この辞書は、芸能・音楽・アニメ・企業・組織などなどの固有名詞のうち、
+;; geo辞書にもjinmei辞書にも当てはまらないものを集めたものです。
+;;
+;; 「固有性とは何か？」などと難しいことは考えずに、
+;; 来るものは拒まずで大らかに採録しています。(議論歓迎)
+;; お気軽にフォームまで登録希望をお寄せ下さい：
+;;
+;;   https://github.com/skk-dev/dict/issues
+;;
+;;
+;; 重点強化項目：
+;;
+;; ・出版社名・文庫・新書・叢書名など
+;;     これは網羅性を目指すか、主要なもののみにするか難しいところです。
+;;
+;;         しちょうしゃ /思潮社;[出版社名]現代詩専門/
+;;         げんだいしぶんこ /現代詩文庫;思潮社/
+;;         みしましょう /三島賞/三島由紀夫賞;※abbrev/ ; 文学賞
+;;         みしまゆきおしょう /三島由紀夫賞/
+;;         びじゅつてちょう /美術手帖;[雑誌名]美術出版社/ ; 雑誌名
+;;
+;; ・東証一部上場企業
+;;     「[企業名]」の後の４桁の数字は証券コードです。
+;;     網羅性を志しています。新規上場や名称変更がありましたらご一報を
+;;     お願いいたします。
+;;     (東証一部以外は採録しないということではありません。)
+;;
+;;         advantest /アドバンテスト;[企業名]6857/(株)アドバンテスト;[企業名]6857/株式会社アドバンテスト;[企業名]6857/
+;;         omせいさくしょ /オーエム製作所;[企業名]6213/(株)オーエム製作所;[企業名]6213/株式会社オーエム製作所;[企業名]6213/ ; 現状では入力できない
+;;         きしゅうせいし /紀州製紙;[企業名]3882/紀州製紙(株);[企業名]3882/紀州製紙株式会社;[企業名]3882/
+;;
+;;     MEMO:
+;;       証券コード→企業名の変換ができると良いが
+;;       単純にコードを見出しにすると弊害が出る。うまい方法はないか？
+;;
+;; ・大学・大学校
+;;     国内の現存する高等教育機関は網羅を、
+;;     国外のものについては適宜需要のありそうなところの収録を目指す方針です。
+;;     略称については、「大学」を機械的に「大」に置き換えて収録しているほか、
+;;     通用している略称・愛称も適宜収録します。
+;;
+;;         あいだい /愛大/愛知大学;※abbrev/愛媛大学;※abbrev/
+;;         あいちだい /愛知大/
+;;         あいちだいがく /愛知大学/
+;;         はーばーどだい /ハーバード大;Harvard University. www.harverd.edu/
+;;         はーばーどだいがく /ハーバード大学;Harvard University. www.harverd.edu/
+;;
+;;     学部名などを付けた形では積極的には収録しない方針ですが、
+;;     L辞書などに既に入っていたものは暫定的にこちらに収めてあります。
+;;     小中高校名などもこれに準じます。
+;;
+;;         けいだいかんきょうじょうほう /慶大環境情報/
+;;         おうびりんこうこう /桜美林高校/
+;;
+;; ・放送局名
+;;     国内の主要な放送局名を収録しています。
+;;     annotationは略称とコールサインです。連想辞書にこれらを見出しにした
+;;     形のエントリが収録されています。
+;;         びわこほうそう /びわ湖放送;BBC,JOBL-TV/
+;;         ふくいえふえむほうそう /福井エフエム放送;JOLU-FM/福井FM放送/
+;;
+;; ・藩と国
+;;         あいづはん /会津藩/
+;;         あきのくに /安芸国/安芸の国/
+;;         あいづはんし /会津藩士/ ; 藩士 (低頻度なものもある)
+;;         あいづはんしゅ /会津藩主/ ; 藩主
+;;         あきのかみ /安芸守/ ; 国司
+;;
+;; ・年号(元号)
+;;     日本で使用された年号を、数値変換および数値変換でもフォローできない
+;;     「元年」つきの形とセットで収録しています。
+;;         あんせい /安政;年号(1854-1860)/
+;;         あんせいがんねん /安政元年;1854/ ; 「○○末年」は未収
+;;         あんせい#ねん /安政#2年;年号(1854-1860)/安政#3年/安政#0年/安政#1年/
+;;         あんせいき /安政期;(1854-1860)/         ;「期」「年間」「時代」は
+;;         あんせいじだい /安政時代;(1854-1860)/   ; 主要なもののみ
+;;         あんせいねんかん /安政年間;(1854-1860)/
+;;
+;; ・歴代内閣名
+;;         いとうないかく /伊藤内閣/
+;;         いとうひろぶみないかく /伊藤博文内閣/
+;;         いとうないかく /伊藤内閣;1885-88,92-96,98,1900-01/
+;;         いとうひろぶみないかく /伊藤博文内閣;1885-88,92-96,98,1900-01/
+;;     (NOTE: 「○○首相」「○○総理」は？　jinmei？)
+;;
+;; ・裁判所名と検察庁名(8高裁・50地裁。50家裁・438簡裁は未収)
+;;         みとちさい /水戸地裁;茨城/水戸地方裁判所;※abbrev/
+;;         みとちけん /水戸地検;茨城/水戸地方検察庁;※abbrev/
+;;
+;; ・都道府県警・庁・民・立
+;;     (NOTE: ○○市立・市役所はどうしましょう)
+;;         あおもりけんけい /青森県警/
+;;         あおもりけんちょう /青森県庁/
+;;         あおもりけんみん /青森県民/
+;;         あおもりけんりつ /青森県立/
+;;
+;; ・星座名(88)
+;;     天文学や占星術で使われる略語をannotateしています。
+;;     なお、この略語を見出しにしたエントリは連想辞書に収録されています。
+;;
+;;         おひつじざ /牡羊座;Aries(Ari)/おひつじ座/
+;;         (連想辞書) Ari /牡羊座/おひつじ座/Aries/
+;;
+;;
+;;
+;; TODO:
+;; ・主要雑誌名 (作業進行中、乞登録希望)
+;; ・幹線道路名 (膨大になるようならSKK-JISYO.road?)
+;; ・通り(street)の名前
+;; ・古典文学作品名
+;; ・仏典・経文名
+;; ・中国元号 (+「人」「期」「末」etc) (SKK-JISYO.historyがほしい...)
+;;
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.requested ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; list of requested new additions to SKK-JISYO.L for SKK system
+;; Copyright (C) 2003-2005 SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;;
+;; github.com 移行前の辞書登録・削除希望単語入力フォーム
+;;
+;;   http://openlab.jp/skk/registdic.cgi
+;;
+;; にお寄せいただいた登録希望を、原則として用例等も含めそのまま収録
+;; した辞書です。
+;;
+;; このままでも辞書の一つとして利用できますが、適宜 L辞書に採録する
+;; か、あるいは SKK-JISYO.noregist や SKK-JISYO.wrong.annotated に
+;; 移動することが望まれます。
+;;
+;; okuri-ari entries.
+
+--- SKK-JISYO.station ---
+;; -*- mode: fundamental; coding: euc-jp -*-
+;; SKK railroad stations dictionary.
+;; Copyright (C) 2003-2005 MITA Yuusuke  <clefs@mail.goo.ne.jp>
+;;               SKK Development Team <skk@ring.gr.jp>
+;;
+;; Maintainer: SKK Development Team <skk@ring.gr.jp>
+;; Keywords: japanese
+;; Created: 2005/07/31
+;; Modifiled: 2020/03/20
+;;
+;; This dictionary is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or
+;; (at your option) any later version.
+;;
+;; This dictionary is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with Daredevil SKK, see the file COPYING.  If not, write to
+;; the Free Software Foundation Inc., 51 Franklin St, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+;;
+;;; Commentary:
+;; 
+;; 日本国内の鉄道の駅名および路線名を収録した辞書です。
+;; 
+;; 基本的に、全ての駅名について「駅」のついた形とつかない形の双方で
+;; 収録してあります。
+;; (TIP: 「えき」をつけて変換して、駅の字だけ消す方が速く入力できる
+;;  場合があります)
+;;
+;; 廃駅・廃線については基本的に削除の対象にはしない方針です。
+;;
+;; 同音異駅のある場合のみ、路線名をannotationとして付与しています。
+;;
+;;
+;;; Acknowledgment:
+;;
+;; この辞書の作成に当たり、特に以下のリソースを参考にさせていただきました。
+;; 作成・公開された皆様に感謝いたします。
+;;
+;; http://ja.wikipedia.org/wiki/%E6%97%A5%E6%9C%AC%E3%81%AE%E9%89%84%E9%81%93%E9%A7%85%E4%B8%80%E8%A6%A7
+;; http://www.mds.gr.jp/~jp3nfp/station/list/
+;; http://www.excite.co.jp/transfer/station/
+;; http://station.directory.ne.jp/
+;; http://www.bit-st.jp/
+;; http://members.jcom.home.ne.jp/tapiola/files/files.htm#RAIL98
+;; http://hit.vis.ne.jp/archives/ekidic.lzh
+;; http://www.jreast-timetable.jp/
+;; http://www.jr-odekake.net/eki/
+;; http://www.jrkyushu-timetable.jp/jr-k_time/top.html
+;; http://openlab.jp/skk/skk/dic/SKK-JISYO.propernoun
+;; http://ja.wikipedia.org/wiki/Category:%E9%96%8B%E6%A5%AD%E5%B9%B4%E5%88%A5%E9%89%84%E9%81%93%E9%A7%85
+;; http://www.trainfrontview.net/index.htm
+;;
+;;
+;;; おねがい:
+;;
+;; 辞書を最新に保つため、新駅・新線の誕生や駅名の改称などのニュースを
+;; 耳になさいましたら、github.com/skk-dev/dict/issues に
+;; 報いただけますようお願いいたします。（三セク化など要注意です）
+;; 
+;; 時間的余裕がおありでしたら、お住まいの地域の主要な駅名や路線名が
+;; 変換できるか試してみて、遺漏や誤字脱字などを報告していただけると
+;; 大変助かります。
+;;
+;;
+;; okuri-ari entries.
+;; okuri-nasi entries.
+
+--- meta/SKK-JISYO.JIS2.yaml ---
+
+
+--- meta/SKK-JISYO.L.yaml ---
+
+
+--- meta/SKK-JISYO.M.yaml ---
+
+
+--- meta/SKK-JISYO.ML.yaml ---
+
+
+--- meta/SKK-JISYO.S.yaml ---
+
+
+--- meta/SKK-JISYO.assoc.yaml ---
+
+
+--- meta/SKK-JISYO.china_taiwan.yaml ---
+
+
+--- meta/SKK-JISYO.edict.yaml ---
+
+
+--- meta/SKK-JISYO.edict2.yaml ---
+
+
+--- meta/SKK-JISYO.emoji.yaml ---
+
+
+--- meta/SKK-JISYO.fullname.yaml ---
+
+
+--- meta/SKK-JISYO.geo.yaml ---
+
+
+--- meta/SKK-JISYO.hukugougo.yaml ---
+
+
+--- meta/SKK-JISYO.itaiji.yaml ---
+
+
+--- meta/SKK-JISYO.jinmei.yaml ---
+
+
+--- meta/SKK-JISYO.law.yaml ---
+
+
+--- meta/SKK-JISYO.mazegaki.yaml ---
+
+
+--- meta/SKK-JISYO.okinawa.yaml ---
+
+
+--- meta/SKK-JISYO.pinyin.yaml ---
+
+
+--- meta/SKK-JISYO.propernoun.yaml ---
+
+
+--- meta/SKK-JISYO.pubdic+.yaml ---
+
+
+--- meta/SKK-JISYO.station.yaml ---
+
+
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 2, June 1991
+
+ Copyright (C) 1989, 1991 Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The licenses for most software are designed to take away your
+freedom to share and change it.  By contrast, the GNU General Public
+License is intended to guarantee your freedom to share and change free
+software--to make sure the software is free for all its users.  This
+General Public License applies to most of the Free Software
+Foundation's software and to any other program whose authors commit to
+using it.  (Some other Free Software Foundation software is covered by
+the GNU Lesser General Public License instead.)  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+this service if you wish), that you receive source code or can get it
+if you want it, that you can change the software or use pieces of it
+in new free programs; and that you know you can do these things.
+
+  To protect your rights, we need to make restrictions that forbid
+anyone to deny you these rights or to ask you to surrender the rights.
+These restrictions translate to certain responsibilities for you if you
+distribute copies of the software, or if you modify it.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must give the recipients all the rights that
+you have.  You must make sure that they, too, receive or can get the
+source code.  And you must show them these terms so they know their
+rights.
+
+  We protect your rights with two steps: (1) copyright the software, and
+(2) offer you this license which gives you legal permission to copy,
+distribute and/or modify the software.
+
+  Also, for each author's protection and ours, we want to make certain
+that everyone understands that there is no warranty for this free
+software.  If the software is modified by someone else and passed on, we
+want its recipients to know that what they have is not the original, so
+that any problems introduced by others will not reflect on the original
+authors' reputations.
+
+  Finally, any free program is threatened constantly by software
+patents.  We wish to avoid the danger that redistributors of a free
+program will individually obtain patent licenses, in effect making the
+program proprietary.  To prevent this, we have made it clear that any
+patent must be licensed for everyone's free use or not licensed at all.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+                    GNU GENERAL PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. This License applies to any program or other work which contains
+a notice placed by the copyright holder saying it may be distributed
+under the terms of this General Public License.  The "Program", below,
+refers to any such program or work, and a "work based on the Program"
+means either the Program or any derivative work under copyright law:
+that is to say, a work containing the Program or a portion of it,
+either verbatim or with modifications and/or translated into another
+language.  (Hereinafter, translation is included without limitation in
+the term "modification".)  Each licensee is addressed as "you".
+
+Activities other than copying, distribution and modification are not
+covered by this License; they are outside its scope.  The act of
+running the Program is not restricted, and the output from the Program
+is covered only if its contents constitute a work based on the
+Program (independent of having been made by running the Program).
+Whether that is true depends on what the Program does.
+
+  1. You may copy and distribute verbatim copies of the Program's
+source code as you receive it, in any medium, provided that you
+conspicuously and appropriately publish on each copy an appropriate
+copyright notice and disclaimer of warranty; keep intact all the
+notices that refer to this License and to the absence of any warranty;
+and give any other recipients of the Program a copy of this License
+along with the Program.
+
+You may charge a fee for the physical act of transferring a copy, and
+you may at your option offer warranty protection in exchange for a fee.
+
+  2. You may modify your copy or copies of the Program or any portion
+of it, thus forming a work based on the Program, and copy and
+distribute such modifications or work under the terms of Section 1
+above, provided that you also meet all of these conditions:
+
+    a) You must cause the modified files to carry prominent notices
+    stating that you changed the files and the date of any change.
+
+    b) You must cause any work that you distribute or publish, that in
+    whole or in part contains or is derived from the Program or any
+    part thereof, to be licensed as a whole at no charge to all third
+    parties under the terms of this License.
+
+    c) If the modified program normally reads commands interactively
+    when run, you must cause it, when started running for such
+    interactive use in the most ordinary way, to print or display an
+    announcement including an appropriate copyright notice and a
+    notice that there is no warranty (or else, saying that you provide
+    a warranty) and that users may redistribute the program under
+    these conditions, and telling the user how to view a copy of this
+    License.  (Exception: if the Program itself is interactive but
+    does not normally print such an announcement, your work based on
+    the Program is not required to print an announcement.)
+
+These requirements apply to the modified work as a whole.  If
+identifiable sections of that work are not derived from the Program,
+and can be reasonably considered independent and separate works in
+themselves, then this License, and its terms, do not apply to those
+sections when you distribute them as separate works.  But when you
+distribute the same sections as part of a whole which is a work based
+on the Program, the distribution of the whole must be on the terms of
+this License, whose permissions for other licensees extend to the
+entire whole, and thus to each and every part regardless of who wrote it.
+
+Thus, it is not the intent of this section to claim rights or contest
+your rights to work written entirely by you; rather, the intent is to
+exercise the right to control the distribution of derivative or
+collective works based on the Program.
+
+In addition, mere aggregation of another work not based on the Program
+with the Program (or with a work based on the Program) on a volume of
+a storage or distribution medium does not bring the other work under
+the scope of this License.
+
+  3. You may copy and distribute the Program (or a work based on it,
+under Section 2) in object code or executable form under the terms of
+Sections 1 and 2 above provided that you also do one of the following:
+
+    a) Accompany it with the complete corresponding machine-readable
+    source code, which must be distributed under the terms of Sections
+    1 and 2 above on a medium customarily used for software interchange; or,
+
+    b) Accompany it with a written offer, valid for at least three
+    years, to give any third party, for a charge no more than your
+    cost of physically performing source distribution, a complete
+    machine-readable copy of the corresponding source code, to be
+    distributed under the terms of Sections 1 and 2 above on a medium
+    customarily used for software interchange; or,
+
+    c) Accompany it with the information you received as to the offer
+    to distribute corresponding source code.  (This alternative is
+    allowed only for noncommercial distribution and only if you
+    received the program in object code or executable form with such
+    an offer, in accord with Subsection b above.)
+
+The source code for a work means the preferred form of the work for
+making modifications to it.  For an executable work, complete source
+code means all the source code for all modules it contains, plus any
+associated interface definition files, plus the scripts used to
+control compilation and installation of the executable.  However, as a
+special exception, the source code distributed need not include
+anything that is normally distributed (in either source or binary
+form) with the major components (compiler, kernel, and so on) of the
+operating system on which the executable runs, unless that component
+itself accompanies the executable.
+
+If distribution of executable or object code is made by offering
+access to copy from a designated place, then offering equivalent
+access to copy the source code from the same place counts as
+distribution of the source code, even though third parties are not
+compelled to copy the source along with the object code.
+
+  4. You may not copy, modify, sublicense, or distribute the Program
+except as expressly provided under this License.  Any attempt
+otherwise to copy, modify, sublicense or distribute the Program is
+void, and will automatically terminate your rights under this License.
+However, parties who have received copies, or rights, from you under
+this License will not have their licenses terminated so long as such
+parties remain in full compliance.
+
+  5. You are not required to accept this License, since you have not
+signed it.  However, nothing else grants you permission to modify or
+distribute the Program or its derivative works.  These actions are
+prohibited by law if you do not accept this License.  Therefore, by
+modifying or distributing the Program (or any work based on the
+Program), you indicate your acceptance of this License to do so, and
+all its terms and conditions for copying, distributing or modifying
+the Program or works based on it.
+
+  6. Each time you redistribute the Program (or any work based on the
+Program), the recipient automatically receives a license from the
+original licensor to copy, distribute or modify the Program subject to
+these terms and conditions.  You may not impose any further
+restrictions on the recipients' exercise of the rights granted herein.
+You are not responsible for enforcing compliance by third parties to
+this License.
+
+  7. If, as a consequence of a court judgment or allegation of patent
+infringement or for any other reason (not limited to patent issues),
+conditions are imposed on you (whether by court order, agreement or
+otherwise) that contradict the conditions of this License, they do not
+excuse you from the conditions of this License.  If you cannot
+distribute so as to satisfy simultaneously your obligations under this
+License and any other pertinent obligations, then as a consequence you
+may not distribute the Program at all.  For example, if a patent
+license would not permit royalty-free redistribution of the Program by
+all those who receive copies directly or indirectly through you, then
+the only way you could satisfy both it and this License would be to
+refrain entirely from distribution of the Program.
+
+If any portion of this section is held invalid or unenforceable under
+any particular circumstance, the balance of the section is intended to
+apply and the section as a whole is intended to apply in other
+circumstances.
+
+It is not the purpose of this section to induce you to infringe any
+patents or other property right claims or to contest validity of any
+such claims; this section has the sole purpose of protecting the
+integrity of the free software distribution system, which is
+implemented by public license practices.  Many people have made
+generous contributions to the wide range of software distributed
+through that system in reliance on consistent application of that
+system; it is up to the author/donor to decide if he or she is willing
+to distribute software through any other system and a licensee cannot
+impose that choice.
+
+This section is intended to make thoroughly clear what is believed to
+be a consequence of the rest of this License.
+
+  8. If the distribution and/or use of the Program is restricted in
+certain countries either by patents or by copyrighted interfaces, the
+original copyright holder who places the Program under this License
+may add an explicit geographical distribution limitation excluding
+those countries, so that distribution is permitted only in or among
+countries not thus excluded.  In such case, this License incorporates
+the limitation as if written in the body of this License.
+
+  9. The Free Software Foundation may publish revised and/or new versions
+of the General Public License from time to time.  Such new versions will
+be similar in spirit to the present version, but may differ in detail to
+address new problems or concerns.
+
+Each version is given a distinguishing version number.  If the Program
+specifies a version number of this License which applies to it and "any
+later version", you have the option of following the terms and conditions
+either of that version or of any later version published by the Free
+Software Foundation.  If the Program does not specify a version number of
+this License, you may choose any version ever published by the Free Software
+Foundation.
+
+  10. If you wish to incorporate parts of the Program into other free
+programs whose distribution conditions are different, write to the author
+to ask for permission.  For software which is copyrighted by the Free
+Software Foundation, write to the Free Software Foundation; we sometimes
+make exceptions for this.  Our decision will be guided by the two goals
+of preserving the free status of all derivatives of our free software and
+of promoting the sharing and reuse of software generally.
+
+                            NO WARRANTY
+
+  11. BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN
+OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED
+OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE ENTIRE RISK AS
+TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU.  SHOULD THE
+PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,
+REPAIR OR CORRECTION.
+
+  12. IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+REDISTRIBUTE THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING
+OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED
+TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY
+YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
+PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+                     END OF TERMS AND CONDITIONS
+
+            How to Apply These Terms to Your New Programs
+
+  If you develop a new program, and you want it to be of the greatest
+possible use to the public, the best way to achieve this is to make it
+free software which everyone can redistribute and change under these terms.
+
+  To do so, attach the following notices to the program.  It is safest
+to attach them to the start of each source file to most effectively
+convey the exclusion of warranty; and each file should have at least
+the "copyright" line and a pointer to where the full notice is found.
+
+    <one line to give the program's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Also add information on how to contact you by electronic and paper mail.
+
+If the program is interactive, make it output a short notice like this
+when it starts in an interactive mode:
+
+    Gnomovision version 69, Copyright (C) year name of author
+    Gnomovision comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
+
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, the commands you use may
+be called something other than `show w' and `show c'; they could even be
+mouse-clicks or menu items--whatever suits your program.
+
+You should also get your employer (if you work as a programmer) or your
+school, if any, to sign a "copyright disclaimer" for the program, if
+necessary.  Here is a sample; alter the names:
+
+  Yoyodyne, Inc., hereby disclaims all copyright interest in the program
+  `Gnomovision' (which makes passes at compilers) written by James Hacker.
+
+  <signature of Ty Coon>, 1 April 1989
+  Ty Coon, President of Vice
+
+This General Public License does not permit incorporating your program into
+proprietary programs.  If your program is a subroutine library, you may
+consider it more useful to permit linking proprietary applications with the
+library.  If this is what you want to do, use the GNU Lesser General
+Public License instead of this License.
+
+
+--- MOZC_LICENSE.txt ---
+Copyright 2010-2018, Google Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  * Redistributions in binary form must reproduce the above
+    copyright notice, this list of conditions and the following disclaimer
+    in the documentation and/or other materials provided with the
+    distribution.
+  * Neither the name of Google Inc. nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+
+Files: src/data/dictionary*
+
+Copyright 2000, 2001, 2002, 2003 Nara Institute of Science
+and Technology.  All Rights Reserved.
+
+Use, reproduction, and distribution of this software is permitted.
+Any copy of this software, whether in its original form or modified,
+must include both the above copyright notice and the following
+paragraphs.
+
+Nara Institute of Science and Technology (NAIST),
+the copyright holders, disclaims all warranties with regard to this
+software, including all implied warranties of merchantability and
+fitness, in no event shall NAIST be liable for
+any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortuous action, arising out
+of or in connection with the use or performance of this software.
+
+A large portion of the dictionary entries
+originate from ICOT Free Software.  The following conditions for ICOT
+Free Software applies to the current dictionary as well.
+
+Each User may also freely distribute the Program, whether in its
+original form or modified, to any third party or parties, PROVIDED
+that the provisions of Section 3 ("NO WARRANTY") will ALWAYS appear
+on, or be attached to, the Program, which is distributed substantially
+in the same form as set out herein and that such intended
+distribution, if actually made, will neither violate or otherwise
+contravene any of the laws and regulations of the countries having
+jurisdiction over the User or the intended distribution itself.
+
+NO WARRANTY
+
+The program was produced on an experimental basis in the course of the
+research and development conducted during the project and is provided
+to users as so produced on an experimental basis.  Accordingly, the
+program is provided without any warranty whatsoever, whether express,
+implied, statutory or otherwise.  The term "warranty" used herein
+includes, but is not limited to, any warranty of the quality,
+performance, merchantability and fitness for a particular purpose of
+the program and the nonexistence of any infringement or violation of
+any right of any third party.
+
+Each user of the program will agree and understand, and be deemed to
+have agreed and understood, that there is no warranty whatsoever for
+the program and, accordingly, the entire risk arising from or
+otherwise connected with the program is assumed by the user.
+
+Therefore, neither ICOT, the copyright holder, or any other
+organization that participated in or was otherwise related to the
+development of the program and their respective officials, directors,
+officers and other employees shall be held liable for any and all
+damages, including, without limitation, general, special, incidental
+and consequential damages, arising out of or otherwise in connection
+with the use or inability to use the program or any product, material
+or result produced or otherwise obtained by using the program,
+regardless of whether they have been advised of, or otherwise had
+knowledge of, the possibility of such damages at any time during the
+project or thereafter.  Each user will be deemed to have agreed to the
+foregoing by his or her commencement of use of the program.  The term
+"use" as used herein includes, but is not limited to, the use,
+modification, copying and distribution of the program and the
+production of secondary products from the program.
+
+In the case where the program, whether in its original form or
+modified, was distributed or delivered to or received by a user from
+any person, organization or entity other than ICOT, unless it makes or
+grants independently of ICOT any specific warranty to the user in
+writing, such person, organization or entity, will also be exempted
+from and not be held liable to the user for any such damages as noted
+above as far as the program is concerned.
+
+---
+
+Files: src/data/dictionary*
+
+Public Domain Dataです。使用・変更・配布に関しては一切の制限をつけません。
+商品などに組み込むことも自由に行なってください。すでにいくつかの辞書には沖縄辞書が採用されています。
+勝手ながら、沖縄辞書に寄贈された辞書も in the Public Domain' 扱いとさせていただきます。
+
+
+--- MOZC_DICTIONARY_LICENSES.txt ---
+Open source mozc dictionary is different from the dictionary
+used for Google Japanese Input. The differences are as follows:
+
+- Large vocabulary set generated from the Web corpus is not included.
+- The vocabulary set is basically the same as that of IPAdic.
+  The licenses of IPAdic is found below.
+  Here's the version of IPAdic Mozc uses.
+  * mecab-ipadic-2.7.0-20070801 (ipadic-2.7.0)
+- Okinawa Dictionary is used to enrich named entities.
+  http://sourceforge.jp/projects/o-dic/
+  The license of Okinawa dictionary is found below.
+- Google manually added some extra adjective/verbs which are not in IPAdic.
+- Many Katakana words are included in the dictionary. They are collected as unknown words
+  during the text processing over the Web data.
+- To improve the conversion quality of Mozc, several compound words
+  (like 社員証, 再起動) are added. We basically collected these compounds from the Web
+  by using MeCab and IPAdic.
+- Open source version doesn't include Japanese postal code dictionary.
+
+You can add zip code dictionary by follows:
+1. Download zip code data from http://www.post.japanpost.jp/zipcode/download.html
+2. Extract them
+3. Update zip_code_seed.tsv by
+  PYTHONPATH="${PYTHONPATH}:../../"  \
+    python ../../dictionary/gen_zip_code_seed.py \
+    --zip_code=KEN_ALL.CSV --jigyosyo=JIGYOSYO.CSV >> dictionary09.txt
+
+
+-------------------------------------------------------------------------------
+IPAdic is licensed as follows:
+
+Copyright 2000, 2001, 2002, 2003 Nara Institute of Science
+and Technology.  All Rights Reserved.
+
+Use, reproduction, and distribution of this software is permitted.
+Any copy of this software, whether in its original form or modified,
+must include both the above copyright notice and the following
+paragraphs.
+
+Nara Institute of Science and Technology (NAIST),
+the copyright holders, disclaims all warranties with regard to this
+software, including all implied warranties of merchantability and
+fitness, in no event shall NAIST be liable for
+any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortuous action, arising out
+of or in connection with the use or performance of this software.
+
+A large portion of the dictionary entries
+originate from ICOT Free Software.  The following conditions for ICOT
+Free Software applies to the current dictionary as well.
+
+Each User may also freely distribute the Program, whether in its
+original form or modified, to any third party or parties, PROVIDED
+that the provisions of Section 3 ("NO WARRANTY") will ALWAYS appear
+on, or be attached to, the Program, which is distributed substantially
+in the same form as set out herein and that such intended
+distribution, if actually made, will neither violate or otherwise
+contravene any of the laws and regulations of the countries having
+jurisdiction over the User or the intended distribution itself.
+
+NO WARRANTY
+
+The program was produced on an experimental basis in the course of the
+research and development conducted during the project and is provided
+to users as so produced on an experimental basis.  Accordingly, the
+program is provided without any warranty whatsoever, whether express,
+implied, statutory or otherwise.  The term "warranty" used herein
+includes, but is not limited to, any warranty of the quality,
+performance, merchantability and fitness for a particular purpose of
+the program and the nonexistence of any infringement or violation of
+any right of any third party.
+
+Each user of the program will agree and understand, and be deemed to
+have agreed and understood, that there is no warranty whatsoever for
+the program and, accordingly, the entire risk arising from or
+otherwise connected with the program is assumed by the user.
+
+Therefore, neither ICOT, the copyright holder, or any other
+organization that participated in or was otherwise related to the
+development of the program and their respective officials, directors,
+officers and other employees shall be held liable for any and all
+damages, including, without limitation, general, special, incidental
+and consequential damages, arising out of or otherwise in connection
+with the use or inability to use the program or any product, material
+or result produced or otherwise obtained by using the program,
+regardless of whether they have been advised of, or otherwise had
+knowledge of, the possibility of such damages at any time during the
+project or thereafter.  Each user will be deemed to have agreed to the
+foregoing by his or her commencement of use of the program.  The term
+"use" as used herein includes, but is not limited to, the use,
+modification, copying and distribution of the program and the
+production of secondary products from the program.
+
+In the case where the program, whether in its original form or
+modified, was distributed or delivered to or received by a user from
+any person, organization or entity other than ICOT, unless it makes or
+grants independently of ICOT any specific warranty to the user in
+writing, such person, organization or entity, will also be exempted
+from and not be held liable to the user for any such damages as noted
+above as far as the program is concerned.
+
+-------------------------------------------------------------------------------
+Okinawa dictionary is licensed as follows
+
+Public Domain Dataです。使用・変更・配布に関しては一切の制限をつけません。
+商品などに組み込むことも自由に行なってください。すでにいくつかの辞書には沖縄辞書が採用されています。
+勝手ながら、沖縄辞書に寄贈された辞書も in the Public Domain' 扱いとさせていただきます。
+
+
+
+再生成用ソース・全件処理報告: https://github.com/zenskypj/Komorebi-IME/releases/tag/v0.3.0-rc.33-dev

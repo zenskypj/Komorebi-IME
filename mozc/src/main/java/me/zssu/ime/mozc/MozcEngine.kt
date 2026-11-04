@@ -8,6 +8,9 @@ import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Input
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Output
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.SessionCommand
 import java.io.File
+import java.util.concurrent.Executors
+import org.mozc.android.inputmethod.japanese.protobuf.ProtoEngineBuilder.EngineReloadRequest
+import org.mozc.android.inputmethod.japanese.protobuf.ProtoEngineBuilder.EngineReloadResponse
 
 /**
  * Owns the single native mozc SessionHandler and the one session we talk to it through.
@@ -20,11 +23,68 @@ import java.io.File
  * funnels through [lock]. Callers should stay off the main thread for anything but short
  * key events.
  */
-class MozcEngine private constructor() {
+class MozcEngine private constructor(private val dictionaries: SystemDictionaryManager, private val standard: File) {
 
     private val lock = Any()
     private var sessionId: Long = INVALID_SESSION_ID
     private var consecutiveFailures = 0
+    private var inputActive = false
+    private var composing = false
+    private var reloadPriority = 0
+    private var pendingDataRequest = false
+    private val reloadWorker = Executors.newSingleThreadExecutor { r -> Thread(r, "mozc-data-reload") }
+    @Volatile var sessionGeneration: Long = 0
+        private set
+
+    fun setInputActive(active: Boolean) {
+        synchronized(lock) { inputActive = active }
+        if (!active) requestDictionaryApply()
+    }
+
+    private fun requestDictionaryApply() {
+        reloadWorker.execute {
+            val selection = dictionaries.selection()
+            val target = selection?.file ?: standard
+            val expected = selection?.version ?: "24.11.oss"
+            val requested = selection?.id.orEmpty()
+            synchronized(lock) {
+                if (inputActive || composing) return@execute
+                if (MozcJNI.getDataVersion() == expected && !pendingDataRequest) {
+                    dictionaries.applied(expected)
+                    return@execute
+                }
+                evalLocked(Input.newBuilder().setType(Input.CommandType.SYNC_DATA))
+                evalLocked(Input.newBuilder().setType(Input.CommandType.RELOAD_AND_WAIT))
+                deleteSession()
+                val response = evalLocked(Input.newBuilder().setType(Input.CommandType.SEND_ENGINE_RELOAD_REQUEST)
+                    .setEngineReloadRequest(EngineReloadRequest.newBuilder()
+                        .setFilePath(target.absolutePath).setPriority(--reloadPriority)))
+                if (response?.hasEngineReloadResponse() != true || response.engineReloadResponse.status != EngineReloadResponse.Status.ACCEPTED) {
+                    dictionaries.fallback("辞書の切り替え要求が受理されませんでした")
+                    if (requested.isNotEmpty()) requestDictionaryApply()
+                    return@execute
+                }
+                pendingDataRequest = true
+            }
+            // ACCEPTED is only queue acknowledgement. Probe solely while no editor/composition
+            // uses the session. A new editor resumes the old engine and leaves this pending.
+            repeat(300) {
+                synchronized(lock) {
+                    if (inputActive || composing || dictionaries.currentState().requested != requested) return@execute
+                    ensureSessionLocked()
+                    val version = MozcJNI.getDataVersion()
+                    deleteSession()
+                    if (version == expected && !pendingDataRequest) {
+                        dictionaries.applied(version)
+                        return@execute
+                    }
+                }
+                Thread.sleep(100)
+            }
+            dictionaries.fallback("辞書の適用を完了できませんでした")
+            if (requested.isNotEmpty()) requestDictionaryApply()
+        }
+    }
 
     val dataVersion: String
         get() = synchronized(lock) { MozcJNI.getDataVersion() }
@@ -102,6 +162,7 @@ class MozcEngine private constructor() {
             return false
         }
         sessionId = output.id
+        sessionGeneration++
         return true
     }
 
@@ -113,6 +174,13 @@ class MozcEngine private constructor() {
                 return null
             }
             val output = Command.parseFrom(responseBytes).output
+            if (input.type == Input.CommandType.SEND_KEY || input.type == Input.CommandType.SEND_COMMAND) {
+                composing = output.hasPreedit() && output.preedit.segmentCount > 0
+            }
+            if (output.hasEngineReloadResponse() && output.engineReloadResponse.status == EngineReloadResponse.Status.RELOADED) {
+                pendingDataRequest = false
+                dictionaries.applied(MozcJNI.getDataVersion())
+            }
             consecutiveFailures = 0
             output
         } catch (e: Exception) {
@@ -185,7 +253,9 @@ class MozcEngine private constructor() {
                 return null
             }
             Log.i(TAG, "mozc up, data version=${MozcJNI.getDataVersion()}")
-            val engine = MozcEngine()
+            val dictionaries = SystemDictionaryManager.get(context)
+            val engine = MozcEngine(dictionaries, dataFile)
+            dictionaries.applied(MozcJNI.getDataVersion())
 
             // Off the caller's thread: this runs during the IME's first keystroke path, and the
             // bundled dictionaries are several MB of TSV. mozc parses them on its own thread and
@@ -198,6 +268,9 @@ class MozcEngine private constructor() {
                     UserDictionary(context).sync(engine)
                 } catch (e: Exception) {
                     Log.e(TAG, "background dictionary import failed", e)
+                } finally {
+                    dictionaries.requestApply = engine::requestDictionaryApply
+                    engine.requestDictionaryApply()
                 }
             }, "mozc-dict-import")
                 .apply { isDaemon = true; priority = Thread.MIN_PRIORITY }

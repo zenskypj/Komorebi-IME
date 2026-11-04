@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 import me.zssu.ime.mozc.UserDictionary
 
 /** Owns the native model on one worker; input and lifecycle callbacks only enqueue work. */
-internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
+internal class ZenzaiEngine(context: Context) {
     private val app = context.applicationContext
     private val ui = Handler(Looper.getMainLooper())
     private val worker = ScheduledThreadPoolExecutor(1) { task ->
@@ -33,7 +33,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
     private var handle = 0L
     @Volatile private var activation = 0L
     private val trainer = ZenzaiTrainer(app, ::modelFile, ::publish) {
-        ui.post { if (enabled) onError() }
+        android.util.Log.w("ZenzaiEngine", "zenzai-plus training unavailable")
     }
 
     fun setEnabled(value: Boolean) {
@@ -45,7 +45,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
         cancel()
         if (value) {
             nativeReady = ZenzaiNative.available
-            if (!nativeReady) { failed = true; onError() }
+            if (!nativeReady) { failed = true }
         } else {
             worker.execute(::release)
         }
@@ -89,7 +89,6 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
                 ui.post {
                     if (ticket == generation && enabled && !failed) {
                         failed = true
-                        onError()
                         onUnavailable()
                     }
                 }

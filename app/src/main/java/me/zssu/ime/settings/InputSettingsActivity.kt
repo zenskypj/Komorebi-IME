@@ -85,7 +85,8 @@ private fun InputSettingsScreen() {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Chip(style == KeyboardStyle.FLICK, "フリック") { style = KeyboardStyle.FLICK; settings.keyboardStyle = KeyboardStyle.FLICK }
                         Chip(style == KeyboardStyle.QWERTY, "QWERTY") { style = KeyboardStyle.QWERTY; settings.keyboardStyle = KeyboardStyle.QWERTY }
-                        Chip(style == KeyboardStyle.MIXED, "混合") { style = KeyboardStyle.MIXED; settings.keyboardStyle = KeyboardStyle.MIXED }
+                        Chip(style == KeyboardStyle.MIXED, "英字だけQWERTY") { style = KeyboardStyle.MIXED; settings.keyboardStyle = KeyboardStyle.MIXED }
+                        Chip(style == KeyboardStyle.KANA_QWERTY, "かなだけQWERTY") { style = KeyboardStyle.KANA_QWERTY; settings.keyboardStyle = KeyboardStyle.KANA_QWERTY }
                     }
                 }
             }
