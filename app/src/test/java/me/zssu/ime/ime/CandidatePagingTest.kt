@@ -4,24 +4,36 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CandidatePagingTest {
-    @Test fun conversionNeverAdvancesIntoAnUnopenedPage() {
-        for (count in 1..40) for (initial in 0 until count) {
-            val start = CandidatePaging.pageStart(count, initial)
-            val end = CandidatePaging.pageEnd(count, initial)
-            var focus = initial
-            repeat(50) { focus = CandidatePaging.next(count, focus)!!; assertTrue(focus in start until end) }
+    @Test fun rowSettingControlsPackingInsteadOfAFixedSixCandidates() {
+        val widths = List(8) { 70 }
+        assertEquals(listOf(listOf(0, 1, 2)), CandidatePaging.pages(widths, 240, 1).first().rows)
+        assertEquals(listOf(listOf(0, 1, 2), listOf(3, 4, 5)), CandidatePaging.pages(widths, 240, 2).first().rows)
+    }
+    @Test fun longCandidatesAndLargeTextReduceTheVisiblePage() {
+        assertEquals(listOf(0), CandidatePaging.pages(listOf(400, 60, 60), 200, 1).first().indices)
+        assertEquals(listOf(0, 1), CandidatePaging.pages(List(8) { 100 }, 240, 1).first().indices)
+    }
+    @Test fun everyCandidateAppearsOnceWithoutOverflowAcrossWidthsAndRows() {
+        for (width in listOf(1, 120, 240, 600)) for (rows in 1..2) {
+            val sizes = List(120) { 48 + it % 7 * 30 }
+            val pages = CandidatePaging.pages(sizes, width, rows)
+            assertEquals(sizes.indices.toList(), pages.flatMap { it.indices })
+            pages.forEach { page ->
+                assertTrue(page.rows.size <= rows)
+                page.rows.forEach { row -> assertTrue(row.sumOf { sizes[it].coerceAtMost(width) } <= width) }
+            }
         }
     }
-    @Test fun nextPageRequiresAnExplicitActionAndDoesNotWrap() {
-        assertEquals(6, CandidatePaging.adjacentPage(20, 4, 1))
-        assertEquals(0, CandidatePaging.adjacentPage(20, 7, -1))
-        assertNull(CandidatePaging.adjacentPage(20, 0, -1))
-        assertNull(CandidatePaging.adjacentPage(20, 19, 1))
-        assertEquals(18, CandidatePaging.next(20, 19))
-    }
-    @Test fun missingOrEmptyFocusDoesNotSkipTheFirstCandidate() {
-        assertNull(CandidatePaging.next(0, -1))
-        assertEquals(0, CandidatePaging.next(20, -1))
+    @Test fun repeatedConversionStaysInsideTheActualVisibleIds() {
+        val available = (1..30).toList()
+        var focus: Int? = 9
+        repeat(40) {
+            focus = CandidatePaging.nextVisible(available, listOf(9, 10, 11), focus)
+            assertTrue(focus in 9..11)
+        }
+        assertEquals(9, CandidatePaging.nextVisible(available, listOf(9, 10, 11), 30))
+        assertNull(CandidatePaging.nextVisible(available, emptyList(), 9))
+        assertEquals(10, CandidatePaging.nextVisible(available, listOf(999, 10), 999))
     }
     @Test fun nativeGlobalIndexIsNotUsedAsAnIndexIntoTheVisiblePage() {
         val page = listOf(9 to 150, 10 to 200, 11 to 240)

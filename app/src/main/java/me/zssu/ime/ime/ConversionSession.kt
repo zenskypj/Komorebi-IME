@@ -88,7 +88,8 @@ internal class ConversionSession(private val context: Context, private val prior
         return MozcSession.State(committedText = candidate.text, consumed = true)
     }
     fun currentPreedit(): String = if (usesMozc) native().currentPreedit() else kana.text
-    fun convertOrSpace(): MozcSession.State? = if (usesMozc) native().convertOrSpace()
+    var visibleConversionCandidateIds: List<Int> = emptyList()
+    fun convertOrSpace(): MozcSession.State? = if (usesMozc) native().convertOrSpace(visibleConversionCandidateIds)
         else when (StandaloneSpace.route(kana.text.isNotEmpty(), style.fullWidthSpace)) {
             StandaloneSpace.Target.COMMIT_AND_SPACE -> sendSpecialKey(KeyEvent.SpecialKey.SPACE)
             StandaloneSpace.Target.NEURAL_CONVERSION -> kana.state()

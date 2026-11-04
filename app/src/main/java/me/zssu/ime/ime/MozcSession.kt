@@ -206,7 +206,7 @@ class MozcSession(
      * instead of being spent on the toggle chunk. When nothing is composing only Space is sent, and
      * an unconsumed result still lets the client insert an ordinary space. See [ConvertKeySequence].
      */
-    fun convertOrSpace(): State? {
+    fun convertOrSpace(visibleCandidateIds: List<Int> = emptyList()): State? {
         val wasConverting = currentIsConverting
         val japaneseComposition = currentStyle?.fullWidthSpace == true && currentPreeditText.isNotEmpty()
         return ConvertKeySequence.convert(
@@ -215,6 +215,7 @@ class MozcSession(
             stop = ::stopKeyToggling,
             send = { sendSpecialKey(it) },
             highlight = ::highlightCandidate,
+            visibleCandidateIds = visibleCandidateIds,
         )
     }
 

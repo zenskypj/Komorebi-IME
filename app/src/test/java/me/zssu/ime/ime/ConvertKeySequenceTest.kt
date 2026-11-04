@@ -75,6 +75,7 @@ class ConvertKeySequenceTest {
             stop = { converting(0) },
             send = { error("must not advance into Mozc's hidden pages") },
             highlight = { assertEquals(81, it); converting(1) },
+            visibleCandidateIds = listOf(42, 81),
         )
         assertTrue(keys.isEmpty())
         assertEquals(1, result?.focusedCandidateIndex)
@@ -87,5 +88,17 @@ class ConvertKeySequenceTest {
             highlight = { error("nothing to highlight") },
         )
         assertEquals("abc", result?.committedText)
+    }
+
+    @Test fun noVisibleOrStaleCandidatesCannotAdvanceIntoHiddenCandidates() {
+        for (visible in listOf(emptyList(), listOf(999))) {
+            val result = ConvertKeySequence.convert(true, true,
+                stop = { converting(0) },
+                send = { error("must not advance native pages") },
+                highlight = { error("no visible candidate is available") },
+                visibleCandidateIds = visible,
+            )
+            assertEquals(0, result?.focusedCandidateIndex)
+        }
     }
 }

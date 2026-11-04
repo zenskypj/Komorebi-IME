@@ -27,6 +27,7 @@ internal object ConvertKeySequence {
         stop: () -> MozcSession.State?,
         send: (KeyEvent.SpecialKey) -> MozcSession.State?,
         highlight: (Int) -> MozcSession.State?,
+        visibleCandidateIds: List<Int> = emptyList(),
     ): MozcSession.State? {
         fun first(state: MozcSession.State): MozcSession.State {
             if (wasConverting || !state.isConverting || state.focusedCandidateIndex == 0) return state
@@ -37,8 +38,9 @@ internal object ConvertKeySequence {
         if (!stopped?.committedText.isNullOrEmpty()) return stopped
         if (wasConverting) {
             if (stopped?.isConverting != true) return stopped
-            val next = CandidatePaging.next(stopped.candidates.size, stopped.focusedCandidateIndex) ?: return stopped
-            return highlight(stopped.candidates[next].id) ?: stopped
+            val next = CandidatePaging.nextVisible(stopped.candidates.map { it.id }, visibleCandidateIds,
+                stopped.candidates.getOrNull(stopped.focusedCandidateIndex)?.id) ?: return stopped
+            return highlight(next) ?: stopped
         }
         if (!wasConverting && reachedConversion(stopped)) return first(stopped!!)
         var last: MozcSession.State? = stopped

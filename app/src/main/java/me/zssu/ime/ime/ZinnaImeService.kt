@@ -97,6 +97,7 @@ class ZinnaImeService : InputMethodService() {
 
     private var editAnchor: Int? = null
     private var segmentBar: LinearLayout? = null
+    private var segmentEditing = false
     private var segmentSummary: LinearLayout? = null
     private var keyboardView: FlickKeyboardView? = null
     private var panelView: KeyboardPanelView? = null
@@ -123,6 +124,7 @@ class ZinnaImeService : InputMethodService() {
      */
     private var isComposing = false
     private var isConverting = false
+        set(value) { field = value; if (!value) segmentEditing = false }
     private var currentSegmentCount = 0
     private var suppressPartialLearning = false
     private var renderedPreeditCursor = 0
@@ -354,6 +356,12 @@ class ZinnaImeService : InputMethodService() {
             onCandidateDetailsClosed = {
                 setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
             }
+            onConversionPageChanged = { ids -> session.visibleConversionCandidateIds = ids }
+            onSegmentEditRequested = {
+                segmentEditing = !segmentEditing
+                candidateView?.segmentEditing = segmentEditing
+                segmentBar?.visibility = if (isConverting && segmentEditing) View.VISIBLE else View.GONE
+            }
             onCandidateFocusRequested = { candidate ->
                 if (isConverting && !candidate.directCommit && lastCandidates.any { it.id == candidate.id && it.text == candidate.text }) {
                     cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -401,7 +409,8 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         val stripHeight = if (fieldPolicy.showCandidates) {
-            (theme.keyHeightDp * 0.8f * settings.candidateRows * resources.displayMetrics.density).toInt()
+            maxOf((theme.keyHeightDp * 0.8f * resources.displayMetrics.density).toInt(),
+                (android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 20f * settings.candidateTextScale, resources.displayMetrics) * 1.35f + 20f * resources.displayMetrics.density).toInt()) * settings.candidateRows
         } else {
             0
         }
@@ -444,6 +453,7 @@ class ZinnaImeService : InputMethodService() {
         candidates.onPanelExpanded = { expanded ->
             keyboard.visibility = if (expanded) View.GONE else View.VISIBLE
             menuButton.visibility = if (expanded) View.GONE else View.VISIBLE
+            segmentBar?.visibility = if (!expanded && isConverting && segmentEditing) View.VISIBLE else View.GONE
         }
         candidates.onEditCommand = ::handleEditCommand
         val content = LinearLayout(this).apply {
@@ -1486,7 +1496,9 @@ class ZinnaImeService : InputMethodService() {
             )
         isComposing = state.hasComposition
         isConverting = state.isConverting
-        segmentBar?.visibility = if (isConverting) View.VISIBLE else View.GONE
+        if (!isConverting) segmentEditing = false
+        candidateView?.segmentEditing = segmentEditing
+        segmentBar?.visibility = if (isConverting && segmentEditing) View.VISIBLE else View.GONE
         currentSegmentCount = if (state.isConverting) state.segments.size else 0
         val focusedSegment = state.segments.indexOfFirst { it.highlighted }
         segmentSummary?.apply {
