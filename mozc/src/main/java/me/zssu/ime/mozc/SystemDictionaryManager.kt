@@ -16,9 +16,9 @@ class SystemDictionaryManager private constructor(context: Context) {
         val id: String, val name: String, val version: String, val license: String,
         val source: String, val url: String, val compressedBytes: Long, val compressedSha256: String,
         val dataBytes: Long, val dataSha256: String, val dataVersion: String,
-        val runtime: String, val notice: String,
+        val runtime: String, val notice: String, val sourceIds: List<String> = emptyList(),
     )
-    data class State(val requested: String = "", val applied: String? = null,
+    data class State(val requested: String = "", val sources: Set<String> = emptySet(), val applied: String? = null,
                      val downloading: String? = null, val received: Long = 0,
                      val message: String = "", val revision: Long = 0)
     internal data class Selection(val id: String, val file: File, val version: String)
@@ -35,17 +35,23 @@ class SystemDictionaryManager private constructor(context: Context) {
         val array = JSONObject(reader.readText()).getJSONArray("packs")
         List(array.length()) { index ->
             val p = array.getJSONObject(index)
+            val sourceIds = p.optJSONArray("sourceIds")?.let { ids -> List(ids.length()) { ids.getString(it) } }.orEmpty()
             Pack(p.getString("id"), p.getString("name"), p.getString("version"), p.getString("license"),
                  p.getString("source"), p.getString("url"), p.getLong("compressedBytes"), p.getString("compressedSha256"),
                  p.getLong("dataBytes"), p.getString("dataSha256"), p.getString("dataVersion"),
-                 p.getString("runtime"), p.getString("notice")).also {
+                 p.getString("runtime"), p.getString("notice"), sourceIds).also {
+                require(it.sourceIds.all { id -> id.matches(Regex("[a-z0-9-]+")) })
                 require(it.id.matches(Regex("[a-z0-9-]+")))
                 require(it.url.startsWith("https://github.com/zenskypj/Komorebi-IME/releases/download/"))
                 require(it.dataBytes > 0 && it.compressedBytes > 0)
             }
         }
     }
-    @Volatile private var state = State(requested = preferences.getString("requested", "").orEmpty())
+    @Volatile private var state = State(
+        requested = preferences.getString("requested", "").orEmpty(),
+        sources = preferences.getString("requested_sources", "").orEmpty()
+            .splitToSequence(',').filter { it.isNotEmpty() }.toSet(),
+    )
     @Volatile internal var requestApply: (() -> Unit)? = null
 
     fun currentState(): State = state
@@ -117,14 +123,29 @@ class SystemDictionaryManager private constructor(context: Context) {
         }
     }
 
-    fun select(id: String) {
-        require(id.isEmpty() || packs.any { it.id == id && compatible(it) && installed(it) })
-        preferences.edit().putString("requested", id).apply {
-            if (id.isNotEmpty()) remove("delete_$id")
-        }.apply()
-        update { it.copy(requested = id, message = "入力を終えた安全なタイミングで切り替えます") }
-        requestApply?.invoke()
+    /** The catalog dataset that contains every selected source, or null when none does. */
+    fun resolve(sources: Set<String>): Pack? = SystemDictionarySelection.resolve(sources, packs)
+
+    fun select(sources: Set<String>) {
+        val resolved = resolve(sources)
+        val usable = resolved?.takeIf { compatible(it) && installed(it) }
+        val editor = preferences.edit()
+            .putString("requested_sources", sources.sorted().joinToString(","))
+            .putString("requested", usable?.id.orEmpty())
+        if (usable != null) editor.remove("delete_${usable.id}")
+        editor.apply()
+        val message = when {
+            sources.isEmpty() -> "入力を終えた安全なタイミングで切り替えます"
+            resolved == null -> "選んだ組み合わせを含む統合データセットはまだ提供されていません"
+            !compatible(resolved) -> "このアプリのMozcとは互換性がありません"
+            !installed(resolved) -> "「${resolved.name}」を取得してください"
+            else -> "入力を終えた安全なタイミングで切り替えます"
+        }
+        update { it.copy(requested = usable?.id.orEmpty(), sources = sources, message = message) }
+        if (usable != null) requestApply?.invoke()
     }
+
+    fun select(id: String) = select(if (id.isEmpty()) emptySet() else setOf(id))
 
     fun delete(pack: Pack) {
         // Mapped files remain in place until the standard dataset is actually running.

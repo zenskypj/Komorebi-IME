@@ -42,3 +42,12 @@
   リリースノートに明記する。
 - 差分と生成物を再確認し、コミット、`v<versionName>`タグ、`main`とタグのpush、
   GitHub Release作成の順で行う。公開後にタグ、リリースURL、添付ファイルを再取得して確認する。
+
+## 追加辞書の生成
+
+- 追加辞書（`scripts/extra_dictionary/`）は`build/extra-dictionary/checkout`の隔離Mozcで生成する。
+  `build_packs.py`が`patches/dictionary-generation/*.patch`をそのcheckoutへ冪等適用する。
+- 生成専用パッチを`patches/`直下に置かない。`build_mozc.sh`は`patches/[0-9][0-9][0-9][0-9]-*.patch`を
+  `third_party/mozc`へ適用するため、直下に置くとlibmozcが再ビルドされ互換指紋が変わる。
+- 統合データセット（`neologd`／`skk`／`all`）は複数の変換結果を`(reading,lid,surface)`の
+  最小コストで統合してから1回のBazelビルドで作る。上限件数での切り捨ては行わない。

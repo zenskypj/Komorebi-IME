@@ -19,7 +19,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.33-dev`、それ以前のテスト版は
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.34-dev`、それ以前のテスト版は
 > pre-release です。自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -31,8 +31,13 @@ rc.32 はツールでの高さ調整、予測順位・学習、次文節への�
 `rc.33-dev` では、追加システム辞書の明示取得・切り替え、初回の配列選択、
 かなだけQWERTY、メニュー・絵文字パネルの幅を追加・修正しています。
 zenzai-plusが利用できない場合の通知は表示せず、変換をフォールバックします。
-今回のAPKは利用者の指定により、追加の品質・動作検証を省いた試験用ビルドです。
 [追加辞書の収録範囲・制限・再生成手順](docs/extra-dictionaries/README.md)を参照してください。
+
+`rc.34-dev` では、ユーザー辞書・追加システム辞書へ個別に登録・指定した語が
+AI 変換（zenzai-plus / Karukan）に越権されないようにし、NFC で設定・学習を移行する
+機能の送受信（送信側の HCE 優先サービス、完了表示、受信側の完了応答・フォアグラウンド
+ディスパッチ）を修正しています。追加システム辞書は複数の同時有効化に対応する準備を入れ、
+統合データセットは再生成後に提供します。
 
 ## 特長
 

@@ -101,9 +101,13 @@ val verifyMozcRuntime by tasks.registering {
 
 // A source-only checkout is useful for editing, but must never silently produce an installable APK
 // whose keyboard cannot convert anything. Keep unit-test compilation available while making every
-// Android package merge depend on the generated native engine and dictionary.
+// Android package merge — and every lint task, which reads the generated runtimeAssets directory as
+// a declared input — depend on the generated native engine and dictionary.
 tasks.configureEach {
     if (name.startsWith("merge") && (name.endsWith("NativeLibs") || name.endsWith("Assets"))) {
+        dependsOn(verifyMozcRuntime)
+    }
+    if (name.contains("lint", ignoreCase = true)) {
         dependsOn(verifyMozcRuntime)
     }
 }

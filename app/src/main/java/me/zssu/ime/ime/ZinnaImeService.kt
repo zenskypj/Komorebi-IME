@@ -1714,7 +1714,7 @@ class ZinnaImeService : InputMethodService() {
         val preceding = session.clientContext?.precedingText.orEmpty()
         val prompt = if (session.zenzaiEnabled) ZenzaiConversion.prompt(reading, preceding) else null
         val registered = if (prompt != null) zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
-            .map { MozcSession.Candidate(-100, it.word, directCommit = true) } else emptyList()
+            .map { MozcSession.Candidate(DictionaryPriority.REGISTERED_DICTIONARY_ID, it.word, inputReading = reading, directCommit = true) } else emptyList()
         val base = (registered + state.candidates).distinctBy { it.text }
         var neural: MozcSession.Candidate? = null
         var karukan: List<MozcSession.Candidate> = emptyList()
@@ -1722,8 +1722,11 @@ class ZinnaImeService : InputMethodService() {
             if (zenzaiState !== state || !isComposing || isConverting) return
             val combined = (karukan + base).distinctBy { it.text }
             karukanSuggestionCandidate = karukan.firstOrNull()
-            lastCandidates = neural?.let { ZenzaiConversion.candidates(combined, it, reading) } ?: combined
-            lastFocusedCandidateIndex = if (neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
+            // A user/network dictionary entry the user registered or pinned outranks the neural
+            // converters; everything else keeps the neural candidate first.
+            val specified = DictionaryPriority.firstSpecified(combined, reading)
+            lastCandidates = DictionaryPriority.order(combined, neural, reading)
+            lastFocusedCandidateIndex = if (specified != null || neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
             candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
         }
         fun fallback() {
