@@ -36,7 +36,7 @@
     {
       group: "比較",
       items: [
-        ["manual/11-hikaku", "ほかのキーボードと比べる", "入力がどこへ行くかを、用語なしで並べる", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較"],
+        ["manual/11-hikaku", "ほかのキーボードと比べる", "Gboard・Simeji と ✓/✗ で比較", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較"],
       ],
     },
     {
@@ -226,6 +226,14 @@
     });
   }
 
+  /* The comparison table is the one whose header names Komorebi IME. */
+  function decorateTables(body) {
+    body.querySelectorAll("table").forEach((table) => {
+      const firstRow = table.querySelector("thead tr, tr");
+      if (firstRow && firstRow.textContent.includes("Komorebi IME")) table.classList.add("compare");
+    });
+  }
+
   function collectToc(root) {
     const headings = root.querySelectorAll("h2, h3");
     return Array.from(headings).map((h) => ({ id: h.id, text: h.textContent, depth: h.tagName === "H3" ? 3 : 2 }));
@@ -285,6 +293,7 @@
     body.innerHTML = safe;
     decorateCallouts(body);
     buildTimeline(body);
+    decorateTables(body);
 
     const toc = collectToc(body);
     const main = el("h1", { text: item.title });
