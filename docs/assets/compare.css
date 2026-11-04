@@ -611,6 +611,101 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* ---------------- phones ---------------- */
+
+@media (max-width: 860px) {
+  /* Comparison becomes a stacked list: no horizontal scrolling, each product on its own line. */
+  .cmp-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .cmp-table { display: block; width: 100%; min-width: 0; }
+  .cmp-table thead { display: none; }
+  .cmp-table tbody { display: block; }
+  .cmp-table tbody tr { display: block; padding: 16px 0; border-bottom: 1px solid var(--outline-variant); }
+  .cmp-table tbody tr:last-child { border-bottom: 0; }
+  .cmp-table tbody tr.group { padding: 22px 0 4px; border-bottom: 1px solid var(--outline); }
+  .cmp-table tbody tr.group th { padding: 0; }
+
+  .cmp-table tbody th {
+    position: static;
+    display: block;
+    min-width: 0;
+    padding: 0 0 10px;
+    border: 0;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .cmp-table tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 2px 0;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: var(--shape-sm);
+    background: var(--surface-container-low);
+    text-align: left;
+    white-space: normal;
+  }
+  .cmp-table tbody td::before {
+    content: attr(data-product);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--on-surface-variant);
+  }
+  .cmp-table tbody td.col-komorebi {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+  .cmp-table tbody td.col-komorebi::before {
+    color: var(--on-primary-container);
+    font-weight: 600;
+  }
+  .cmp-table tbody tr:hover th { background: transparent; }
+  .cmp-table tbody tr:hover td { background: var(--surface-container-low); }
+  .cmp-table tbody tr:hover td.col-komorebi { background: var(--primary-container); }
+  .cmp-table .m { font-size: 1.05rem; }
+  .cmp-legend { gap: 4px 14px; }
+
+  /* Gallery becomes a plain vertical stack instead of a side-scrolling row. */
+  .cmp-track {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+    scroll-snap-type: none;
+    padding: 4px 20px 8px;
+  }
+  .cmp-card { min-height: 0; }
+  .cmp-gallery-nav { display: none; }
+}
+
+@media (max-width: 720px) {
+  .cmp-hero { padding: 36px 20px 32px; }
+  .cmp-title { font-size: clamp(2.1rem, 9vw, 3.4rem); }
+  .cmp-hero-art { max-width: 360px; }
+  .cmp-metrics { padding: 0 20px 44px; }
+  .cmp-section { padding: 52px 20px; }
+  .cmp-h2 { font-size: 1.5rem; }
+  .cmp-reason { grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; }
+  .cmp-reason .num { padding-top: 4px; font-size: 0.75rem; }
+  .cmp-reason h3 { font-size: 1.125rem; }
+  .cmp-reason p { font-size: 0.9375rem; }
+  .cmp-footer-inner { padding: 32px 20px 48px; }
+}
+
+@media (max-width: 400px) {
+  .cmp-metrics { grid-template-columns: minmax(0, 1fr); }
+  .cmp-metric { display: flex; align-items: baseline; gap: 12px; }
+  .cmp-metric .l { margin-top: 0; }
+}
+
 @media print {
   .cmp-nav, .cmp-gallery-nav, .cmp-faq summary .plus { display: none !important; }
   .cmp-faq details { display: block; }

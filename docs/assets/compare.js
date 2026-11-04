@@ -66,6 +66,18 @@
     sync();
   }
 
+  /* Label every product cell so the table can stack on phones without side-scrolling. */
+  const comparison = document.querySelector(".cmp-table");
+  if (comparison) {
+    const labels = Array.from(comparison.querySelectorAll("thead th")).map((th) => th.dataset.label || "");
+    comparison.querySelectorAll("tbody tr:not(.group)").forEach((row) => {
+      Array.from(row.querySelectorAll("td")).forEach((cell, index) => {
+        const label = labels[index + 1];
+        if (label) cell.setAttribute("data-product", label);
+      });
+    });
+  }
+
   /* FAQ: close the others so the page does not jump far away */
   const faq = document.querySelector(".cmp-faq");
   if (faq) {
