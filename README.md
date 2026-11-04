@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.38-dev`、それ以前のテスト版は
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.39-dev`、それ以前のテスト版は
 > pre-release です。自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -58,6 +58,10 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.38-dev` は利用者提供の4,468件を既存の同梱固有名詞辞書へ統合し、重複整理後4,879語に
 しました。人名・地名・組織を区別し、追加ダウンロードなしで使用できます。
 [原本・統合方法](data/dictionaries/README.md)を記録しています。
+
+`rc.39-dev` はフリック削除キーの距離で二段階の削除を選べます。左は「左の単語→行頭まで」、
+上は「右の単語→行末まで」。表示を確認して指を離すと1回実行し、改行は残します。
+[操作と制限](docs/manual/01-nyuryoku.md)を参照してください。
 
 ## 特長
 

@@ -118,6 +118,10 @@ sealed interface KeyAction {
     data object Backspace : KeyAction
 
     @Serializable
+    @SerialName("delete_chunk")
+    data class DeleteChunk(val forward: Boolean = false, val toLineBoundary: Boolean = false) : KeyAction
+
+    @Serializable
     @SerialName("enter")
     data object Enter : KeyAction
 

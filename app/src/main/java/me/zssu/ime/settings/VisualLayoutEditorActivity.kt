@@ -386,6 +386,7 @@ private fun LayoutEditorScreen() {
 }
 
 private fun actionType(output: KeyOutput): String = when (output.action) {
+    is KeyAction.DeleteChunk -> "delete_chunk"
     is KeyAction.Input -> "input"; is KeyAction.Backspace -> "backspace"; is KeyAction.Enter -> "enter"
     is KeyAction.Space -> "space"; is KeyAction.Convert -> "convert"; is KeyAction.MoveCursor -> "cursor"
     is KeyAction.Undo -> "undo"; is KeyAction.ModifyChar -> "modify"; is KeyAction.SwitchLayout -> "layout"

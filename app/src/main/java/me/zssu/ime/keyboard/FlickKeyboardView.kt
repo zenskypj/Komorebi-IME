@@ -121,6 +121,8 @@ class FlickKeyboardView @JvmOverloads constructor(
         var trackpad: Boolean = false,
         var trackpadMotion: TrackpadMotion? = null,
         var spaceHoldMotion: SpaceHoldMotion? = null,
+        var deleteGesture: Boolean = false,
+        var deleteLine: Boolean = false,
     )
 
     private var placedKeys: List<PlacedKey> = emptyList()
@@ -278,6 +280,10 @@ class FlickKeyboardView @JvmOverloads constructor(
 
         // Guides go on top of every key so a guide near the edge is never clipped by a neighbour.
         for (touch in activeTouches.values) {
+            if (touch.deleteGesture) {
+                if (touch.direction != FlickDirection.CENTER) drawFlickPreview(canvas, touch, radius)
+                continue
+            }
             if (touch.trackpad || !touch.key.spec.hasFlicks) continue
             when (guideStyle) {
                 FlickGuideStyle.PREVIEW -> drawFlickPreview(canvas, touch, radius)
@@ -294,9 +300,15 @@ class FlickKeyboardView @JvmOverloads constructor(
      * as the direction changes.
      */
     private fun drawFlickPreview(canvas: Canvas, touch: Touch, radius: Float) {
-        val output = touch.key.spec.output(touch.direction) ?: return
+        val output = touchOutput(touch) ?: return
         val bounds = touch.key.bounds
         previewRect.set(bounds)
+        if (touch.deleteGesture) {
+            val width = min(this.width.toFloat(), max(bounds.width(),
+                max(144 * resources.displayMetrics.density, guideLabelPaint.measureText(output.label) + 24 * resources.displayMetrics.density)))
+            previewRect.left = bounds.centerX() - width / 2
+            previewRect.right = bounds.centerX() + width / 2
+        }
         previewRect.offset(0f, -bounds.height())
         clampIntoView(previewRect)
 
@@ -456,15 +468,23 @@ class FlickKeyboardView @JvmOverloads constructor(
         val key = placedKeys.firstOrNull { it.bounds.contains(x, y) } ?: return
         // A new finger means the previous key is settled; commit it rather than letting a stray
         // move event on the old pointer rewrite it.
-        activeTouches.values.forEach { commit(it) }
+        activeTouches.values.forEach {
+            if (!it.deleteGesture || it.direction == FlickDirection.CENTER) commit(it)
+        }
         activeTouches.clear()
         cancelTimers()
 
         val touch = Touch(key, x, y)
+        touch.deleteGesture = key.spec.center.action is KeyAction.Backspace && !key.spec.hasFlicks &&
+            layout?.inputStyle?.name?.contains("FLICK") == true && layout?.id?.startsWith("qwerty") != true
         activeTouches[pointerId] = touch
         if (theme.hapticFeedback) performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
 
-        if (key.spec.center.action is KeyAction.Space || key.spec.center.action is KeyAction.Convert) {
+        if (touch.deleteGesture) {
+            // A flick must not first delete a character on DOWN. Tap resolves on release;
+            // an unmoving hold retains continuous ordinary Backspace.
+            if (key.spec.repeatable) scheduleRepeat(touch)
+        } else if (key.spec.center.action is KeyAction.Space || key.spec.center.action is KeyAction.Convert) {
             val hold = Runnable {
                 val qwerty = layout?.inputStyle == InputStyle.QWERTY_HIRAGANA || layout?.inputStyle == InputStyle.QWERTY_HALFWIDTH_ASCII
                 if (touch.direction == FlickDirection.CENTER || (qwerty && touch.direction in listOf(FlickDirection.LEFT, FlickDirection.RIGHT))) {
@@ -507,6 +527,37 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun onPointerMove(pointerId: Int, x: Float, y: Float) {
         val touch = activeTouches[pointerId] ?: return
         touch.path.record(x, y)
+        if (touch.deleteGesture) {
+            val dx = touch.path.dx
+            val dy = touch.path.dy
+            val distance = max(kotlin.math.abs(dx), kotlin.math.abs(dy))
+            if (touch.repeated) {
+                if (distance >= flickThresholdPx) cancelRepeat()
+                return
+            }
+            val direction = when {
+                distance < flickThresholdPx -> FlickDirection.CENTER
+                touch.direction == FlickDirection.LEFT && dx < 0 && kotlin.math.abs(dx) * 1.25f >= kotlin.math.abs(dy) -> FlickDirection.LEFT
+                touch.direction == FlickDirection.UP && dy < 0 && kotlin.math.abs(dy) * 1.25f >= kotlin.math.abs(dx) -> FlickDirection.UP
+                kotlin.math.abs(dx) >= kotlin.math.abs(dy) && dx < 0 -> FlickDirection.LEFT
+                kotlin.math.abs(dy) > kotlin.math.abs(dx) && dy < 0 -> FlickDirection.UP
+                else -> FlickDirection.CENTER
+            }
+            val boundary = max(flickThresholdPx * 2.5f, 64 * resources.displayMetrics.density)
+            val line = direction != FlickDirection.CENTER && distance >=
+                boundary * (if (touch.deleteLine && touch.direction == direction) 0.8f else 1f)
+            if (direction != touch.direction || line != touch.deleteLine) {
+                touch.direction = direction
+                touch.deleteLine = line
+                cancelRepeat()
+                if (direction == FlickDirection.CENTER && touch.key.spec.repeatable) scheduleRepeat(touch)
+                if (direction != FlickDirection.CENTER && theme.hapticFeedback) {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+                invalidate()
+            }
+            return
+        }
         if (touch.trackpad) {
             if (touch.spaceHoldMotion != null) return
             val count = touch.trackpadMotion?.move(x) ?: 0
@@ -548,8 +599,16 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     private fun emit(touch: Touch) {
-        val output = touch.key.spec.output(touch.direction) ?: return
+        val output = touchOutput(touch) ?: return
         emitOutput(output, touch.key.spec, touch.direction)
+    }
+
+    private fun touchOutput(touch: Touch): KeyOutput? {
+        if (!touch.deleteGesture || touch.direction == FlickDirection.CENTER) return touch.key.spec.output(touch.direction)
+        val forward = touch.direction == FlickDirection.UP
+        val label = if (touch.deleteLine) { if (forward) "行末まで" else "行頭まで" }
+            else if (forward) "右の単語" else "左の単語"
+        return KeyOutput(label, KeyAction.DeleteChunk(forward, touch.deleteLine))
     }
 
     private fun emitOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {

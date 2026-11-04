@@ -1119,6 +1119,7 @@ class ZinnaImeService : InputMethodService() {
             }
 
             is KeyAction.Backspace -> handleBackspace()
+            is KeyAction.DeleteChunk -> handleDeleteChunk(action)
 
             is KeyAction.Space -> handleSpace()
 
@@ -1222,6 +1223,82 @@ class ZinnaImeService : InputMethodService() {
 
     private fun sendRawBackspace(ic: android.view.inputmethod.InputConnection) {
         sendRawKeyPress(ic, android.view.KeyEvent.KEYCODE_DEL)
+    }
+
+    private fun handleDeleteChunk(action: KeyAction.DeleteChunk) {
+        synchronizeEditorComposition()
+        val ic = currentInputConnection ?: return
+        cancelKarukanConversion(clearReading = true, revertMozc = false)
+        zenzai.cancel()
+        val selected = runCatching { ic.getSelectedText(0) }.getOrNull()
+        if (!selected.isNullOrEmpty()) {
+            if (isComposing) discardExternalComposition()
+            runCatching { ic.commitText("", 1) }
+            return
+        }
+        if (isComposing) {
+            // Escape cancels conversion into its reading; REVERT would discard that reading.
+            var state = if (isConverting) session.sendSpecialKey(KeyEvent.SpecialKey.ESCAPE)
+                else session.stopKeyToggling()
+            if (state == null || !state.hasComposition || state.isConverting) {
+                recoverFromLostSession(ic)
+                return
+            }
+            val text = state.preedit
+            val cursor = state.preeditCursor
+            val range = DeletionRange.plan(text, cursor, action.forward, action.toLineBoundary)
+            if (range.start == range.end) { render(state); return }
+            if (range.start == 0 && range.end == text.length) {
+                render(session.resetContext())
+                return
+            }
+            val count = text.codePointCount(range.start, range.end)
+            val prefix = text.take(range.start)
+            val suffix = text.drop(range.end)
+            val remaining = prefix + suffix
+            for (index in 0 until count) {
+                val previous = state!!.preedit
+                val next = session.sendSpecialKey(if (action.forward) KeyEvent.SpecialKey.DEL else KeyEvent.SpecialKey.BACKSPACE)
+                if (next == null || next.committedText.isNotEmpty()) {
+                    recoverFromLostSession(ic)
+                    return
+                }
+                if (next.preedit == previous) break
+                if (next.preedit.length >= previous.length || next.preedit.length < remaining.length ||
+                    !next.preedit.startsWith(prefix) || !next.preedit.endsWith(suffix)) {
+                    recoverFromLostSession(ic)
+                    return
+                }
+                state = next
+                if (next.preedit == remaining) break
+            }
+            render(state)
+            return
+        }
+        // A selection is one explicit deletion target; never also remove adjacent words.
+        val maximum = 8192
+        val text = runCatching {
+            if (action.forward) ic.getTextAfterCursor(maximum, 0)?.toString()
+            else ic.getTextBeforeCursor(maximum, 0)?.toString()
+        }.getOrNull() ?: return
+        if (text.isEmpty()) return
+        val range = DeletionRange.plan(text, if (action.forward) 0 else text.length,
+            action.forward, action.toLineBoundary)
+        if (range.start == range.end) return
+        // A capped query may end in the middle of a word or line. Do not silently delete
+        // a guessed partial range when the requested boundary is outside the snapshot.
+        if (text.length >= maximum && (if (action.forward) range.end == text.length else range.start == 0)) return
+        if (Character.isLowSurrogate(text[range.start]) || Character.isHighSurrogate(text[range.end - 1])) return
+        val points = text.codePointCount(range.start, range.end)
+        val units = range.end - range.start
+        runCatching {
+            ic.beginBatchEdit()
+            try {
+                if (!ic.deleteSurroundingTextInCodePoints(if (action.forward) 0 else points, if (action.forward) points else 0)) {
+                    ic.deleteSurroundingText(if (action.forward) 0 else units, if (action.forward) units else 0)
+                }
+            } finally { ic.endBatchEdit() }
+        }.onFailure { Log.w(TAG, "Editor did not accept deletion gesture", it) }
     }
 
     private fun sendRawKeyPress(

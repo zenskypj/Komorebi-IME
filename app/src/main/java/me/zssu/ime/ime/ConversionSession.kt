@@ -65,6 +65,7 @@ internal class ConversionSession(private val context: Context, private val prior
         if (usesMozc) return native().sendSpecialKey(key, shift)
         return when (key) {
             KeyEvent.SpecialKey.BACKSPACE -> { kana.backspace(); kana.state() }
+            KeyEvent.SpecialKey.DEL -> { kana.deleteForward(); kana.state() }
             KeyEvent.SpecialKey.LEFT -> { kana.move(-1); kana.state() }
             KeyEvent.SpecialKey.RIGHT -> { kana.move(1); kana.state() }
             KeyEvent.SpecialKey.SPACE -> if (kana.text.isEmpty()) MozcSession.State()
@@ -161,6 +162,10 @@ internal class KanaComposer(private val rules: Map<String, Pair<String, String>>
     }
     fun move(delta: Int) { flush(); cursor = committed.offsetByCodePoints(cursor,
         delta.coerceIn(-committed.codePointCount(0, cursor), committed.codePointCount(cursor, committed.length))) }
+    fun deleteForward() {
+        flush()
+        if (cursor < committed.length) committed = committed.removeRange(cursor, committed.offsetByCodePoints(cursor, 1))
+    }
     fun modify() {
         flush()
         if (cursor == 0) return
