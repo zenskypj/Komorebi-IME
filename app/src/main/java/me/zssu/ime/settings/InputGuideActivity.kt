@@ -70,7 +70,7 @@ private fun InputGuideScreen(onBack: () -> Unit) {
                         Text("入力中の範囲も、変換後の文節も整える。", style = MaterialTheme.typography.headlineSmall)
                         GuideCard("変換キーの順番") {
                             Text("① 読みを入力 → ② 変換を1回押して先頭候補 → ③ 表示中の候補を変換キーで巡回。左右スワイプで別の候補へ進み、右端の下向きボタンで一覧を開きます。候補の1行／2行と文字サイズは外観設定を反映します。候補のタップか確定キーで決定します。")
-                            Text("入力中の左右キーで選んだ読みの先頭側の区切りは、変換時に引き継ぎます。変換1回目の直後は左右キーで前／次の文節へ移動し、もう一度変換して候補選択に入ると左右キーで文節を縮める／広げる操作になります。")
+                            Text("入力中の左右キーで選んだ読みの先頭側の区切りは、変換時に引き継ぎます。変換1回目の直後は左右キーで前／次の文節へ移動し、もう一度変換して候補選択に入ると左右キーで文節を縮める／広げる操作になります。前の文節を確定して読みが残ったときは、次の文節の候補が自動で開きます。2文節目以降に変換キーを押し直す必要はありません。")
                             Text("候補一覧の「文節を調整」で文節操作を開けます。候補の意味や優先登録は、候補を長押しすると開けます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         SegmentLesson()
@@ -82,7 +82,7 @@ private fun InputGuideScreen(onBack: () -> Unit) {
                             Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(16.dp)) {
                                 Text("←     長押ししてから滑らせる     →", Modifier.fillMaxWidth().padding(20.dp), style = MaterialTheme.typography.titleMedium)
                             }
-                            Text("キーの表示が「↔ カーソル」に変わったら、指を左右へ。読みの途中を直せます。変換中は文節単位、確定後は入力先の文字単位で移動します。")
+                            Text("キーの表示が「カーソル」に変わったら、指を左右へ。読みの途中を直せます。変換中は文節単位、確定後は入力先の文字単位で移動します。QWERTYでは左右にフリックしたまま長押しすると連続移動します。中心付近で止まり、離すほど速くなりますが上限があります。指を離すと停止します。")
                             Text("短い左右フリックとは別の操作です。変換中の短いフリックは文節の境界を変更します。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         GuideCard("範囲選択やコピーも、キーボードから") {
@@ -210,5 +210,6 @@ private fun ToolLesson() {
             labels.forEachIndexed { index, label -> FilterChip(selected = selected == index, onClick = { selected = index }, label = { Text(label) }) }
         }
         Text(details[selected])
+        Text("追加ツールの「キーボードの高さ」では、入力を続けたまま高さを調整し、保存・取消・標準へ戻す操作ができます。アプリ別設定があるときは、そのアプリの高さを変更します。")
     }
 }

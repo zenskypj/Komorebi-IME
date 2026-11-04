@@ -120,6 +120,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         var longPressed: Boolean = false,
         var trackpad: Boolean = false,
         var trackpadMotion: TrackpadMotion? = null,
+        var spaceHoldMotion: SpaceHoldMotion? = null,
     )
 
     private var placedKeys: List<PlacedKey> = emptyList()
@@ -256,7 +257,8 @@ class FlickKeyboardView @JvmOverloads constructor(
             }
             if (paint != null) canvas.drawRoundRect(placed.bounds, radius, radius, paint)
             canvas.drawRoundRect(placed.bounds, radius, radius, boundaryPaint)
-            drawOutput(canvas, placed.spec.center.action, faceLabel(placed.spec), placed.bounds.centerX(), placed.bounds.centerY(), labelPaint)
+            if (activeTouches.values.any { it.key === placed && it.trackpad }) drawCursorLabel(canvas, placed.bounds)
+            else drawOutput(canvas, placed.spec.center.action, faceLabel(placed.spec), placed.bounds.centerX(), placed.bounds.centerY(), labelPaint)
             placed.spec.longPress?.let { output ->
                 val inset = 5f * resources.displayMetrics.density
                 if (OperationKeyIcons.resource(output.action, output.label) != null) {
@@ -276,7 +278,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
         // Guides go on top of every key so a guide near the edge is never clipped by a neighbour.
         for (touch in activeTouches.values) {
-            if (!touch.key.spec.hasFlicks) continue
+            if (touch.trackpad || !touch.key.spec.hasFlicks) continue
             when (guideStyle) {
                 FlickGuideStyle.PREVIEW -> drawFlickPreview(canvas, touch, radius)
                 FlickGuideStyle.DIRECTIONS -> drawFlickGuide(canvas, touch, radius)
@@ -464,11 +466,17 @@ class FlickKeyboardView @JvmOverloads constructor(
 
         if (key.spec.center.action is KeyAction.Space || key.spec.center.action is KeyAction.Convert) {
             val hold = Runnable {
-                if (touch.direction == FlickDirection.CENTER) {
+                val qwerty = layout?.inputStyle == InputStyle.QWERTY_HIRAGANA || layout?.inputStyle == InputStyle.QWERTY_HALFWIDTH_ASCII
+                if (touch.direction == FlickDirection.CENTER || (qwerty && touch.direction in listOf(FlickDirection.LEFT, FlickDirection.RIGHT))) {
                     touch.trackpad = true
                     touch.longPressed = true
                     touch.trackpadMotion = TrackpadMotion(18 * resources.displayMetrics.density, touch.downX + touch.path.dx)
                     cancelRepeat()
+                    if (qwerty) {
+                        touch.spaceHoldMotion = SpaceHoldMotion(touch.downX, resources.displayMetrics.density)
+                        if (touch.direction == FlickDirection.LEFT || touch.direction == FlickDirection.RIGHT) onTrackpadMove?.invoke(if (touch.direction == FlickDirection.LEFT) -1 else 1)
+                        scheduleSpaceHold(touch)
+                    }
                     performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                     announceForAccessibility("カーソル移動。左右に滑らせて移動")
                     invalidate()
@@ -500,6 +508,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         val touch = activeTouches[pointerId] ?: return
         touch.path.record(x, y)
         if (touch.trackpad) {
+            if (touch.spaceHoldMotion != null) return
             val count = touch.trackpadMotion?.move(x) ?: 0
             repeat(kotlin.math.abs(count)) { onTrackpadMove?.invoke(if (count < 0) -1 else 1) }
             return
@@ -628,6 +637,35 @@ class FlickKeyboardView @JvmOverloads constructor(
         handler.postDelayed(runnable, LONG_PRESS_DELAY_MS)
     }
 
+    private fun scheduleSpaceHold(touch: Touch) {
+        val runnable = object : Runnable {
+            override fun run() {
+                if (!isAttachedToWindow || !activeTouches.containsValue(touch) || !touch.trackpad) return
+                val step = touch.spaceHoldMotion?.tick(touch.downX + touch.path.dx, android.os.SystemClock.uptimeMillis()) ?: 0
+                if (step != 0) onTrackpadMove?.invoke(step)
+                if (isAttachedToWindow && activeTouches.containsValue(touch)) handler.postDelayed(this, 32L)
+            }
+        }
+        repeatRunnable = runnable
+        handler.post(runnable)
+    }
+
+    private val cursorModePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private fun drawCursorLabel(canvas: Canvas, bounds: RectF) {
+        cursorModePaint.set(labelPaint)
+        val width = (bounds.width() - 8f * resources.displayMetrics.density).coerceAtLeast(1f)
+        val text = "カーソル"
+        val split = cursorModePaint.measureText(text) > width / 0.75f
+        val lines = if (split) listOf("カー", "ソル") else listOf(text)
+        val widest = lines.maxOf { cursorModePaint.measureText(it) }
+        val fontHeight = cursorModePaint.descent() - cursorModePaint.ascent()
+        val scale = minOf(1f, width / widest.coerceAtLeast(1f), (bounds.height() - 8f * resources.displayMetrics.density).coerceAtLeast(1f) / (fontHeight * lines.size))
+        cursorModePaint.textSize *= scale
+        val height = cursorModePaint.descent() - cursorModePaint.ascent()
+        val top = bounds.centerY() - height * lines.size / 2f
+        lines.forEachIndexed { index, line -> canvas.drawText(line, bounds.centerX(), top + index * height - cursorModePaint.ascent(), cursorModePaint) }
+    }
+
     private fun cancelRepeat() {
         repeatRunnable?.let { handler.removeCallbacks(it) }
         repeatRunnable = null
@@ -643,8 +681,14 @@ class FlickKeyboardView @JvmOverloads constructor(
         cancelLongPressTimer()
     }
 
-    override fun onDetachedFromWindow() {
+    fun cancelGestures() {
         cancelTimers()
+        activeTouches.clear()
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        cancelGestures()
         super.onDetachedFromWindow()
     }
 

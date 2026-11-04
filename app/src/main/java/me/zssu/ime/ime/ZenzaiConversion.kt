@@ -34,6 +34,8 @@ internal object ZenzaiConversion {
             '\uFFFD' !in it
     }?.let { MozcSession.Candidate(CANDIDATE_ID, it, directCommit = true) }
 
-    fun candidates(base: List<MozcSession.Candidate>, neural: MozcSession.Candidate): List<MozcSession.Candidate> =
-        listOf(neural) + base.filter { it.text != neural.text }
+    fun candidates(base: List<MozcSession.Candidate>, neural: MozcSession.Candidate, reading: String = ""): List<MozcSession.Candidate> {
+        val combined = listOf(neural.copy(inputReading = reading.ifEmpty { neural.inputReading }, sourceReading = reading)) + base.filter { it.text != neural.text }
+        return combined
+    }
 }

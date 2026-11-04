@@ -115,8 +115,7 @@ internal class ZenzaiEngine(context: Context, private val onError: () -> Unit) {
 
     fun confirm(reading: String, preceding: String, output: String) {
         if (!enabled || !nativeReady || failed) return
-        val prompt = ZenzaiConversion.prompt(reading, preceding) ?: return
-        trainer.confirm(prompt, output)
+        ConfirmedLearning.trainingPrompts(reading, preceding, output).forEach { trainer.confirm(it, output) }
     }
 
     fun syncDictionary(onEntries: (List<UserDictionary.Entry>) -> Unit) {

@@ -118,7 +118,7 @@ enum class PriorityMatch { NONE, SIMILAR, EXACT }
 /** Conservative local similarity used only to recover an explicitly pinned value. */
 internal object ReadingSimilarity {
     fun normalize(value: String): String = buildString(value.length) {
-        value.trim().forEach { ch ->
+        java.text.Normalizer.normalize(value.trim(), java.text.Normalizer.Form.NFKC).forEach { ch ->
             append(
                 when (ch) {
                     in '\u30a1'..'\u30f6' -> (ch.code - 0x60).toChar()

@@ -98,6 +98,8 @@ class ZinnaImeService : InputMethodService() {
     private var editAnchor: Int? = null
     private var segmentBar: LinearLayout? = null
     private var segmentEditing = false
+    private var heightPanel: LinearLayout? = null
+    private var heightPreview: Float? = null
     private val conversionInteraction = ConversionInteraction()
     private var segmentSummary: LinearLayout? = null
     private var keyboardView: FlickKeyboardView? = null
@@ -125,9 +127,10 @@ class ZinnaImeService : InputMethodService() {
      */
     private var isComposing = false
     private var isConverting = false
-        set(value) { field = value; conversionInteraction.observe(value); if (!value) segmentEditing = false }
+        set(value) { field = value; conversionInteraction.observe(value); if (!value && !isComposing) conversionInteraction.reset(); if (!value) segmentEditing = false }
     private var currentSegmentCount = 0
     private var suppressPartialLearning = false
+    private var learningCandidate: MozcSession.Candidate? = null
     private var renderedPreeditCursor = 0
     private var renderedPreedit = ""
 
@@ -179,6 +182,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
+        closeHeightControl()
         // onStartInputView normally makes this available first. Keep an explicitly selected policy
         // if an OEM calls view creation with no EditorInfo instead of falling back to normal text.
         currentInputEditorInfo?.let {
@@ -289,8 +293,7 @@ class ZinnaImeService : InputMethodService() {
                 // neural candidate resets it inside selectCandidate.
                 cancelKarukanConversion(clearReading = true, revertMozc = false)
                 val partial = isConverting && currentSegmentCount > 1 && !candidate.directCommit
-                suppressPartialLearning = partial
-                try { render(session.selectCandidate(candidate)) } finally { suppressPartialLearning = false }
+                commitCandidate(candidate, partial)
             }
             onCandidateLongPressed = { candidate ->
                 val entries = meaningDictionaries.lookup(candidate.text)
@@ -630,6 +633,7 @@ class ZinnaImeService : InputMethodService() {
             }
             CandidateStripView.ToolAction.PROOFREAD -> startProofreading()
             CandidateStripView.ToolAction.RECONVERT -> {
+                conversionInteraction.reset()
                 cancelKarukanConversion(clearReading = true, revertMozc = false)
                 render(session.undo(), requestNeural = false)
             }
@@ -648,6 +652,7 @@ class ZinnaImeService : InputMethodService() {
                 emojiRepository.favorites(),
                 CandidateStripView.EmojiPage.RECENT,
             )
+            CandidateStripView.ToolAction.HEIGHT -> showHeightControl()
             CandidateStripView.ToolAction.ONE_HAND_CYCLE -> cycleOneHandMode()
             CandidateStripView.ToolAction.SETTINGS -> startActivity(
                 Intent(this, SettingsActivity::class.java)
@@ -866,8 +871,16 @@ class ZinnaImeService : InputMethodService() {
         setInputView(onCreateInputView())
     }
 
+    override fun onFinishInputView(finishingInput: Boolean) {
+        keyboardView?.cancelGestures()
+        closeHeightControl()
+        super.onFinishInputView(finishingInput)
+    }
+
     override fun onFinishInput() {
         super.onFinishInput()
+        keyboardView?.cancelGestures()
+        closeHeightControl()
         zenzai.cancel()
         zenzaiState = null
         zenzaiCandidate = null
@@ -1149,12 +1162,11 @@ class ZinnaImeService : InputMethodService() {
         )
         if (partial != null) {
             cancelKarukanConversion(clearReading = true, revertMozc = false)
-            suppressPartialLearning = true
-            try { render(session.selectCandidate(partial)) } finally { suppressPartialLearning = false }
+            commitCandidate(partial, partial = true)
             return
         }
-        zenzaiCandidate?.takeIf { isComposing && !isConverting }?.let {
-            render(session.selectCandidate(it))
+        if (isComposing && !isConverting && (zenzaiCandidate != null || karukanSuggestionCandidate != null)) {
+            submitCurrentComposition()
             return
         }
         val ic = currentInputConnection ?: return
@@ -1482,10 +1494,16 @@ class ZinnaImeService : InputMethodService() {
         cancelKarukanSuggestions()
         zenzai.cancel()
         zenzaiCandidate = null
-        if (state.committedText.isNotEmpty() && !suppressPartialLearning && !fieldPolicy.incognito &&
+        if (state.committedText.isNotEmpty() && !fieldPolicy.incognito &&
             (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
-            zenzai.confirm(zenzaiState?.preeditReading.orEmpty(),
+            val actualReading = state.committedReading.ifBlank {
+                if (!suppressPartialLearning && !state.hasComposition) zenzaiState?.preeditReading.orEmpty() else ""
+            }
+            if (actualReading.isNotEmpty()) zenzai.confirm(actualReading,
                 session.clientContext?.precedingText.orEmpty(), state.committedText)
+            val units = ConfirmedLearning.examples(zenzaiState, state.committedText, learningCandidate) +
+                ConfirmedLearning.fromReading(state.committedReading, state.committedText)
+            units.distinct().take(6).forEach { zenzai.confirm(it.reading, "", it.value) }
         }
         zenzaiState = state
         val hadComposition = isComposing
@@ -1496,7 +1514,7 @@ class ZinnaImeService : InputMethodService() {
                 committedText = state.committedText,
             )
         isComposing = state.hasComposition
-        if (state.committedText.isNotEmpty()) conversionInteraction.observe(false)
+        if (state.committedText.isNotEmpty()) conversionInteraction.committed(state.hasComposition)
         isConverting = state.isConverting
         if (!isConverting) segmentEditing = false
         candidateView?.segmentEditing = segmentEditing
@@ -1657,7 +1675,7 @@ class ZinnaImeService : InputMethodService() {
             if (zenzaiState !== state || !isComposing || isConverting) return
             val combined = (karukan + base).distinctBy { it.text }
             karukanSuggestionCandidate = karukan.firstOrNull()
-            lastCandidates = neural?.let { ZenzaiConversion.candidates(combined, it) } ?: combined
+            lastCandidates = neural?.let { ZenzaiConversion.candidates(combined, it, reading) } ?: combined
             lastFocusedCandidateIndex = if (neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
             candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
         }
@@ -1832,14 +1850,33 @@ class ZinnaImeService : InputMethodService() {
         if (state != null) render(state)
     }
 
+    private fun commitCandidate(candidate: MozcSession.Candidate, partial: Boolean = isConverting && currentSegmentCount > 1 && !candidate.directCommit) {
+        learningCandidate = candidate
+        suppressPartialLearning = partial
+        try {
+            val state = session.selectCandidate(candidate)
+            val advance = ConversionNavigation.advanceAfterCommit(candidate, state, layout?.inputStyle?.fullWidthSpace == true)
+            // Commit the confirmed head before advancing, so even a later native failure cannot
+            // lose it. Do not launch neural prediction for this intermediate reading.
+            render(state, requestNeural = !advance)
+            learningCandidate = null
+            if (advance && isComposing && zenzaiState === state) {
+                conversionInteraction.chooseCandidates()
+                if (!state!!.isConverting) render(session.convertOrSpace(), requestNeural = false)
+            }
+        } finally { learningCandidate = null; suppressPartialLearning = false }
+    }
+
     private fun submitCurrentComposition() {
-        (zenzaiCandidate ?: karukanSuggestionCandidate)?.takeIf { isComposing }?.let { render(session.selectCandidate(it)); return }
+        if (isComposing && !isConverting && (zenzaiCandidate != null || karukanSuggestionCandidate != null)) {
+            lastCandidates.firstOrNull()?.let { commitCandidate(it); return }
+        }
         if (karukanConversionActive) {
             val candidate = lastCandidates.getOrNull(lastFocusedCandidateIndex)
                 ?: lastCandidates.firstOrNull()
             cancelKarukanConversion(clearReading = true, revertMozc = false)
             if (candidate != null) {
-                render(session.selectCandidate(candidate))
+                commitCandidate(candidate)
             } else {
                 render(session.submit())
             }
@@ -1888,6 +1925,72 @@ class ZinnaImeService : InputMethodService() {
         candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
     }
 
+    private fun showHeightControl() {
+        if (heightPanel != null) { closeHeightControl(); return }
+        val content = contentLayout ?: return
+        val keyboard = keyboardView ?: return
+        val initial = effectiveKeyHeightScale()
+        val controls = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 4)
+        }
+        val label = android.widget.TextView(this).apply { textSize = 16f; setTextColor(theme.labelColor) }
+        fun preview(value: Float) {
+            heightPreview = value.coerceIn(ImeSettings.MIN_KEY_HEIGHT_SCALE, ImeSettings.MAX_KEY_HEIGHT_SCALE)
+            label.text = (if (activeProfile != null) "このアプリの高さ " else "キーボードの高さ ") + "${(heightPreview!! * 100 + 0.5f).toInt()}%"
+            theme = resolveTheme()
+            keyboard.theme = theme
+            keyboard.requestLayout()
+        }
+        controls.addView(label)
+        val seek = android.widget.SeekBar(this).apply {
+            max = ((ImeSettings.MAX_KEY_HEIGHT_SCALE - ImeSettings.MIN_KEY_HEIGHT_SCALE) * 100).toInt()
+            progress = ((initial - ImeSettings.MIN_KEY_HEIGHT_SCALE) * 100).toInt()
+            contentDescription = "キーボードの高さ"
+            setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(bar: android.widget.SeekBar?, value: Int, fromUser: Boolean) { if (fromUser) preview(ImeSettings.MIN_KEY_HEIGHT_SCALE + value / 100f) }
+                override fun onStartTrackingTouch(bar: android.widget.SeekBar?) {}
+                override fun onStopTrackingTouch(bar: android.widget.SeekBar?) {}
+            })
+        }
+        controls.addView(seek)
+        val buttons = LinearLayout(this)
+        fun button(text: String, action: () -> Unit) = android.widget.Button(this).apply {
+            this.text = text; textSize = 14f; minWidth = 0
+            setPadding(4, 4, 4, 4); setOnClickListener { action() }
+        }
+        buttons.addView(button("標準") {
+            seek.progress = ((1f - ImeSettings.MIN_KEY_HEIGHT_SCALE) * 100).toInt()
+            preview(1f)
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        buttons.addView(button("取消") { closeHeightControl() }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        buttons.addView(button("保存") {
+            val value = heightPreview ?: initial
+            runCatching {
+                val profile = activeProfile
+                if (profile == null) settings.keyHeightScale = value else {
+                    val updated = profile.copy(keyHeightScale = value)
+                    appProfiles.save(updated)
+                    activeProfile = updated
+                }
+            }.onSuccess { closeHeightControl() }
+                .onFailure { Toast.makeText(this@ZinnaImeService, "高さを保存できませんでした", Toast.LENGTH_SHORT).show() }
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        controls.addView(buttons)
+        heightPanel = controls
+        content.addView(controls, content.indexOfChild(keyboard))
+        preview(initial)
+    }
+
+    private fun closeHeightControl() {
+        if (heightPanel == null && heightPreview == null) return
+        heightPanel?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
+        heightPanel = null
+        heightPreview = null
+        theme = resolveTheme()
+        keyboardView?.let { it.theme = theme; it.requestLayout() }
+    }
+
     private fun effectiveKeyboardStyle() =
         activeProfile?.resolvedKeyboardStyle ?: settings.keyboardStyle
 
@@ -1895,7 +1998,7 @@ class ZinnaImeService : InputMethodService() {
         activeProfile?.resolvedOneHandMode ?: settings.oneHandMode
 
     private fun effectiveKeyHeightScale() =
-        activeProfile?.keyHeightScale ?: settings.keyHeightScale
+        heightPreview ?: activeProfile?.keyHeightScale ?: settings.keyHeightScale
 
     private fun effectivePolicy(
         base: InputFieldPolicy,

@@ -2,6 +2,9 @@ package me.zssu.ime.ime
 
 /** Keeps native segment navigation separate from whole-sentence neural suggestions. */
 internal object ConversionNavigation {
+    fun advanceAfterCommit(candidate: MozcSession.Candidate, state: MozcSession.State?, japanese: Boolean): Boolean =
+        japanese && !candidate.directCommit && state?.hasComposition == true && state.committedText.isNotEmpty()
+
     fun partialCandidate(
         converting: Boolean,
         segmentCount: Int,

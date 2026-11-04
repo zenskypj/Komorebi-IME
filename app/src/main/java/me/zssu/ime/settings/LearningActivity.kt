@@ -141,7 +141,7 @@ private fun LearningScreen() {
             Card(shape = RoundedCornerShape(14.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("変換学習について", style = MaterialTheme.typography.titleMedium)
-                    Text("候補を長押しすると意味を確認でき、削除可能な予測候補では学習削除も選べます。", style = MaterialTheme.typography.bodyMedium)
+                    Text("候補を長押しすると意味を確認でき、削除可能な予測候補では学習削除も選べます。AI学習が有効なときは、確定した読みと表記を文脈あり・なしで学び、確認できる文節の語も別の文章で使えるよう学習します。読みの文字種を変えただけの結果はAI再学習から除きます。", style = MaterialTheme.typography.bodyMedium)
                     OutlinedButton(onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Update, null, Modifier.size(18.dp))
                         Text("変換学習をすべてリセット")

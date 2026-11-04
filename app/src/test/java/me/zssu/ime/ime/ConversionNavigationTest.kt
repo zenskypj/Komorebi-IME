@@ -23,4 +23,13 @@ class ConversionNavigationTest {
         assertFalse(result[0].directCommit)
         assertTrue(result[2].directCommit)
     }
+    @Test fun confirmingAHeadWithRemainingReadingAutomaticallyOpensTheNextCandidates() {
+        val remaining = MozcSession.State(committedText = "私", preedit = "はがっこうへ", preeditReading = "はがっこうへ")
+        assertTrue(ConversionNavigation.advanceAfterCommit(first, remaining, true))
+        assertFalse(ConversionNavigation.advanceAfterCommit(whole, remaining, true))
+        assertFalse(ConversionNavigation.advanceAfterCommit(first, remaining, false))
+        assertFalse(ConversionNavigation.advanceAfterCommit(first, remaining.copy(preedit = ""), true))
+        assertFalse(ConversionNavigation.advanceAfterCommit(first, remaining.copy(committedText = ""), true))
+        assertFalse(ConversionNavigation.advanceAfterCommit(first, null, true))
+    }
 }

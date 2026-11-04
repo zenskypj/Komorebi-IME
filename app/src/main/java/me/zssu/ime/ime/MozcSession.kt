@@ -58,6 +58,7 @@ class MozcSession(
          * "nothing to do" silently swallows the keystroke.
          */
         val consumed: Boolean = false,
+        val committedReading: String = "",
     ) {
         val hasComposition: Boolean get() = preedit.isNotEmpty()
     }
@@ -69,6 +70,7 @@ class MozcSession(
         val deletable: Boolean = false,
         /** Used to keep supplementary user dictionaries from overwhelming live suggestions. */
         internal val fromUserDictionary: Boolean = false,
+        internal val fromUserHistory: Boolean = false,
         /** Reading currently present in the composition, used when explicitly pinning this value. */
         val inputReading: String = "",
         /** Mozc's reading for this candidate; differs from [inputReading] for prediction/correction. */
@@ -389,6 +391,7 @@ class MozcSession(
             !convertingOutput -> { lastInputReading = displayedPreedit; readingBoundary.update(lastInputReading) }
             else -> ConversionOutput.reading(this)?.takeIf { it.isNotEmpty() }?.let { lastInputReading = it }
         }
+        if (hasResult() && result.value.isNotEmpty()) readingBoundary.clear()
         currentIsConverting = convertingOutput
         val reading = if (convertingOutput) lastInputReading else displayedPreedit
         val candidateMetadata = if (hasAllCandidateWords()) {
@@ -426,6 +429,7 @@ class MozcSession(
                     CandidateAttribute.DELETABLE in attributes ||
                     id in deletableCandidateIds,
                 fromUserDictionary = CandidateAttribute.USER_DICTIONARY in attributes,
+                fromUserHistory = CandidateAttribute.USER_HISTORY in attributes,
                 inputReading = reading,
                 sourceReading =
                     if (metadata?.hasKey() == true) metadata.key else reading,
@@ -440,9 +444,7 @@ class MozcSession(
                 .sortedBy { when (it.priorityMatch) { PriorityMatch.EXACT -> 0; PriorityMatch.SIMILAR -> 1; PriorityMatch.NONE -> 2 } }
         } else if (hasCandidateWindow()) {
             val visible = candidateWindow.candidateList.map { candidate(it.id, it.value) }
-            val isLiveJapaneseSuggestion = candidateWindow.category == Category.SUGGESTION &&
-                !candidateWindow.hasFocusedIndex() &&
-                (currentStyle == InputStyle.FLICK_HIRAGANA || currentStyle == InputStyle.TOGGLE_FLICK_HIRAGANA)
+            val isLiveJapaneseSuggestion = CandidateRanking.shouldRankLive(candidateWindow.category, currentStyle?.fullWidthSpace == true)
             if (isLiveJapaneseSuggestion) {
                 val complete = if (hasAllCandidateWords()) {
                     allCandidateWords.candidatesList.asSequence()
@@ -490,6 +492,7 @@ class MozcSession(
 
         return State(
             committedText = if (hasResult()) result.value else "",
+            committedReading = if (hasResult() && result.hasKey()) result.key else "",
             deleteBeforeCodePoints = if (hasDeletionRange() && deletionRange.offset < 0 &&
                 deletionRange.length == -deletionRange.offset) deletionRange.length else 0,
             preedit = displayedPreedit,
@@ -532,6 +535,9 @@ internal object CandidateRanking {
     private const val LATIN_USER_DICTIONARY_PENALTY = 6
     private const val LANE_STRIDE = 1_000
 
+    fun shouldRankLive(category: Category, japanese: Boolean): Boolean = japanese &&
+        (category == Category.SUGGESTION || category == Category.PREDICTION)
+
     fun rankLiveJapaneseSuggestions(
         candidates: List<MozcSession.Candidate>,
         limit: Int,
@@ -555,17 +561,18 @@ internal object CandidateRanking {
     private fun lane(candidate: MozcSession.Candidate): Int = when {
         candidate.priorityMatch == PriorityMatch.EXACT -> 0
         candidate.priorityMatch == PriorityMatch.SIMILAR -> 1
-        hasKatakanaGrammarInPrediction(candidate) -> 6
-        isFullReadingConversion(candidate) -> 2
-        !candidate.correction && !candidate.prediction -> 3
-        candidate.correction -> 4
-        else -> 5
+        hasKatakanaGrammarInPrediction(candidate) -> 7
+        candidate.fromUserHistory && isFullReadingConversion(candidate) -> 2
+        isFullReadingConversion(candidate) -> 3
+        !candidate.correction && !candidate.prediction -> 4
+        candidate.correction -> 5
+        else -> 6
     }
 
     /**
      * Promotes "了解です" above the verbatim "りょうかいです" without promoting a longer
-     * completion such as "了解ですので". Mozc sometimes marks a same-length alternate reading as
-     * prediction, so source/input length is the reliable distinction for this toolbar.
+     * completion such as "了解ですので". Native content keys can omit a typed particle; matching
+     * the literal prefix/suffix proves coverage without promoting a different longer reading.
      */
     private fun isFullReadingConversion(candidate: MozcSession.Candidate): Boolean {
         if (candidate.correction || isLatinUserDictionaryEntry(candidate)) return false
@@ -575,8 +582,10 @@ internal object CandidateRanking {
         if (!candidate.prediction) return true
 
         val source = ReadingSimilarity.normalize(candidate.sourceReading)
-        return (source.isNotEmpty() && source.length == input.length) ||
-            preservesTypedHiraganaSuffix(candidate.text, input)
+        if (source == input) return true
+        if (source.isNotEmpty() && source.length > input.length) return false
+        return preservesTypedHiraganaSuffix(candidate.text, input, source) ||
+            preservesTypedHiraganaPrefix(candidate.text, input, source)
     }
 
     /**
@@ -584,7 +593,7 @@ internal object CandidateRanking {
      * the visible candidate covers the already typed "りょうかいです". Keeping a two-kana suffix
      * proves this is a full phrase conversion rather than a continuation such as "了解ですので".
      */
-    private fun preservesTypedHiraganaSuffix(text: String, input: String): Boolean {
+    private fun preservesTypedHiraganaSuffix(text: String, input: String, source: String): Boolean {
         if (!text.any(::isKanji)) return false
         var textIndex = text.lastIndex
         var inputIndex = input.lastIndex
@@ -597,7 +606,13 @@ internal object CandidateRanking {
             textIndex--
             inputIndex--
         }
-        return matched >= 2
+        return matched > 0 && (source + input.takeLast(matched) == input || (source.isEmpty() && matched >= 2))
+    }
+
+    private fun preservesTypedHiraganaPrefix(text: String, input: String, source: String): Boolean {
+        if (!text.any(::isKanji) || source.isEmpty()) return false
+        val prefix = text.takeWhile { it in '\u3040'..'\u309f' }
+        return prefix.isNotEmpty() && prefix + source == input
     }
 
     /**
@@ -606,7 +621,7 @@ internal object CandidateRanking {
      * Keep these candidates available at the end instead of letting them displace natural text.
      */
     private fun hasKatakanaGrammarInPrediction(candidate: MozcSession.Candidate): Boolean {
-        if (!candidate.prediction || !candidate.text.any(::isKanjiOrHiragana)) return false
+        if (candidate.fromUserDictionary || !candidate.text.any(::isKanjiOrHiragana)) return false
         return KATAKANA_RUN.findAll(candidate.text).any { it.value in KATAKANA_GRAMMAR }
     }
 

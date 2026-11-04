@@ -36,7 +36,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT }
+    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, HEIGHT }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -451,6 +451,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.EMOJI -> "絵文字"
         ToolAction.ONE_HAND_CYCLE -> "片手モード"
         ToolAction.SNIPPETS -> "定型文"
+        ToolAction.HEIGHT -> "キーボードの高さ"
         ToolAction.SETTINGS -> "設定"
         ToolAction.MEETS_BEAM -> "Meets Beam"
         ToolAction.EDIT -> "カーソル・範囲選択"
@@ -463,6 +464,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.EMOJI -> R.drawable.ic_material_face
         ToolAction.ONE_HAND_CYCLE -> R.drawable.ic_material_settings
         ToolAction.SNIPPETS -> R.drawable.ic_material_content_paste
+        ToolAction.HEIGHT -> R.drawable.ic_ime_height
         ToolAction.SETTINGS -> R.drawable.ic_material_settings
         ToolAction.MEETS_BEAM -> R.drawable.ic_meets_beam
         ToolAction.EDIT -> R.drawable.ic_ime_cursor_right

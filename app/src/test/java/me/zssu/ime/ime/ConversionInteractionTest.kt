@@ -31,4 +31,19 @@ class ConversionInteractionTest {
         interaction.convertPressed(false, false)
         assertEquals(ConversionInteraction.Phase.INPUT, interaction.phase)
     }
+    @Test fun automaticContinuationIsAlreadyInCandidateSelectionWithoutAnotherPress() {
+        val interaction = ConversionInteraction()
+        interaction.convertPressed(true, false)
+        assertEquals(ConversionInteraction.Phase.CLAUSES, interaction.phase)
+        interaction.committed(hasRemaining = true)
+        interaction.observe(false) // A partial native commit can return a remaining reading.
+        interaction.chooseCandidates() // Auto-convert that remaining reading.
+        interaction.observe(true)
+        assertEquals(ConversionInteraction.Phase.CANDIDATES, interaction.phase)
+        assertTrue(interaction.resize(false, false))
+        interaction.committed(hasRemaining = false)
+        interaction.observe(false)
+        interaction.convertPressed(true, false)
+        assertEquals(ConversionInteraction.Phase.CLAUSES, interaction.phase)
+    }
 }
