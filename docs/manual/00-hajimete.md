@@ -78,6 +78,7 @@ Komorebi IME は、Android 向けのオープンソース日本語入力（IME�
 | [トラブルシューティング](08-troubleshoot.md) | 症状別の対処 |
 | [詳細仕様](09-spec.md) | 技術仕様・ファイル構成・ライセンス |
 | [よくある質問](10-faq.md) | 短い Q&A |
+| [他IMEとの比較](11-hikaku.md) | Gboard・Google日本語入力・Simeji の公開情報と機能比較 |
 
 > [!NOTE]
 > 補足・制約は各章のコールアウト（NOTE / TIP / IMPORTANT / WARNING）と、[詳細仕様](09-spec.md)の「補足」節に分けてまとめています。仕様の細部はそちらを参照してください。

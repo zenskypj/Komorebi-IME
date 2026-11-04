@@ -28,6 +28,12 @@
       ],
     },
     {
+      group: "比較・検証",
+      items: [
+        ["manual/11-hikaku", "他IMEとの比較", "Gboard・Google日本語入力・Simeji の公開情報と機能を並べる", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較 プライバシー"],
+      ],
+    },
+    {
       group: "設計・仕様",
       items: [
         ["conversion-ui", "変換とキーボード操作", "候補・文節・ライブ予測の検証範囲", "docs/conversion-ui.md", "conversion ui"],
@@ -387,6 +393,7 @@
       el("section", { class: "section" }, [el("h2", { text: "5 分で使いはじめる" }), el("p", { class: "sub", text: "インストール後の初期設定は 4 ステップです。AI やネット辞書は使う人だけが後から追加します。" }), steps]),
     );
     home.append(tileSection("マニュアル", "目的から探す", "manual/00-hajimete"));
+    home.append(tileSection("比較・検証", "他IMEの公開情報と並べて確認する", null));
     home.append(tileSection("設計・仕様", "細かい仕様と検証範囲", "conversion-ui"));
     home.append(tileSection("リリースノート", "版ごとの変更", null));
 
