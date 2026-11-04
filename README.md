@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.35-dev`、それ以前のテスト版は
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.36-dev`、それ以前のテスト版は
 > pre-release です。自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -44,6 +44,11 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.35-dev` では、追加システム辞書の統合データセット（NEologd統合 / SKK統合 / 全部入り）を
 追加しました。複数の辞書を選ぶと、選択したすべてを含む統合データセットが使われます。
 [追加辞書の収録範囲・制限・再生成手順](docs/extra-dictionaries/README.md)を参照してください。
+
+`rc.36-dev` では、追加システム辞書の切り替えを高速化しました。切り替え前の不要な
+コンバータ再読み込みを削り、適用待ちのポーリングを指数バックオフに、データセットの
+ハッシュ検証をプロセス内でキャッシュしています。あわせてユーザーマニュアルと
+ドキュメントサイト（GitHub Pages）を公開しました。
 
 ## 特長
 

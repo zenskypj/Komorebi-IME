@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.36-dev", "rc.36-dev", "辞書の切り替えを高速化・ドキュメントサイト公開", "docs/releases/v0.3.0-rc.36-dev.md", "release rc36"],
         ["releases/v0.3.0-rc.35-dev", "rc.35-dev", "複数の辞書を同時に使えるように", "docs/releases/v0.3.0-rc.35-dev.md", "release rc35"],
         ["releases/v0.3.0-rc.34-dev", "rc.34-dev", "登録した単語を AI が横取りしないように", "docs/releases/v0.3.0-rc.34-dev.md", "release rc34"],
         ["releases/v0.3.0-rc.32-dev", "rc.32-dev", "キーの高さ調整・予測の順位・次の文節へ自動で進む", "docs/releases/v0.3.0-rc.32-dev.md", "release rc32"],
@@ -427,6 +428,8 @@
         el("div", { class: "actions" }, [
           el("a", { class: "btn btn-filled", href: "#/doc/manual/00-hajimete", text: "はじめての設定" }),
           el("a", { class: "btn btn-text", href: `https://github.com/${REPO}/releases/latest`, target: "_blank", rel: "noopener noreferrer", text: "最新版" }),
+          el("a", { class: "btn btn-text", href: "compare.html", text: "Gboard・Simeji と比較" }),
+          el("a", { class: "btn btn-text", href: "compare-zinna.html", text: "Zinna-IME と比較" }),
         ]),
         badges,
       ]),
