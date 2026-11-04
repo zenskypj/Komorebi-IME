@@ -94,6 +94,7 @@ internal class ConversionSession(private val context: Context, private val prior
             StandaloneSpace.Target.NEURAL_CONVERSION -> kana.state()
             StandaloneSpace.Target.EDITOR_SPACE -> MozcSession.State()
         }
+    fun highlightCandidate(id: Int): MozcSession.State? = if (usesMozc) native().highlightCandidate(id) else kana.state()
     fun deleteCandidateFromHistory(id: Int): MozcSession.State? = if (usesMozc) native().deleteCandidateFromHistory(id) else kana.state()
     fun setIncognitoMode(value: Boolean) { incognito = value; if (usesMozc) native().setIncognitoMode(value) }
     fun setTypingCorrectionEnabled(value: Boolean) { typingCorrection = value; if (usesMozc) native().setTypingCorrectionEnabled(value) }

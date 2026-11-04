@@ -69,7 +69,7 @@ private fun InputGuideScreen(onBack: () -> Unit) {
                     1 -> {
                         Text("変換してから、区切りを整える。", style = MaterialTheme.typography.headlineSmall)
                         GuideCard("変換キーの順番") {
-                            Text("① 読みを入力 → ② 変換を1回押して先頭候補 → ③ もう1回押して次の候補。候補をタップするか確定キーで決定します。")
+                            Text("① 読みを入力 → ② 変換を1回押して先頭候補 → ③ 表示中の6候補を変換キーで巡回。別の候補群は「次」、まとめて見るときは「一覧」を開きます。候補のタップか確定キーで決定します。")
                             Text("候補の意味や優先登録は、候補を長押しすると開けます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         SegmentLesson()

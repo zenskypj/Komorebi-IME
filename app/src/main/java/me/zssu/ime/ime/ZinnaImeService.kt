@@ -273,7 +273,7 @@ class ZinnaImeService : InputMethodService() {
             applyTheme(this@ZinnaImeService.theme)
             onDismiss = {
                 if (isComposing) {
-                    candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+                    candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
                 }
             }
         }
@@ -281,6 +281,7 @@ class ZinnaImeService : InputMethodService() {
         val candidates = CandidateStripView(this).apply {
             theme = this@ZinnaImeService.theme
             listener = CandidateStripView.OnCandidateSelectedListener { candidate ->
+                if (lastCandidates.none { it.id == candidate.id && it.text == candidate.text }) return@OnCandidateSelectedListener
                 // Preserve the native candidate window until a Mozc id is submitted. A direct
                 // neural candidate resets it inside selectCandidate.
                 cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -351,7 +352,13 @@ class ZinnaImeService : InputMethodService() {
                 ).show()
             }
             onCandidateDetailsClosed = {
-                setCandidates(lastCandidates, lastFocusedCandidateIndex)
+                setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
+            }
+            onCandidateFocusRequested = { candidate ->
+                if (isConverting && !candidate.directCommit && lastCandidates.any { it.id == candidate.id && it.text == candidate.text }) {
+                    cancelKarukanConversion(clearReading = true, revertMozc = false)
+                    render(session.highlightCandidate(candidate.id), requestNeural = false)
+                }
             }
             onToolAction = ::handleToolAction
             onSnippetSelected = { text -> if (!fieldPolicy.incognito) { handleSymbol(text); showTools() } }
@@ -417,7 +424,7 @@ class ZinnaImeService : InputMethodService() {
                 // conversion just produced — rather than dropping the user on the tool icons.
                 candidates.showMenu {
                     if (lastCandidates.isNotEmpty()) {
-                        candidates.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+                        candidates.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
                     } else {
                         candidates.showTools()
                     }
@@ -810,7 +817,7 @@ class ZinnaImeService : InputMethodService() {
                 // sides of that composition alive, including candidates lost by a view rebuild.
                 keyboardView?.isConversionAvailable =
                     layout?.inputStyle?.fullWidthSpace == true
-                candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+                candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
             }
             InputRestartRouting.Target.RESET_SESSION -> {
                 // In particular, a restart while our editor-facing state is idle must not retain
@@ -1056,7 +1063,11 @@ class ZinnaImeService : InputMethodService() {
             return
         }
         val state = session.convertOrSpace()
-        if (state == null || !state.consumed) {
+        if (state == null && isComposing) {
+            currentInputConnection?.let(::recoverFromLostSession)
+            return
+        }
+        if ((state == null || !state.consumed) && !isComposing) {
             val fullWidth = layout?.inputStyle?.fullWidthSpace ?: false
             currentInputConnection?.commitText(if (fullWidth) FULL_WIDTH_SPACE else " ", 1)
         }
@@ -1603,7 +1614,7 @@ class ZinnaImeService : InputMethodService() {
 
         lastCandidates = state.candidates
         lastFocusedCandidateIndex = state.focusedCandidateIndex
-        candidateView?.setCandidates(state.candidates, state.focusedCandidateIndex)
+        candidateView?.setCandidates(state.candidates, state.focusedCandidateIndex, converting = isConverting)
         if (requestNeural) requestZenzai(state)
     }
 
@@ -1634,7 +1645,7 @@ class ZinnaImeService : InputMethodService() {
             karukanSuggestionCandidate = karukan.firstOrNull()
             lastCandidates = neural?.let { ZenzaiConversion.candidates(combined, it) } ?: combined
             lastFocusedCandidateIndex = if (neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
-            candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+            candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
         }
         fun fallback() {
             zenzaiFallbackPending?.let { mainHandler.removeCallbacks(it) }
@@ -1778,7 +1789,7 @@ class ZinnaImeService : InputMethodService() {
                     cancelKarukanConversion(clearReading = true, revertMozc = false)
                     lastCandidates = candidates
                     lastFocusedCandidateIndex = focused
-                    candidateView?.setCandidates(candidates, focused)
+                    candidateView?.setCandidates(candidates, focused, converting = isConverting)
                 }
                 is KarukanEngine.Result.Failure -> fallbackFromKarukan(
                     result.message,
@@ -1796,7 +1807,11 @@ class ZinnaImeService : InputMethodService() {
 
     private fun handleMozcSpace() {
         val state = session.convertOrSpace()
-        if (state == null || !state.consumed) {
+        if (state == null && isComposing) {
+            currentInputConnection?.let(::recoverFromLostSession)
+            return
+        }
+        if ((state == null || !state.consumed) && !isComposing) {
             val fullWidth = layout?.inputStyle?.fullWidthSpace ?: false
             currentInputConnection?.commitText(if (fullWidth) FULL_WIDTH_SPACE else " ", 1)
         }
@@ -1856,7 +1871,7 @@ class ZinnaImeService : InputMethodService() {
             .map { it.value }
         lastFocusedCandidateIndex =
             focusedId?.let { id -> lastCandidates.indexOfFirst { it.id == id } } ?: -1
-        candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex)
+        candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
     }
 
     private fun effectiveKeyboardStyle() =

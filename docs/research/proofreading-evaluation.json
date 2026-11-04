@@ -1,0 +1,131 @@
+{
+  "description": "Synthetic Japanese proofreading examples. Exact-match scores are regression checks, not an estimate of general language accuracy.",
+  "cases": [
+    {
+      "id": "typo",
+      "group": "development",
+      "input": "会議で使う資科を添付しました。ご確認をお願いいたしましす。",
+      "expected": "会議で使う資料を添付しました。ご確認をお願いいたします。"
+    },
+    {
+      "id": "particle",
+      "group": "development",
+      "input": "私は電車を乗って会社に行きます。",
+      "expected": "私は電車に乗って会社に行きます。"
+    },
+    {
+      "id": "duplicate",
+      "group": "development",
+      "input": "この問題は問題は解決しました。",
+      "expected": "この問題は解決しました。"
+    },
+    {
+      "id": "missing",
+      "group": "development",
+      "input": "お忙しいところ恐れ入ますが、資料をご確認くださ。",
+      "expected": "お忙しいところ恐れ入りますが、資料をご確認ください。"
+    },
+    {
+      "id": "middle",
+      "group": "development",
+      "input": "本日はお時間をいただきありがとうございます。会議の資科は明日の午前中に送付します。どうぞよろしくお願いいたします。",
+      "expected": "本日はお時間をいただきありがとうございます。会議の資料は明日の午前中に送付します。どうぞよろしくお願いいたします。"
+    },
+    {
+      "id": "clean",
+      "group": "development",
+      "input": "明日の会議は10時からです。資料をご確認ください。",
+      "expected": "明日の会議は10時からです。資料をご確認ください。"
+    },
+    {
+      "id": "name",
+      "group": "development",
+      "input": "山田太郎(やまだたろう)さんが担当です。",
+      "expected": "山田太郎(やまだたろう)さんが担当です。"
+    },
+    {
+      "id": "protected",
+      "group": "development",
+      "input": "会議は11月4日10時、参加者は3名です。資料は https://example.com/a をご確認ください。",
+      "expected": "会議は11月4日10時、参加者は3名です。資料は https://example.com/a をご確認ください。"
+    },
+    {
+      "id": "explain",
+      "group": "holdout",
+      "input": "詳細を説名します。ご質問がありましたらお知らせください。",
+      "expected": "詳細を説明します。ご質問がありましたらお知らせください。"
+    },
+    {
+      "id": "weekday",
+      "group": "holdout",
+      "input": "次回の会議は、来週の火曜目に開催します。",
+      "expected": "次回の会議は、来週の火曜日に開催します。"
+    },
+    {
+      "id": "contact",
+      "group": "holdout",
+      "input": "確認が完了したら、ご連楽をお願いいたします。",
+      "expected": "確認が完了したら、ご連絡をお願いいたします。"
+    },
+    {
+      "id": "conjugation",
+      "group": "holdout",
+      "input": "この資料は、全ての項目を確認することができれます。",
+      "expected": "この資料は、全ての項目を確認することができます。"
+    },
+    {
+      "id": "please",
+      "group": "holdout",
+      "input": "結果を確認したあと、担当者に報告してくだい。",
+      "expected": "結果を確認したあと、担当者に報告してください。"
+    },
+    {
+      "id": "schedule",
+      "group": "holdout",
+      "input": "明日の打ち合わせは予亭どおり実施します。",
+      "expected": "明日の打ち合わせは予定どおり実施します。"
+    },
+    {
+      "id": "place",
+      "group": "holdout",
+      "input": "私は学校に勉強します。",
+      "expected": "私は学校で勉強します。"
+    },
+    {
+      "id": "repeat",
+      "group": "holdout",
+      "input": "資料を資料を確認しました。",
+      "expected": "資料を確認しました。"
+    },
+    {
+      "id": "good",
+      "group": "holdout",
+      "input": "検討しましたが、今回は見送ることにしました。",
+      "expected": "検討しましたが、今回は見送ることにしました。"
+    },
+    {
+      "id": "name2",
+      "group": "holdout",
+      "input": "佐藤一郎(さとういちろう)さん、受付番号はA-102です。",
+      "expected": "佐藤一郎(さとういちろう)さん、受付番号はA-102です。"
+    },
+    {
+      "id": "email",
+      "group": "holdout",
+      "input": "価格は1,280円です。\nお問い合わせ: support@example.com",
+      "expected": "価格は1,280円です。\nお問い合わせ: support@example.com"
+    },
+    {
+      "id": "code",
+      "group": "holdout",
+      "input": "この関数名は `confrimData()` です。コードは変更しません。",
+      "expected": "この関数名は `confrimData()` です。コードは変更しません。"
+    },
+    {
+      "id": "middle2",
+      "group": "holdout",
+      "input": "対応ありがとうございます。結果については、明日までにご連楽いたします。引き続きよろしくお願いします。",
+      "expected": "対応ありがとうございます。結果については、明日までにご連絡いたします。引き続きよろしくお願いします。"
+    }
+  ]
+}

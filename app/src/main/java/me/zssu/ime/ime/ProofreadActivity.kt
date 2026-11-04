@@ -289,6 +289,7 @@ class ProofreadActivity : Activity() {
                 resultSection.addView(label(highlighted(diff.before, Color.rgb(255, 190, 190))))
                 resultSection.addView(label(highlighted(diff.after, Color.rgb(255, 220, 120))))
             }
+            if (result == generatedFrom?.text) resultSection.addView(label("今回の校正では変更がありませんでした。誤りがないことを保証するものではありません。", 12f, dim = true))
             if (isStale()) resultSection.addView(label("文章または指示を変更したため、この結果は古くなっています。もう一度校正してください。", 12f, dim = true))
         }
 
@@ -348,10 +349,12 @@ class ProofreadActivity : Activity() {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
             try {
                 val raw = ProofreadNative.generate(modelFile.absolutePath, prompt.toByteArray(Charsets.UTF_8), ticket)?.toString(Charsets.UTF_8)
-                val cleaned = ProofreadPrompt.extract(raw.orEmpty())
-                check(!ProofreadPrompt.hasUnexpectedReasoningSwitch(snapshot.text, cleaned)) {
+                val extracted = ProofreadPrompt.extract(raw.orEmpty())
+                check(extracted.isNotBlank() && extracted.length <= 1800 && !extracted.contains('\uFFFD')) { "校正結果を取得できませんでした" }
+                check(!ProofreadPrompt.hasUnexpectedReasoningSwitch(snapshot.text, extracted)) {
                     "結果に内部制御用の文字列が混ざったため破棄しました。元の文章は変更していません。"
                 }
+                val cleaned = if (snapshot.style == ProofreadPrompt.Style.FIX) ProofreadReview.apply(snapshot.text, extracted) else extracted
                 check(cleaned.isNotBlank() && cleaned.length <= 1800 && !cleaned.contains('\uFFFD')) { "校正結果を取得できませんでした" }
                 post {
                     busy = false; progress = null; output = cleaned

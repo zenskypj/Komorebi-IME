@@ -45,6 +45,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onCandidateLongPressed: ((MozcSession.Candidate) -> Unit)? = null
     var onPanelExpanded: ((Boolean) -> Unit)? = null
     var onEditCommand: ((String) -> Unit)? = null
+    var onCandidateFocusRequested: ((MozcSession.Candidate) -> Unit)? = null
     var onToolAction: ((ToolAction) -> Unit)? = null
     var onSnippetSelected: ((String) -> Unit)? = null
     var onManageSnippets: (() -> Unit)? = null
@@ -62,6 +63,9 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     /** Which chip currently carries the focus highlight, so only the two that change are touched. */
     private var focusedChild = -1
+    private var conversionExpanded = false
+    private var conversionBaseHeight = 0
+    private var conversionPresentation = 0
 
     /** Texts of the last rendered candidate list; scroll resets only when content changes. */
     private var lastCandidateTexts: List<String> = emptyList()
@@ -150,8 +154,13 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
      * Each property is written only when it actually differs: TextView.setText and setBackground
      * invalidate unconditionally, so assigning the same value still costs a layout pass.
      */
-    fun setCandidates(candidates: List<MozcSession.Candidate>, focusedIndex: Int) {
+    fun setCandidates(candidates: List<MozcSession.Candidate>, focusedIndex: Int, converting: Boolean = false) {
         paletteHeight(false)
+        if (converting && candidates.any { !it.directCommit }) {
+            showConversionCandidates(candidates, focusedIndex)
+            return
+        }
+        resetConversionPresentation()
         if (candidates.isEmpty()) {
             showTools()
             return
@@ -204,6 +213,86 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         if (newTexts != lastCandidateTexts) {
             scrollTo(0, 0)
             lastCandidateTexts = newTexts
+        }
+    }
+
+    private fun resetConversionPresentation() {
+        conversionPresentation++
+        conversionExpanded = false
+        if (conversionBaseHeight != 0) {
+            layoutParams = layoutParams.apply { height = conversionBaseHeight }
+            conversionBaseHeight = 0
+        }
+    }
+
+    private fun showConversionCandidates(all: List<MozcSession.Candidate>, focusedIndex: Int) {
+        val native = all.filterNot { it.directCommit }
+        val focusedId = all.getOrNull(focusedIndex)?.id
+        val focus = native.indexOfFirst { it.id == focusedId }.coerceAtLeast(0)
+        val start = me.zssu.ime.ime.CandidatePaging.pageStart(native.size, focus)
+        val end = me.zssu.ime.ime.CandidatePaging.pageEnd(native.size, focus)
+        val viewportWidth = width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+        val columns = if (viewportWidth < dp(300)) 2 else 3
+        val headerHeight = maxOf(dp(48), (12f * resources.displayMetrics.scaledDensity * 2.8f).toInt() + dp(8))
+        val rowHeight = maxOf(dp(48), (15f * resources.displayMetrics.scaledDensity * me.zssu.ime.settings.ImeSettings(context).candidateTextScale * 2.8f).toInt() + dp(8))
+        val compactRows = (me.zssu.ime.ime.CandidatePaging.PAGE_SIZE + columns - 1) / columns
+        if (conversionBaseHeight == 0) conversionBaseHeight = layoutParams.height
+        layoutParams = layoutParams.apply { height = if (conversionExpanded) dp(320) else headerHeight + compactRows * (rowHeight + dp(4)) }
+        onPanelExpanded?.invoke(conversionExpanded)
+        focusedChild = -1
+        lastCandidateTexts = emptyList()
+        container.removeAllViews()
+        setContainerFillWidth(false)
+        scrollTo(0, 0)
+        val presentation = ++conversionPresentation
+        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val header = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+        fun control(label: String, enabled: Boolean = true, action: () -> Unit): TextView = TextView(context).apply {
+            text = label; gravity = Gravity.CENTER; textSize = 12f; setTextColor(theme.candidateTextColor)
+            isEnabled = enabled; alpha = if (enabled) 1f else 0.3f
+            setOnClickListener { action() }
+        }
+        if (!conversionExpanded) header.addView(control("‹", start > 0) {
+            me.zssu.ime.ime.CandidatePaging.adjacentPage(native.size, focus, -1)?.let { onCandidateFocusRequested?.invoke(native[it]) }
+        }.apply { contentDescription = "前の候補ページ" }, LinearLayout.LayoutParams(dp(48), headerHeight))
+        header.addView(TextView(context).apply {
+            text = if (conversionExpanded) "候補一覧（表示対象 ${all.size}件）" else "${start + 1}–$end / ${native.size}候補"
+            textSize = 12f; gravity = Gravity.CENTER; setTextColor(theme.candidateTextColor)
+        }, LinearLayout.LayoutParams(0, headerHeight, 1f))
+        if (!conversionExpanded) header.addView(control("›", end < native.size) {
+            me.zssu.ime.ime.CandidatePaging.adjacentPage(native.size, focus, 1)?.let { onCandidateFocusRequested?.invoke(native[it]) }
+        }.apply { contentDescription = "次の候補ページ" }, LinearLayout.LayoutParams(dp(48), headerHeight))
+        header.addView(control(if (conversionExpanded) "戻る" else "一覧 ▾") {
+            conversionExpanded = !conversionExpanded
+            setCandidates(all, focusedIndex, converting = true)
+        }.apply { contentDescription = if (conversionExpanded) "キーボードに戻る" else "候補一覧を開く" }, LinearLayout.LayoutParams(dp(88), headerHeight))
+        panel.addView(header)
+        val grid = android.widget.GridLayout(context).apply { columnCount = columns }
+        val displayed = if (conversionExpanded) all else native.subList(start, end)
+        var selected: View? = null
+        displayed.forEachIndexed { index, candidate ->
+            val number = if (conversionExpanded) index + 1 else start + index + 1
+            val chip = newChip().apply {
+                tag = candidate; setSingleLine(false); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+                text = if (candidate.directCommit) "$number 全文 ${candidate.text}" else "$number  ${candidate.text}"
+                setPadding(dp(6), dp(2), dp(6), dp(2))
+                textSize = 15f * me.zssu.ime.settings.ImeSettings(context).candidateTextScale
+                contentDescription = "$number 番目 ${candidate.text}" + (if (candidate.directCommit) " 全文を確定" else "") + if (candidate.id == focusedId) " 選択中" else ""
+                isSelected = candidate.id == focusedId
+                if (candidate.id == focusedId) { setBackgroundColor(theme.keyPressedColor); selected = this }
+            }
+            grid.addView(chip, android.widget.GridLayout.LayoutParams().apply {
+                width = 0; height = rowHeight
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                setMargins(dp(2), dp(2), dp(2), dp(2))
+            })
+        }
+        val scroll = android.widget.ScrollView(context).apply { addView(grid) }
+        panel.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        emojiPanel = panel
+        container.addView(panel, LinearLayout.LayoutParams(width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, LinearLayout.LayoutParams.MATCH_PARENT))
+        if (conversionExpanded) selected?.let { chosen ->
+            chosen.post { if (presentation == conversionPresentation) chosen.requestRectangleOnScreen(android.graphics.Rect(0, 0, chosen.width, chosen.height)) }
         }
     }
 
@@ -306,6 +395,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     }
     fun showTools() {
         paletteHeight(false)
+        resetConversionPresentation()
         focusedChild = -1
         lastCandidateTexts = emptyList()
         container.removeAllViews()

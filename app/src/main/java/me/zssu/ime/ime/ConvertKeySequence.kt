@@ -35,9 +35,14 @@ internal object ConvertKeySequence {
         }
         val stopped = stop()
         if (!stopped?.committedText.isNullOrEmpty()) return stopped
+        if (wasConverting) {
+            if (stopped?.isConverting != true) return stopped
+            val next = CandidatePaging.next(stopped.candidates.size, stopped.focusedCandidateIndex) ?: return stopped
+            return highlight(stopped.candidates[next].id) ?: stopped
+        }
         if (!wasConverting && reachedConversion(stopped)) return first(stopped!!)
         var last: MozcSession.State? = stopped
-        val keys = if (wasConverting) listOf(KeyEvent.SpecialKey.SPACE) else order(composing)
+        val keys = order(composing)
         for (key in keys) {
             last = send(key)
             if (reachedConversion(last)) return first(last!!)

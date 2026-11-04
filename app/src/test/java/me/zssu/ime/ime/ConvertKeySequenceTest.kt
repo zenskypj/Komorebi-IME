@@ -73,10 +73,10 @@ class ConvertKeySequenceTest {
         val keys = mutableListOf<KeyEvent.SpecialKey>()
         val result = ConvertKeySequence.convert(true, true,
             stop = { converting(0) },
-            send = { keys.add(it); converting(1) },
-            highlight = { error("must not rewind a subsequent press") },
+            send = { error("must not advance into Mozc's hidden pages") },
+            highlight = { assertEquals(81, it); converting(1) },
         )
-        assertEquals(listOf(KeyEvent.SpecialKey.SPACE), keys)
+        assertTrue(keys.isEmpty())
         assertEquals(1, result?.focusedCandidateIndex)
     }
 

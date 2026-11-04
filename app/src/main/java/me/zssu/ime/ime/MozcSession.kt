@@ -368,7 +368,7 @@ class MozcSession(
             if (convertingOutput && lastInputReading.isNotEmpty()) lastInputReading
             else displayedPreedit
         val candidateMetadata = if (hasAllCandidateWords()) {
-            allCandidateWords.candidatesList.take(CandidateRanking.MAX_LIVE_POOL_SIZE)
+            allCandidateWords.candidatesList.take(if (convertingOutput) CandidatePaging.MAX_CANDIDATES else CandidateRanking.MAX_LIVE_POOL_SIZE)
         } else {
             emptyList()
         }
@@ -426,7 +426,11 @@ class MozcSession(
                     !candidateWindow.hasFocusedIndex() &&
                     (currentStyle == InputStyle.FLICK_HIRAGANA ||
                         currentStyle == InputStyle.TOGGLE_FLICK_HIRAGANA)
-            if (isLiveJapaneseSuggestion) {
+            if (convertingOutput && candidateMetadata.isNotEmpty()) {
+                candidateMetadata.sortedBy { it.index }.map { candidate(it.id, it.value) }
+                    .filter { it.text.isNotEmpty() }.distinctBy { it.id }
+                    .sortedBy { when (it.priorityMatch) { PriorityMatch.EXACT -> 0; PriorityMatch.SIMILAR -> 1; PriorityMatch.NONE -> 2 } }
+            } else if (isLiveJapaneseSuggestion) {
                 val complete = if (hasAllCandidateWords()) {
                     allCandidateWords.candidatesList.asSequence()
                         .take(CandidateRanking.MAX_LIVE_POOL_SIZE)
@@ -467,7 +471,8 @@ class MozcSession(
         }
 
         val focusedId = if (hasCandidateWindow() && candidateWindow.hasFocusedIndex()) {
-            candidates.getOrNull(candidateWindow.focusedIndex)?.id
+            CandidatePaging.focusedId(candidateWindow.candidateList.map { it.index to it.id }, candidateWindow.focusedIndex)
+                ?: candidateMetadata.firstOrNull { it.index == candidateWindow.focusedIndex }?.id
         } else {
             null
         }

@@ -19,12 +19,14 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.28-dev`、それ以前のテスト版は
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.29-dev`、それ以前のテスト版は
 > pre-release です。自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
 > テスト用APKはすべて debug 署名（`me.zssu.ime.debug`）です。
+
+rc.29 の変換候補は6件表示とページ切り替えに変更しています。[操作と検証範囲](docs/conversion-ui.md)を参照してください。
 
 ## 特長
 
