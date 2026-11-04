@@ -98,6 +98,75 @@
     <div class="cmp-metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
   </section>
 
+  <!-- motion -->
+  <section class="cmp-section" aria-labelledby="motion-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">動く比較</p>
+      <h2 class="cmp-h2" id="motion-h">入力は、どこへ行く？</h2>
+      <p class="cmp-sub">左は、入力をクラウドへ送り続けます。右は、端末の中で止まります。9秒のアニメーションです。</p>
+    </div>
+
+    <figure class="cmp-player" data-motion data-state="idle" data-reveal>
+      <div class="cmp-player-frame">
+        <svg class="cmp-motion-art" viewBox="0 0 760 420" role="img" aria-label="ほかのキーボードは入力をクラウドへ送り続け、Komorebi IME は端末内の盾で止まり、送信件数が0のままであることを示すアニメーション">
+          <text x="140" y="30" text-anchor="middle" class="m-label">ほかのキーボード</text>
+          <text x="540" y="30" text-anchor="middle" class="m-label">Komorebi IME</text>
+          <line x1="380" y1="52" x2="380" y2="386" stroke="var(--outline-variant)" stroke-width="1" stroke-dasharray="4 6"/>
+
+          <!-- left destination -->
+          <g>
+            <path d="M84 108 h108 a22 22 0 0 0 2 -44 a30 30 0 0 0 -58 -6 a22 22 0 0 0 -50 50z"
+                  fill="var(--surface-container-high)" stroke="var(--outline)" stroke-width="2"/>
+            <text x="140" y="92" text-anchor="middle" class="m-dest">クラウド</text>
+          </g>
+          <text id="count-a" x="212" y="94" class="m-count" aria-hidden="true">0</text>
+          <text x="212" y="118" class="m-sublabel" aria-hidden="true">送信した回数</text>
+
+          <path id="flow-a" d="M140 306 C 140 272, 140 224, 140 112" fill="none" stroke="none"/>
+          <path d="M140 306 C 140 272, 140 224, 140 112" fill="none" stroke="var(--outline-variant)" stroke-width="1.5" stroke-dasharray="4 6"/>
+          <g id="packets-a"></g>
+
+          <!-- right destination -->
+          <g>
+            <path d="M540 82 L574 96 V126 C574 150 556 163 540 170 C524 163 506 150 506 126 V96 Z"
+                  fill="var(--primary-container)" stroke="var(--primary)" stroke-width="2.5"/>
+            <path d="M529 126 l8 8 l16 -18" fill="none" stroke="var(--primary)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <text id="count-b" x="612" y="94" class="m-count" aria-hidden="true">0</text>
+          <text x="612" y="118" class="m-sublabel" aria-hidden="true">送信した回数</text>
+
+          <path id="flow-b" d="M540 306 C 540 280, 540 230, 540 172" fill="none" stroke="none"/>
+          <path d="M540 306 C 540 280, 540 230, 540 172" fill="none" stroke="var(--outline-variant)" stroke-width="1.5" stroke-dasharray="4 6"/>
+          <g id="packets-b"></g>
+
+          <!-- devices -->
+          <g fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5">
+            <rect x="70" y="306" width="140" height="66" rx="14"/>
+            <rect x="73" y="322" width="22" height="18" rx="5"/><rect x="101" y="322" width="22" height="18" rx="5"/><rect x="129" y="322" width="22" height="18" rx="5"/><rect x="157" y="322" width="22" height="18" rx="5"/><rect x="185" y="322" width="22" height="18" rx="5"/>
+            <rect x="73" y="346" width="22" height="18" rx="5"/><rect x="101" y="346" width="22" height="18" rx="5"/><rect x="129" y="346" width="22" height="18" rx="5"/><rect x="157" y="346" width="22" height="18" rx="5"/><rect x="185" y="346" width="22" height="18" rx="5"/>
+          </g>
+          <g fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5">
+            <rect x="470" y="306" width="140" height="66" rx="14"/>
+            <rect x="473" y="322" width="22" height="18" rx="5"/><rect x="501" y="322" width="22" height="18" rx="5"/><rect x="529" y="322" width="22" height="18" rx="5"/><rect x="557" y="322" width="22" height="18" rx="5"/><rect x="585" y="322" width="22" height="18" rx="5"/>
+            <rect x="473" y="346" width="22" height="18" rx="5"/><rect x="501" y="346" width="22" height="18" rx="5"/><rect x="529" y="346" width="22" height="18" rx="5"/><rect x="557" y="346" width="22" height="18" rx="5"/><rect x="585" y="346" width="22" height="18" rx="5"/>
+          </g>
+
+          <text x="140" y="404" text-anchor="middle" class="m-sublabel">入力 → クラウドへ</text>
+          <text x="540" y="404" text-anchor="middle" class="m-sublabel">入力 → 端末内で完了</text>
+        </svg>
+      </div>
+      <figcaption class="cmp-player-bar">
+        <button class="cmp-play" id="motion-toggle" type="button" aria-label="再生" aria-pressed="false">
+          <svg class="ico-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="ico-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <div class="cmp-progress" id="motion-progress" role="progressbar" aria-label="再生位置" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+        <button class="cmp-textbtn" id="motion-replay" type="button">もう一度</button>
+      </figcaption>
+    </figure>
+    <p class="cmp-sr-summary sr-only">ほかのキーボードは入力をクラウドへ送り続けます。Komorebi IME は端末内で処理が完結し、送信件数は0のままです。</p>
+  </section>
+
   <!-- highlights -->
   <section class="cmp-section" aria-labelledby="highlights-h">
     <div class="cmp-section-head" data-reveal>
