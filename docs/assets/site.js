@@ -36,7 +36,8 @@
     {
       group: "比較",
       items: [
-        ["manual/11-hikaku", "ほかのキーボードと比べる", "専用ページで ✓/✗ 比較", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較", "compare.html"],
+        ["manual/11-hikaku", "ほかのキーボードと比べる", "Gboard・Simeji と ✓/✗ で比較", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較", "compare.html"],
+        ["compare/zinna", "Zinna-IME と比べる", "プライバシーは互角、機能で比べる", "docs/compare-zinna.html", "zinna フォーク 比較", "compare-zinna.html"],
       ],
     },
     {

@@ -90,6 +90,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+img, svg, video, canvas, iframe { max-width: 100%; }
 html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
 
 body {
@@ -609,11 +610,9 @@ a:hover { text-decoration: underline; }
     background: var(--surface);
     border-right: 1px solid var(--outline-variant);
     box-shadow: var(--elev-1);
-    transform: translateX(-102%);
-    visibility: hidden;
-    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
+    display: none;
   }
-  body[data-drawer="open"] .sidebar { transform: none; visibility: visible; }
+  body[data-drawer="open"] .sidebar { display: block; }
   body[data-drawer="open"] { overflow: hidden; }
   body[data-drawer="open"] .scrim {
     display: block; position: fixed; inset: var(--topbar-h) 0 0 0; z-index: 45;

@@ -76,6 +76,61 @@
         if (label) cell.setAttribute("data-product", label);
       });
     });
+    buildMobileCards(comparison);
+    document.body.classList.add("cards-ready");
+  }
+
+  /** Phones get cards instead of a table. Built once; CSS switches the display. */
+  function buildMobileCards(table) {
+    const labels = Array.from(table.querySelectorAll("thead th")).map((th) => th.dataset.label || "");
+    const root = document.createElement("div");
+    root.className = "cmp-cards";
+    let group = root;
+
+    table.querySelectorAll("tbody tr").forEach((row) => {
+      if (row.classList.contains("group")) {
+        group = document.createElement("section");
+        group.className = "cmp-card-group";
+        const heading = document.createElement("h3");
+        heading.textContent = row.textContent.trim();
+        group.appendChild(heading);
+        root.appendChild(group);
+        return;
+      }
+
+      const feature = document.createElement("article");
+      feature.className = "cmp-feature";
+      const name = document.createElement("h4");
+      name.textContent = (row.querySelector("th") ? row.querySelector("th").textContent : "").trim();
+      feature.appendChild(name);
+
+      const list = document.createElement("ul");
+      list.className = "cmp-marks";
+      Array.from(row.querySelectorAll("td")).forEach((cell, index) => {
+        const item = document.createElement("li");
+        if (cell.classList.contains("col-komorebi")) item.classList.add("on");
+        const who = document.createElement("span");
+        who.className = "who";
+        who.textContent = labels[index + 1] || "";
+        item.appendChild(who);
+        const mark = cell.querySelector(".m");
+        if (mark) item.appendChild(mark.cloneNode(true));
+        const sr = cell.querySelector(".sr-only");
+        if (sr) {
+          const label = document.createElement("span");
+          label.className = "sr-only";
+          label.textContent = " " + sr.textContent;
+          item.appendChild(label);
+        }
+        list.appendChild(item);
+      });
+
+      feature.appendChild(list);
+      group.appendChild(feature);
+    });
+
+    const wrap = table.closest(".cmp-table-wrap");
+    if (wrap) wrap.insertAdjacentElement("afterend", root);
   }
 
   /* FAQ: close the others so the page does not jump far away */
