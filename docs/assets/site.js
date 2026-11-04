@@ -30,7 +30,7 @@
     {
       group: "比較・検証",
       items: [
-        ["manual/11-hikaku", "他IMEとの比較", "Gboard・Google日本語入力・Simeji の公開情報と機能を並べる", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較 プライバシー"],
+        ["manual/11-hikaku", "他IME検証", "閉源IMEの説明と実態、Komorebi の立場", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較 検証 批判"],
       ],
     },
     {
@@ -341,19 +341,14 @@
   const SHIELD_SVG = `
     <svg class="emblem" viewBox="0 0 120 134" role="img" aria-labelledby="emblem-title">
       <title id="emblem-title">端末内で完結することを表す盾</title>
-      <defs>
-        <linearGradient id="sh" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="var(--accent)"/>
-          <stop offset="1" stop-color="var(--accent-ink)"/>
-        </linearGradient>
-      </defs>
-      <path d="M60 3 113 21v49c0 34-24 55-53 63C31 125 7 104 7 70V21Z" fill="url(#sh)" stroke="var(--sun)" stroke-width="2.5"/>
-      <g stroke="var(--sun)" stroke-width="4" stroke-linecap="round" opacity="0.95">
+      <path d="M60 3 113 21v49c0 34-24 55-53 63C31 125 7 104 7 70V21Z"
+            fill="var(--md-sys-color-primary-container)" stroke="var(--md-sys-color-primary)" stroke-width="2.5"/>
+      <g stroke="var(--md-sys-color-primary)" stroke-width="4" stroke-linecap="round" opacity="0.9">
         <path d="M60 22v-7M86 32l5-5M34 32l-5-5"/>
       </g>
-      <circle cx="60" cy="52" r="16" fill="#fdf2da"/>
-      <path d="M60 78c-14 0-25 8-25 8s11 9 25 9 25-9 25-9-11-8-25-8Z" fill="#fdf2da" opacity="0.5"/>
-      <path d="M60 84v22" stroke="#fdf2da" stroke-width="4" stroke-linecap="round" opacity="0.75"/>
+      <circle cx="60" cy="52" r="16" fill="var(--md-sys-color-primary)"/>
+      <path d="M60 78c-14 0-25 8-25 8s11 9 25 9 25-9 25-9-11-8-25-8Z" fill="var(--md-sys-color-primary)" opacity="0.35"/>
+      <path d="M60 84v22" stroke="var(--md-sys-color-primary)" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
     </svg>`;
 
   function renderHome() {
@@ -465,16 +460,16 @@
 
   const THEME_KEY = "komorebi-docs-theme";
   function readTheme() {
-    try { return localStorage.getItem(THEME_KEY) || ""; } catch { return ""; }
+    try { return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light"; } catch { return "light"; }
   }
   function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
+    const dark = theme === "dark";
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
     const sun = $(".ico-sun");
     const moon = $(".ico-moon");
-    const dark = theme === "dark" || (theme === "" && matchMedia("(prefers-color-scheme: dark)").matches);
     if (sun) sun.hidden = !dark;
     if (moon) moon.hidden = dark;
-    try { theme ? localStorage.setItem(THEME_KEY, theme) : localStorage.removeItem(THEME_KEY); } catch { /* ignore */ }
+    try { localStorage.setItem(THEME_KEY, dark ? "dark" : "light"); } catch { /* ignore */ }
   }
 
   function setDrawer(open) {
@@ -497,10 +492,12 @@
     buildNav();
 
     $("#theme-toggle").addEventListener("click", () => {
-      const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
-        (document.documentElement.getAttribute("data-theme") === "" && matchMedia("(prefers-color-scheme: dark)").matches);
-      applyTheme(dark ? "light" : "dark");
+      applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
     });
+    const topbar = $(".topbar");
+    const onScroll = () => topbar.classList.toggle("is-scrolled", window.scrollY > 2);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
     $("#drawer-toggle").addEventListener("click", () => setDrawer(document.body.getAttribute("data-drawer") !== "open"));
     $("#scrim").addEventListener("click", () => setDrawer(false));
     $("#nav-search").addEventListener("input", (e) => filterNav(e.target.value));
