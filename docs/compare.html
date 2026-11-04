@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Komorebi IME と、ほかのキーボード</title>
+<meta name="description" content="Komorebi IME と Gboard・Google 日本語入力・Simeji を、入力の送信・利用統計・AI・辞書・暗号化の14項目で比較。入力は端末の外へ送りません。">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Komorebi IME と、ほかのキーボード">
+<meta property="og:description" content="入力は端末の外へ送らない。14項目の比較で、何が違うかを見る。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 134'%3E%3Cpath d='M60 4 112 22v48c0 33-23 53-52 61C31 123 8 103 8 70V22Z' fill='%23006d3b'/%3E%3Ccircle cx='60' cy='55' r='15' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/compare.css">
+</head>
+<body>
+
+<a class="skip" href="#main">本文へスキップ</a>
+
+<header class="cmp-nav" id="nav">
+  <a class="cmp-brand" href="./">
+    <svg viewBox="0 0 120 134" aria-hidden="true">
+      <path d="M60 4 112 22v48c0 33-23 53-52 61C31 123 8 103 8 70V22Z" fill="currentColor"/>
+      <circle cx="60" cy="55" r="15" fill="var(--on-primary)"/>
+      <path d="M60 76c-13 0-22 7-22 7s9 8 22 8 22-8 22-8-9-7-22-7Z" fill="var(--on-primary)" opacity="0.55"/>
+    </svg>
+    <span><span class="wordmark">Komorebi IME</span> <span class="thin">比較</span></span>
+  </a>
+  <nav class="cmp-nav-links" aria-label="メイン">
+    <a href="./#/doc/manual/00-hajimete">ドキュメント</a>
+    <a href="./#/doc/manual/12-history">タイムライン</a>
+    <a href="https://github.com/zenskypj/Komorebi-IME/releases">リリース</a>
+    <a href="https://github.com/zenskypj/Komorebi-IME">GitHub</a>
+  </nav>
+  <span class="cmp-nav-spacer"></span>
+  <button class="cmp-iconbtn" id="theme" aria-label="配色を切り替え">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+  </button>
+  <a class="cmp-nav-cta" href="https://github.com/zenskypj/Komorebi-IME/releases/latest" target="_blank" rel="noopener noreferrer">ダウンロード</a>
+</header>
+
+<main id="main">
+
+  <!-- hero -->
+  <section class="cmp-hero">
+    <div>
+      <p class="cmp-kicker">入力は、あなたのもの</p>
+      <h1 class="cmp-title">送るものが、<br>ない。</h1>
+      <p class="cmp-lede">Komorebi IME は、<strong>入力した文字を端末の外へ送りません。</strong>変換も、AI も、辞書も、ぜんぶ端末の中。Gboard や Simeji との違いは、そこに尽きます。</p>
+      <div class="cmp-cta-row">
+        <a class="cmp-btn cmp-btn-primary" href="https://github.com/zenskypj/Komorebi-IME/releases/latest" target="_blank" rel="noopener noreferrer">最新版をダウンロード</a>
+        <a class="cmp-btn cmp-btn-ghost" href="#compare">比較を見る</a>
+      </div>
+      <div class="cmp-badges">
+        <img src="https://img.shields.io/github/v/release/zenskypj/Komorebi-IME?include_prereleases&sort=semver&style=flat-square&label=release&color=006d3b" alt="release" height="20" loading="lazy">
+        <img src="https://img.shields.io/github/license/zenskypj/Komorebi-IME?style=flat-square&color=44474a" alt="license" height="20" loading="lazy">
+        <img src="https://img.shields.io/badge/Android-7.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white" alt="Android 7.0+" height="20" loading="lazy">
+        <img src="https://img.shields.io/badge/telemetry-none-44474a?style=flat-square" alt="telemetry none" height="20" loading="lazy">
+      </div>
+    </div>
+
+    <svg class="cmp-hero-art" viewBox="0 0 560 420" role="img" aria-label="入力が端末内で処理され、クラウドへ送信されないことを示す図">
+      <rect x="150" y="26" width="260" height="368" rx="34" fill="var(--surface-container-low)" stroke="var(--outline-variant)" stroke-width="2"/>
+      <rect x="182" y="56" width="150" height="14" rx="7" fill="var(--surface-container-high)"/>
+      <rect x="182" y="80" width="96" height="12" rx="6" fill="var(--surface-container-high)"/>
+
+      <g transform="translate(280 196)">
+        <path d="M0 -46 L42 -29 V10 C42 39 19 56 0 62 C-19 56 -42 39 -42 10 V-29 Z" fill="var(--primary-container)" stroke="var(--primary)" stroke-width="3"/>
+        <path d="M-15 2 l10 11 l21 -23" fill="none" stroke="var(--primary)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <g fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5">
+        <rect x="178" y="276" width="26" height="24" rx="6"/><rect x="212" y="276" width="26" height="24" rx="6"/><rect x="246" y="276" width="26" height="24" rx="6"/><rect x="280" y="276" width="26" height="24" rx="6"/><rect x="314" y="276" width="26" height="24" rx="6"/><rect x="348" y="276" width="26" height="24" rx="6"/>
+        <rect x="178" y="308" width="26" height="24" rx="6"/><rect x="212" y="308" width="26" height="24" rx="6"/><rect x="246" y="308" width="26" height="24" rx="6"/><rect x="280" y="308" width="26" height="24" rx="6"/><rect x="314" y="308" width="26" height="24" rx="6"/><rect x="348" y="308" width="26" height="24" rx="6"/>
+        <rect x="178" y="340" width="26" height="24" rx="6"/><rect x="212" y="340" width="26" height="24" rx="6"/><rect x="246" y="340" width="26" height="24" rx="6"/><rect x="280" y="340" width="26" height="24" rx="6"/><rect x="314" y="340" width="26" height="24" rx="6"/><rect x="348" y="340" width="26" height="24" rx="6"/>
+      </g>
+
+      <g transform="translate(470 96)">
+        <path d="M-24 14 h48 a17 17 0 0 0 2 -34 a24 24 0 0 0 -46 -4 a17 17 0 0 0 -4 38z" fill="var(--surface-container-high)" stroke="var(--outline)" stroke-width="2"/>
+        <line x1="-27" y1="-26" x2="33" y2="28" stroke="var(--error)" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <path d="M414 118 C 436 116, 444 108, 448 104" fill="none" stroke="var(--outline)" stroke-width="2" stroke-dasharray="5 6"/>
+      <text x="470" y="162" text-anchor="middle" font-size="13" fill="var(--on-surface-variant)">送信しない</text>
+
+      <g transform="translate(470 322)">
+        <circle r="26" fill="var(--primary)"/>
+        <path d="M-11 0 l8 9 l16 -18" fill="none" stroke="var(--on-primary)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="470" y="374" text-anchor="middle" font-size="13" fill="var(--on-surface-variant)">端末内で完了</text>
+    </svg>
+  </section>
+
+  <!-- metrics -->
+  <section class="cmp-metrics" aria-label="要点">
+    <div class="cmp-metric"><span class="n">0</span><span class="l">外へ送る入力データ</span></div>
+    <div class="cmp-metric"><span class="n">1</span><span class="l">要求する権限（INTERNET）</span></div>
+    <div class="cmp-metric"><span class="n">0</span><span class="l">広告SDK・解析SDK</span></div>
+    <div class="cmp-metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
+  </section>
+
+  <!-- highlights -->
+  <section class="cmp-section" aria-labelledby="highlights-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">ハイライト</p>
+      <h2 class="cmp-h2" id="highlights-h">違いは、4つにまとまります。</h2>
+      <p class="cmp-sub">どれも「機能が多い」という話ではありません。入力がどこへ行くか、という話です。</p>
+    </div>
+    <div class="cmp-gallery">
+      <div class="cmp-track" id="track" tabindex="0" aria-label="ハイライトの一覧">
+        <article class="cmp-card" data-reveal>
+          <span class="tag">送信</span>
+          <h3>クラウドへ行く道が、ない。</h3>
+          <p>Mozc を端末に組み込み、変換はオフラインで実行します。AI も端末内。通信するのは、あなたがモデルを取得したときだけです。</p>
+          <div class="cmp-visual">
+            <svg viewBox="0 0 260 120" role="img" aria-label="入力から端末内の変換、完了まで。クラウドへの矢印は打ち消されている">
+              <rect x="6" y="42" width="58" height="36" rx="10" fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5"/>
+              <text x="35" y="65" text-anchor="middle" font-size="11" fill="var(--on-surface-variant)">入力</text>
+              <path d="M70 60h14" stroke="var(--outline)" stroke-width="2" marker-end="url(#a1)"/>
+              <rect x="90" y="34" width="80" height="52" rx="12" fill="var(--primary-container)" stroke="var(--primary)" stroke-width="1.5"/>
+              <text x="130" y="65" text-anchor="middle" font-size="11" fill="var(--on-primary-container)">端末内</text>
+              <path d="M176 60h14" stroke="var(--outline)" stroke-width="2" marker-end="url(#a1)"/>
+              <circle cx="216" cy="60" r="17" fill="var(--primary)"/>
+              <path d="M208 60l6 7l11 -13" fill="none" stroke="var(--on-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M130 30 C130 12 190 12 206 18" fill="none" stroke="var(--outline)" stroke-width="1.5" stroke-dasharray="4 5"/>
+              <line x1="196" y1="6" x2="216" y2="26" stroke="var(--error)" stroke-width="3" stroke-linecap="round"/>
+              <rect x="206" y="2" width="34" height="18" rx="9" fill="var(--surface-container-high)" stroke="var(--outline)" stroke-width="1.5"/>
+              <defs><marker id="a1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l8 4-8 4z" fill="var(--outline)"/></marker></defs>
+            </svg>
+          </div>
+        </article>
+
+        <article class="cmp-card" data-reveal>
+          <span class="tag">収益</span>
+          <h3>入力は、広告の材料にしない。</h3>
+          <p>広告SDKも解析SDKも入れていません。無料で使えますが、入力を見返りに売る作りにはしていません。</p>
+          <div class="cmp-visual">
+            <svg viewBox="0 0 260 120" role="img" aria-label="広告ブロックに打ち消し線が引かれている">
+              <rect x="14" y="18" width="232" height="84" rx="10" fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5"/>
+              <rect x="28" y="30" width="120" height="10" rx="5" fill="var(--surface-container-high)"/>
+              <rect x="28" y="48" width="86" height="8" rx="4" fill="var(--surface-container-high)"/>
+              <rect x="28" y="66" width="120" height="26" rx="6" fill="var(--surface-container)" stroke="var(--outline-variant)" stroke-width="1.5"/>
+              <text x="88" y="84" text-anchor="middle" font-size="10" fill="var(--on-surface-variant)">広告</text>
+              <line x1="24" y1="68" x2="152" y2="92" stroke="var(--error)" stroke-width="3" stroke-linecap="round"/>
+              <rect x="170" y="30" width="62" height="8" rx="4" fill="var(--surface-container-high)"/>
+              <rect x="170" y="46" width="46" height="8" rx="4" fill="var(--surface-container-high)"/>
+            </svg>
+          </div>
+        </article>
+
+        <article class="cmp-card" data-reveal>
+          <span class="tag">検証</span>
+          <h3>説明ではなく、コードで。</h3>
+          <p>Apache-2.0 でソースを公開。Mozc への変更もパッチで公開しています。「送っていません」を信じる必要はありません。</p>
+          <div class="cmp-visual">
+            <svg viewBox="0 0 260 120" role="img" aria-label="ソースコードの行">
+              <rect x="14" y="14" width="232" height="92" rx="10" fill="var(--surface-container-low)" stroke="var(--outline-variant)" stroke-width="1.5"/>
+              <g fill="var(--surface-container-high)">
+                <rect x="30" y="30" width="60" height="7" rx="3.5"/>
+                <rect x="98" y="30" width="88" height="7" rx="3.5"/>
+                <rect x="46" y="48" width="48" height="7" rx="3.5"/>
+                <rect x="102" y="48" width="120" height="7" rx="3.5"/>
+                <rect x="46" y="66" width="70" height="7" rx="3.5"/>
+                <rect x="124" y="66" width="54" height="7" rx="3.5"/>
+                <rect x="30" y="84" width="40" height="7" rx="3.5"/>
+              </g>
+            </svg>
+          </div>
+        </article>
+
+        <article class="cmp-card" data-reveal>
+          <span class="tag">保存</span>
+          <h3>辞書も学習も、暗号化して手元に。</h3>
+          <p>ユーザー辞書は TSV で入出力。学習履歴・辞書・優先候補は Android Keystore の鍵で暗号化。クラウドバックアップは無効です。</p>
+          <div class="cmp-visual">
+            <svg viewBox="0 0 260 120" role="img" aria-label="鍵のかかった保存データ">
+              <rect x="84" y="54" width="92" height="52" rx="10" fill="var(--primary-container)" stroke="var(--primary)" stroke-width="1.5"/>
+              <path d="M104 54 V40 a26 26 0 0 1 52 0 V54" fill="none" stroke="var(--primary)" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="130" cy="76" r="7" fill="var(--primary)"/>
+              <rect x="127" y="80" width="6" height="14" rx="3" fill="var(--primary)"/>
+              <rect x="24" y="54" width="40" height="10" rx="5" fill="var(--surface-container-high)"/>
+              <rect x="24" y="72" width="30" height="10" rx="5" fill="var(--surface-container-high)"/>
+              <rect x="196" y="54" width="40" height="10" rx="5" fill="var(--surface-container-high)"/>
+              <rect x="196" y="72" width="30" height="10" rx="5" fill="var(--surface-container-high)"/>
+            </svg>
+          </div>
+        </article>
+      </div>
+      <div class="cmp-gallery-nav">
+        <button class="cmp-paddle" id="prev" aria-label="前のハイライト" type="button">←</button>
+        <button class="cmp-paddle" id="next" aria-label="次のハイライト" type="button">→</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- comparison -->
+  <section class="cmp-section" id="compare" aria-labelledby="compare-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">比較</p>
+      <h2 class="cmp-h2" id="compare-h">14項目で、並べました。</h2>
+      <p class="cmp-sub">公開情報（2026年11月時点）にもとづきます。一番右の3列はソースコードが非公開なので、✓ も ✗ も会社の説明か報道で知るしかありません。</p>
+    </div>
+
+    <div class="cmp-table-wrap" data-reveal>
+      <table class="cmp-table">
+        <caption class="sr-only">Komorebi IME、Gboard、Google 日本語入力、Simeji の機能比較</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span class="sr-only">項目</span></th>
+            <th scope="col" class="col-komorebi"><span class="badge">本命</span><br>Komorebi IME</th>
+            <th scope="col">Gboard</th>
+            <th scope="col">Google 日本語入力</th>
+            <th scope="col">Simeji</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr class="group"><th colspan="5" scope="colgroup">プライバシー</th></tr>
+          <tr>
+            <th scope="row">入力した文字を外に送らない</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+          </tr>
+          <tr>
+            <th scope="row">利用統計を送らない</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+          <tr>
+            <th scope="row">広告のために入力を使わない</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+          <tr>
+            <th scope="row">ソースコードが公開されている</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+          <tr>
+            <th scope="row">学習履歴を暗号化して保存する</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+          </tr>
+          <tr>
+            <th scope="row">クラウドバックアップを無効にできる</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+          </tr>
+
+          <tr class="group"><th colspan="5" scope="colgroup">変換と AI</th></tr>
+          <tr>
+            <th scope="row">変換がオフラインで動く</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+          </tr>
+          <tr>
+            <th scope="row">AI 変換が端末内で完結する</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+          <tr>
+            <th scope="row">AI 文章校正が端末内で完結する</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+
+          <tr class="group"><th colspan="5" scope="colgroup">辞書</th></tr>
+          <tr>
+            <th scope="row">辞書を TSV で入出力できる</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+          <tr>
+            <th scope="row">ネット辞書（NEologd / SKK）を使える</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
+
+          <tr class="group"><th colspan="5" scope="colgroup">対応機能</th></tr>
+          <tr>
+            <th scope="row">音声入力できる</th>
+            <td class="col-komorebi"><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+          </tr>
+          <tr>
+            <th scope="row">翻訳できる</th>
+            <td class="col-komorebi"><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-none" aria-hidden="true">—</span><span class="sr-only">該当なし</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+          </tr>
+          <tr>
+            <th scope="row">多言語を入力できる</th>
+            <td class="col-komorebi"><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-partial" aria-hidden="true">△</span><span class="sr-only">条件つき</span></td>
+            <td><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="cmp-legend">
+      <span><span class="m m-yes" aria-hidden="true">✓</span> できる・している</span>
+      <span><span class="m m-no" aria-hidden="true">✗</span> できない・していない</span>
+      <span><span class="m m-partial" aria-hidden="true">△</span> 条件つき</span>
+      <span><span class="m m-none" aria-hidden="true">—</span> その機能がない</span>
+      <span><span class="m m-unknown" aria-hidden="true">?</span> 公開情報では分からない</span>
+    </p>
+  </section>
+
+  <!-- reasons -->
+  <section class="cmp-section" aria-labelledby="reasons-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">理由</p>
+      <h2 class="cmp-h2" id="reasons-h">乗り換える理由は、4つ。</h2>
+    </div>
+    <div class="cmp-reasons">
+      <article class="cmp-reason" data-reveal>
+        <span class="num">01</span>
+        <h3>入力した文字を、外に出さない</h3>
+        <p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。通信するのは、あなたがモデルや追加辞書の「取得」を押したときだけです。入力・文脈・辞書・学習履歴は送りません。</p>
+      </article>
+      <article class="cmp-reason" data-reveal>
+        <span class="num">02</span>
+        <h3>入力は、広告の材料にしない</h3>
+        <p>広告SDKも解析SDKも組み込んでいません。無料で使えますが、入力を見返りに広告主へ売る作りにはしていません。これは会社の善意ではなく、そういう作りにしていない、という話です。</p>
+      </article>
+      <article class="cmp-reason" data-reveal>
+        <span class="num">03</span>
+        <h3>「送っていません」を、確かめられる</h3>
+        <p>ソースコードを公開しています（Apache-2.0）。Mozc への変更もパッチとして公開しています。会社の説明を信じる必要はありません。コードと権限を見れば済みます。</p>
+      </article>
+      <article class="cmp-reason" data-reveal>
+        <span class="num">04</span>
+        <h3>辞書も学習も、自分のもの</h3>
+        <p>ユーザー辞書は TSV で入出力できます。学習履歴・辞書・優先候補は Android Keystore の鍵で暗号化して保存。クラウドバックアップは無効です。機種変更はファイルか NFC で移せます。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- incident -->
+  <section class="cmp-section" aria-labelledby="incident-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">前例</p>
+      <h2 class="cmp-h2" id="incident-h">2013年、Simeji で起きたこと。</h2>
+      <p class="cmp-sub">「OFFにしているのに送られていた」。これは作り話ではなく、実際に起きた事故です。</p>
+    </div>
+    <ol class="cmp-timeline" data-reveal>
+      <li>
+        <time datetime="2013-12-26">2013年12月26日</time>
+        <strong>セキュリティ会社が指摘</strong>
+        <p>Simeji が入力内容を無断で外部に送っている、と公表。</p>
+      </li>
+      <li>
+        <time datetime="2013-12-26">同日</time>
+        <strong>「プログラムの不具合」と説明</strong>
+        <p class="alarm">記録をOFFにしていても、一部が送られていた。</p>
+      </li>
+      <li>
+        <time datetime="2013-12-26">同日</time>
+        <strong>8か月間続いていた</strong>
+        <p>不具合は2013年3月の版から混入。同じ会社のパソコン用ソフトでも同時に問題が起きていた。</p>
+      </li>
+      <li>
+        <time datetime="2013-12-27">2013年12月27日</time>
+        <strong>修正版で、初期設定を変更</strong>
+        <p>「クラウド変換」を初期設定でOFFに。問題の一部は不具合ではなく、最初からONにしていた設定だった。</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- faq -->
+  <section class="cmp-section" aria-labelledby="faq-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">FAQ</p>
+      <h2 class="cmp-h2" id="faq-h">よくある質問。</h2>
+    </div>
+    <div class="cmp-faq" data-reveal>
+      <details>
+        <summary>Gboard より安全ですか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>「安全」を「入力が外に出ないことを自分で確かめられる」と定義するなら、はい。Gboard は検索・利用統計・音声を Google に送ると自社ヘルプに書いています。Komorebi IME は入力も統計も送らず、コードも公開しています。</p></div>
+      </details>
+      <details>
+        <summary>入力は本当に送られませんか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>送りません。要求する権限は <code>INTERNET</code> だけで、使うのはモデルや追加辞書をあなたが取得したときだけです。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p></div>
+      </details>
+      <details>
+        <summary>オフラインで使えますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>使えます。Mozc を端末に組み込んでいるので、変換に通信は不要です。AI 機能を使う場合だけ、モデルを一度取得します。取得後の推論はオフラインです。</p></div>
+      </details>
+      <details>
+        <summary>AI はクラウドですか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>いいえ。AI 変換（zenzai-plus / Karukan）も AI 文章校正（Qwen / Gemma）も端末内で動きます。文章を外部へ送りません。</p></div>
+      </details>
+      <details>
+        <summary>無料ですか？広告は入りますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>無料です。広告は表示しません。広告SDK・解析SDK・クラッシュレポートSDKも組み込んでいません。</p></div>
+      </details>
+      <details>
+        <summary>辞書はほかの IME から移せますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>Mozc / Google 日本語入力互換の TSV をそのまま取り込めます。書き出しもできます。取り込みは現在の辞書を置き換えるので、先に書き出しておいてください。</p></div>
+      </details>
+      <details>
+        <summary>音声入力や翻訳はできますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>できません。ここは大手に負けています（比較表の「—」）。必要なら、音声入力は OS や別アプリに任せてください。Komorebi IME は日本語入力と変換に絞っています。</p></div>
+      </details>
+      <details>
+        <summary>多言語は？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>日本語が中心です。英語の入力はできますが、多言語の切り替えは大手ほど得意ではありません。</p></div>
+      </details>
+      <details>
+        <summary>何が劣っていますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>機能の数、多言語、音声、翻訳、そして実績です。まだ Release Candidate で、AI 機能は一部の CPU だけ、実機での確認が続いている項目もあります。便利さの合計では負けます。</p></div>
+      </details>
+      <details>
+        <summary>元に戻せますか？<span class="plus" aria-hidden="true"></span></summary>
+        <div class="answer"><p>戻せます。Android の設定でキーボードを切り替えるだけです。アンインストールすれば、端末内のデータも削除されます。</p></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- steps -->
+  <section class="cmp-section" aria-labelledby="steps-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">乗り換え</p>
+      <h2 class="cmp-h2" id="steps-h">3ステップで、終わります。</h2>
+      <p class="cmp-sub">設定を移す必要はありません。まずは変換だけ試して、物足りなければ元に戻せます。</p>
+    </div>
+    <div class="cmp-steps">
+      <article class="cmp-step" data-reveal>
+        <span class="step-n">1</span>
+        <h3>APK をインストール</h3>
+        <p>GitHub Releases から取得して開きます。提供元不明アプリの許可が必要な場合があります。</p>
+      </article>
+      <article class="cmp-step" data-reveal>
+        <span class="step-n">2</span>
+        <h3>有効化して選択</h3>
+        <p>設定アプリ、またはアプリ内の案内から Komorebi IME をオンにして、キーボードに選びます。</p>
+      </article>
+      <article class="cmp-step" data-reveal>
+        <span class="step-n">3</span>
+        <h3>試し入力</h3>
+        <p>設定の「試し入力」で変換を確認。AI やネット辞書は、必要になってから追加できます。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- limits -->
+  <section class="cmp-section" aria-labelledby="limits-h">
+    <div class="cmp-section-head" data-reveal>
+      <p class="cmp-eyebrow">正直なところ</p>
+      <h2 class="cmp-h2" id="limits-h">できないことも、書きます。</h2>
+    </div>
+    <div class="cmp-notebox" data-reveal>
+      <h3>大手に負けているところ</h3>
+      <ul>
+        <li>音声入力・翻訳・多言語はありません。必要なら、OS や別アプリと組み合わせてください。</li>
+        <li>まだ Release Candidate です。設定や保存形式が変わる可能性があります。</li>
+        <li>ニューラル変換と AI 校正は、今は <code>arm64-v8a</code> だけです。</li>
+        <li>実機での確認が続いている項目があります。品質保証はまだありません。</li>
+      </ul>
+      <p style="margin-top:12px">便利さの合計では負けます。勝っているのは、入力が誰のものか、という仕組みです。</p>
+    </div>
+  </section>
+
+  <!-- final -->
+  <section class="cmp-final" data-reveal>
+    <h2>入力は、あなたのもの。</h2>
+    <p>それが必要なら、乗り換える価値はあります。</p>
+    <div class="cmp-cta-row">
+      <a class="cmp-btn cmp-btn-primary" href="https://github.com/zenskypj/Komorebi-IME/releases/latest" target="_blank" rel="noopener noreferrer">最新版をダウンロード</a>
+      <a class="cmp-btn cmp-btn-ghost" href="./#/doc/manual/00-hajimete">インストール手順</a>
+    </div>
+  </section>
+</main>
+
+<footer class="cmp-footer">
+  <div class="cmp-footer-inner">
+    <div>
+      <h3>Komorebi IME</h3>
+      <p class="cmp-sub" style="font-size:.875rem">Android 向け日本語IME。入力は端末の外へ送りません。</p>
+    </div>
+    <div>
+      <h3>ドキュメント</h3>
+      <ul>
+        <li><a href="./#/doc/manual/00-hajimete">はじめての設定</a></li>
+        <li><a href="./#/doc/manual/11-hikaku">文章版の比較</a></li>
+        <li><a href="./#/doc/manual/06-privacy">プライバシー</a></li>
+        <li><a href="./#/doc/manual/09-spec">詳細仕様</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>リンク</h3>
+      <ul>
+        <li><a href="https://github.com/zenskypj/Komorebi-IME/releases">リリース</a></li>
+        <li><a href="https://github.com/zenskypj/Komorebi-IME">GitHub</a></li>
+        <li><a href="https://github.com/zenskypj/Komorebi-IME/blob/main/PRIVACY.md">プライバシーポリシー</a></li>
+        <li><a href="https://github.com/zenskypj/Komorebi-IME/blob/main/NOTICE">ライセンス</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>出典</h3>
+      <ul>
+        <li><a href="https://japan.cnet.com/article/35041966/">CNET Japan（2013-12-26）</a></li>
+        <li><a href="https://www.itmedia.co.jp/news/articles/1312/27/news036.html">ITmedia（2013-12-27）</a></li>
+        <li><a href="https://simeji.me/privacy/">Simeji プライバシーポリシー</a></li>
+        <li><a href="https://support.google.com/gboard/answer/9058584?hl=ja">Gboard ヘルプ</a></li>
+      </ul>
+    </div>
+    <p class="fine">比較は2026年11月時点の公開情報にもとづきます。各社の仕様は変わります。特定の製品の安全性を断定するものではありません。Komorebi IME は Apache-2.0 のオープンソースで、Release Candidate です。</p>
+  </div>
+</footer>
+
+<script src="assets/compare.js" defer></script>
+</body>
+</html>

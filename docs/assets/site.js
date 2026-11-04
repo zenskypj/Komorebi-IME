@@ -36,7 +36,7 @@
     {
       group: "比較",
       items: [
-        ["manual/11-hikaku", "ほかのキーボードと比べる", "Gboard・Simeji と ✓/✗ で比較", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較"],
+        ["manual/11-hikaku", "ほかのキーボードと比べる", "専用ページで ✓/✗ 比較", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較", "compare.html"],
       ],
     },
     {
@@ -79,9 +79,12 @@
     },
   ];
 
-  const ITEMS = INDEX.flatMap((g) => g.items.map(([id, title, blurb, path, tags]) => ({ group: g.group, id, title, blurb, path, tags })));
+  const ITEMS = INDEX.flatMap((g) => g.items.map(([id, title, blurb, path, tags, page]) => ({ group: g.group, id, title, blurb, path, tags, page })));
   const BY_ID = new Map(ITEMS.map((it) => [it.id, it]));
   const BY_PATH = new Map(ITEMS.map((it) => [it.path, it]));
+
+  /** Some entries are hand-built pages rather than Markdown rendered in place. */
+  const hrefFor = (item) => (item && item.page ? item.page : `#/doc/${item ? item.id : ""}`);
 
   /* ---------------- helpers ---------------- */
 
@@ -454,7 +457,7 @@
     const list = el("ul", { class: "doclist" });
     group.items.forEach(([id]) => {
       const item = BY_ID.get(id);
-      list.append(el("li", {}, [el("a", { href: `#/doc/${item.id}` }, [
+      list.append(el("li", {}, [el("a", { href: hrefFor(item) }, [
         el("span", { class: "t", text: item.title }),
         el("span", { class: "d", text: item.blurb }),
       ])]));
@@ -475,7 +478,8 @@
     INDEX.forEach((group) => {
       const list = el("ul", { class: "nav-list" });
       group.items.forEach(([id, title]) => {
-        list.append(el("li", {}, [el("a", { href: `#/doc/${id}`, "data-nav-id": id, text: title })]));
+        const item = BY_ID.get(id);
+        list.append(el("li", {}, [el("a", { href: hrefFor(item), "data-nav-id": id, text: title })]));
       });
       navRoot.append(el("div", { class: "nav-group" }, [el("h2", { text: group.group }), list]));
     });
