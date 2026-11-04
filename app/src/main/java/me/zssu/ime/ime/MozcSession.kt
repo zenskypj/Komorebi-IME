@@ -82,7 +82,7 @@ class MozcSession(
         /** Client-generated kana spelling that commits directly instead of addressing a Mozc id. */
         internal val directCommit: Boolean = false,
     )
-    data class Segment(val text: String, val highlighted: Boolean)
+    data class Segment(val text: String, val highlighted: Boolean, val reading: String = "")
 
     private var requestedStyle: InputStyle? = null
     var clientContext: org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context? = null
@@ -98,6 +98,8 @@ class MozcSession(
     /** Current preedit text from the last state. Empty when not composing. */
     private var currentPreeditText: String = ""
     private var currentIsConverting = false
+    private var nativeCursorCodePoints = 0
+    private val readingBoundary = ReadingBoundary()
 
     fun currentPreedit(): String = currentPreeditText
 
@@ -109,6 +111,7 @@ class MozcSession(
             style
         }
         if (effectiveStyle == currentStyle) return
+        readingBoundary.clear()
         val engine = engine ?: return
         val request = Request.newBuilder()
             .setSpecialRomanjiTable(
@@ -209,14 +212,33 @@ class MozcSession(
     fun convertOrSpace(visibleCandidateIds: List<Int> = emptyList()): State? {
         val wasConverting = currentIsConverting
         val japaneseComposition = currentStyle?.fullWidthSpace == true && currentPreeditText.isNotEmpty()
-        return ConvertKeySequence.convert(
+        val state = ConvertKeySequence.convert(
             composing = japaneseComposition,
             wasConverting = wasConverting,
             stop = ::stopKeyToggling,
             send = { sendSpecialKey(it) },
             highlight = ::highlightCandidate,
             visibleCandidateIds = visibleCandidateIds,
+        ) ?: return null
+        if (wasConverting || !state.isConverting) return state
+        val boundary = readingBoundary.target(state.preeditReading) ?: return state
+        val count = state.preeditReading.codePointCount(0, state.preeditReading.length)
+        return ReadingBoundary.restore(state, boundary, count,
+            length = { snapshot -> snapshot.segments.firstOrNull()?.reading?.takeIf { it.isNotEmpty() }
+                ?.let { it.codePointCount(0, it.length) } },
+            step = { _, expand -> sendSpecialKey(if (expand) KeyEvent.SpecialKey.RIGHT else KeyEvent.SpecialKey.LEFT, shift = true) },
         )
+    }
+
+    /** Plain input arrows choose a prefix; conversion arrows act on the existing native clauses. */
+    fun moveCursor(delta: Int, resize: Boolean): State? {
+        val wasConverting = currentIsConverting
+        val beforeCursor = nativeCursorCodePoints
+        val state = sendSpecialKey(if (delta < 0) KeyEvent.SpecialKey.LEFT else KeyEvent.SpecialKey.RIGHT, shift = resize)
+        if (!wasConverting && state?.hasComposition == true && !state.isConverting && currentStyle?.fullWidthSpace == true) {
+            readingBoundary.moved(state.preeditReading, beforeCursor, nativeCursorCodePoints)
+        }
+        return state
     }
 
     /**
@@ -247,6 +269,7 @@ class MozcSession(
                         .setUseTypingCorrection(typingCorrection)
                         .setUseKanaModifierInsensitiveConversion(typingCorrection)
                         .setUseHistorySuggest(true)
+                        .setUseRealtimeConversion(true)
                         .setSuggestionsSize(9)
                         .setComposingTimeoutThresholdMsec(
                             if (phoneToggleEnabled) ImeSettings.TOGGLE_TIMEOUT_MILLIS else 0
@@ -343,6 +366,7 @@ class MozcSession(
         requestedStyle = null
         currentStyle = null
         lastInputReading = ""
+        readingBoundary.clear()
     }
 
     private fun sendSessionCommand(type: SessionCommand.CommandType): State? =
@@ -358,16 +382,15 @@ class MozcSession(
 
         val displayedPreedit = preeditText.toString()
         currentPreeditText = displayedPreedit
-        val convertingOutput = hasCandidateWindow() &&
-            candidateWindow.category == Category.CONVERSION &&
-            candidateWindow.hasFocusedIndex()
-        if (displayedPreedit.isNotEmpty() && !convertingOutput) {
-            lastInputReading = displayedPreedit
+        nativeCursorCodePoints = cursor
+        val convertingOutput = ConversionOutput.isConverting(this)
+        when {
+            displayedPreedit.isEmpty() -> { lastInputReading = ""; readingBoundary.clear() }
+            !convertingOutput -> { lastInputReading = displayedPreedit; readingBoundary.update(lastInputReading) }
+            else -> ConversionOutput.reading(this)?.takeIf { it.isNotEmpty() }?.let { lastInputReading = it }
         }
         currentIsConverting = convertingOutput
-        val reading =
-            if (convertingOutput && lastInputReading.isNotEmpty()) lastInputReading
-            else displayedPreedit
+        val reading = if (convertingOutput) lastInputReading else displayedPreedit
         val candidateMetadata = if (hasAllCandidateWords()) {
             allCandidateWords.candidatesList.take(if (convertingOutput) CandidatePaging.MAX_CANDIDATES else CandidateRanking.MAX_LIVE_POOL_SIZE)
         } else {
@@ -411,27 +434,16 @@ class MozcSession(
                 priorityMatch = priorityLookup(reading, value),
             )
         }
-        val candidates = if (hasCandidateWindow()) {
-            val visible = candidateWindow.candidateList.map {
-                candidate(it.id, it.value)
-            }
-
-            // User dictionaries intentionally receive a strong native ranking boost. That is right
-            // for someone's own entries, but it made the bundled 24k-entry kana→English dictionary
-            // occupy nearly the whole toolbar. During an unfocused Japanese suggestion only, draw
-            // additional candidates from Mozc's complete result and apply a small stable penalty to
-            // Latin user-dictionary values. Explicit conversion, focused prediction, and the ASCII
-            // keyboard retain Mozc's original order.
-            val isLiveJapaneseSuggestion =
-                candidateWindow.category == Category.SUGGESTION &&
-                    !candidateWindow.hasFocusedIndex() &&
-                    (currentStyle == InputStyle.FLICK_HIRAGANA ||
-                        currentStyle == InputStyle.TOGGLE_FLICK_HIRAGANA)
-            if (convertingOutput && candidateMetadata.isNotEmpty()) {
-                candidateMetadata.sortedBy { it.index }.map { candidate(it.id, it.value) }
-                    .filter { it.text.isNotEmpty() }.distinctBy { it.id }
-                    .sortedBy { when (it.priorityMatch) { PriorityMatch.EXACT -> 0; PriorityMatch.SIMILAR -> 1; PriorityMatch.NONE -> 2 } }
-            } else if (isLiveJapaneseSuggestion) {
+        val candidates = if (convertingOutput && candidateMetadata.isNotEmpty()) {
+            candidateMetadata.map { candidate(it.id, it.value) }
+                .filter { it.text.isNotEmpty() }.distinctBy { it.id }
+                .sortedBy { when (it.priorityMatch) { PriorityMatch.EXACT -> 0; PriorityMatch.SIMILAR -> 1; PriorityMatch.NONE -> 2 } }
+        } else if (hasCandidateWindow()) {
+            val visible = candidateWindow.candidateList.map { candidate(it.id, it.value) }
+            val isLiveJapaneseSuggestion = candidateWindow.category == Category.SUGGESTION &&
+                !candidateWindow.hasFocusedIndex() &&
+                (currentStyle == InputStyle.FLICK_HIRAGANA || currentStyle == InputStyle.TOGGLE_FLICK_HIRAGANA)
+            if (isLiveJapaneseSuggestion) {
                 val complete = if (hasAllCandidateWords()) {
                     allCandidateWords.candidatesList.asSequence()
                         .take(CandidateRanking.MAX_LIVE_POOL_SIZE)
@@ -462,6 +474,7 @@ class MozcSession(
             preedit.segmentList.map {
                 Segment(
                     text = it.value,
+                    reading = if (it.hasKey()) it.key else "",
                     highlighted = it.annotation ==
                         org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Preedit
                             .Segment.Annotation.HIGHLIGHT,
@@ -471,12 +484,7 @@ class MozcSession(
             emptyList()
         }
 
-        val focusedId = if (hasCandidateWindow() && candidateWindow.hasFocusedIndex()) {
-            CandidatePaging.focusedId(candidateWindow.candidateList.map { it.index to it.id }, candidateWindow.focusedIndex)
-                ?: candidateMetadata.firstOrNull { it.index == candidateWindow.focusedIndex }?.id
-        } else {
-            null
-        }
+        val focusedId = ConversionOutput.focusedId(this)
         val reorderedFocused =
             focusedId?.let { id -> candidates.indexOfFirst { it.id == id } } ?: -1
 
@@ -486,13 +494,11 @@ class MozcSession(
                 deletionRange.length == -deletionRange.offset) deletionRange.length else 0,
             preedit = displayedPreedit,
             preeditReading = reading,
-            preeditCursor = cursor.coerceIn(0, preeditText.length),
+            preeditCursor = displayedPreedit.offsetByCodePoints(0, cursor.coerceIn(0, displayedPreedit.codePointCount(0, displayedPreedit.length))),
             candidates = candidates,
             focusedCandidateIndex = reorderedFocused,
             segments = segments,
-            isConverting = hasCandidateWindow() &&
-                candidateWindow.category == Category.CONVERSION &&
-                candidateWindow.hasFocusedIndex(),
+            isConverting = convertingOutput,
             consumed = consumed,
         )
     }

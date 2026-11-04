@@ -67,13 +67,14 @@ private fun InputGuideScreen(onBack: () -> Unit) {
                         GuidePractice("あいうえお", "実際のキーボードで「あいうえお」を入力してみましょう。")
                     }
                     1 -> {
-                        Text("変換してから、区切りを整える。", style = MaterialTheme.typography.headlineSmall)
+                        Text("入力中の範囲も、変換後の文節も整える。", style = MaterialTheme.typography.headlineSmall)
                         GuideCard("変換キーの順番") {
                             Text("① 読みを入力 → ② 変換を1回押して先頭候補 → ③ 表示中の候補を変換キーで巡回。左右スワイプで別の候補へ進み、右端の下向きボタンで一覧を開きます。候補の1行／2行と文字サイズは外観設定を反映します。候補のタップか確定キーで決定します。")
+                            Text("入力中の左右キーで選んだ読みの先頭側の区切りは、変換時に引き継ぎます。変換1回目の直後は左右キーで前／次の文節へ移動し、もう一度変換して候補選択に入ると左右キーで文節を縮める／広げる操作になります。")
                             Text("候補一覧の「文節を調整」で文節操作を開けます。候補の意味や優先登録は、候補を長押しすると開けます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         SegmentLesson()
-                        GuidePractice("きょうはいいてんきです", "読みを入力して変換。キーボード上の文節をタップし、「縮める／広げる」を試してください。")
+                        GuidePractice("きょうはいいてんきです", "読みを入力して変換し、左右キーで文節移動。もう一度変換を押してから、左右キーで区切りの変更を試してください。文節操作ボタンは候補一覧の「文節を調整」から開けます。")
                     }
                     2 -> {
                         Text("消して打ち直す前に、移動。", style = MaterialTheme.typography.headlineSmall)

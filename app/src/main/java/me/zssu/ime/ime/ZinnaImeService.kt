@@ -98,6 +98,7 @@ class ZinnaImeService : InputMethodService() {
     private var editAnchor: Int? = null
     private var segmentBar: LinearLayout? = null
     private var segmentEditing = false
+    private val conversionInteraction = ConversionInteraction()
     private var segmentSummary: LinearLayout? = null
     private var keyboardView: FlickKeyboardView? = null
     private var panelView: KeyboardPanelView? = null
@@ -124,7 +125,7 @@ class ZinnaImeService : InputMethodService() {
      */
     private var isComposing = false
     private var isConverting = false
-        set(value) { field = value; if (!value) segmentEditing = false }
+        set(value) { field = value; conversionInteraction.observe(value); if (!value) segmentEditing = false }
     private var currentSegmentCount = 0
     private var suppressPartialLearning = false
     private var renderedPreeditCursor = 0
@@ -364,6 +365,7 @@ class ZinnaImeService : InputMethodService() {
             }
             onCandidateFocusRequested = { candidate ->
                 if (isConverting && !candidate.directCommit && lastCandidates.any { it.id == candidate.id && it.text == candidate.text }) {
+                    conversionInteraction.chooseCandidates()
                     cancelKarukanConversion(clearReading = true, revertMozc = false)
                     render(session.highlightCandidate(candidate.id), requestNeural = false)
                 }
@@ -495,7 +497,7 @@ class ZinnaImeService : InputMethodService() {
                     cornerRadius = 12 * resources.displayMetrics.density
                 }
                 isFocusable = true
-                setOnClickListener { if (isConverting) handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1) }
+                setOnClickListener { if (isConverting) handleCursorMove(if (code < 0) -1 else 1, kotlin.math.abs(code) == 1, forceClauseMove = kotlin.math.abs(code) == 2) }
             }, LinearLayout.LayoutParams(0, (48 * resources.displayMetrics.density).toInt(), 1f).apply {
                 val gap = (3 * resources.displayMetrics.density).toInt(); setMargins(gap, gap, gap, gap)
             })
@@ -538,7 +540,7 @@ class ZinnaImeService : InputMethodService() {
         candidateView = candidates
         panelView = panel
         contentLayout = content
-        keyboard.onTrackpadMove = { delta -> handleCursorMove(delta, adjustSegment = false) }
+        keyboard.onTrackpadMove = { delta -> handleCursorMove(delta, adjustSegment = false, forceClauseMove = true) }
         keyboardView = keyboard
         meaningPopup = popupView
         builtFromRevision = combinedRevision()
@@ -1062,6 +1064,7 @@ class ZinnaImeService : InputMethodService() {
      * nothing at all, so space appeared to work only as the second keystroke of a word.
      */
     private fun handleSpace() {
+        conversionInteraction.convertPressed(isComposing, isConverting)
         if (karukanConversionActive) {
             // The user is navigating Mozc's candidates; discard an outstanding neural result.
             cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -1397,7 +1400,7 @@ class ZinnaImeService : InputMethodService() {
         ic.setSelection(editAnchor ?: absolute, absolute)
     }
 
-    private fun handleCursorMove(delta: Int, adjustSegment: Boolean) {
+    private fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {
         if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
         if (
@@ -1414,11 +1417,9 @@ class ZinnaImeService : InputMethodService() {
             currentInputConnection?.let { sendRawKeyPress(it, rawKey) }
             return
         }
-        val special = if (delta < 0) KeyEvent.SpecialKey.LEFT else KeyEvent.SpecialKey.RIGHT
-        // In conversion, ordinary arrows move the focused clause. A sideways space flick supplies
-        // Shift+Arrow, Mozc's standard command for shrinking/expanding that clause boundary.
+        val resize = isConverting && conversionInteraction.resize(adjustSegment, forceClauseMove)
         val wasComposing = isComposing
-        val state = if (isComposing) session.sendSpecialKey(special, shift = adjustSegment) else null
+        val state = if (isComposing) session.moveCursor(delta, resize) else null
         if (wasComposing) {
             if (state == null) render(null, requestNeural = false)
             else if (state.hasComposition) render(state, requestNeural = false)
@@ -1495,6 +1496,7 @@ class ZinnaImeService : InputMethodService() {
                 committedText = state.committedText,
             )
         isComposing = state.hasComposition
+        if (state.committedText.isNotEmpty()) conversionInteraction.observe(false)
         isConverting = state.isConverting
         if (!isConverting) segmentEditing = false
         candidateView?.segmentEditing = segmentEditing
@@ -1515,7 +1517,7 @@ class ZinnaImeService : InputMethodService() {
                     setOnClickListener {
                         if (zenzaiState !== state || !isConverting || focusedSegment < 0) return@setOnClickListener
                         repeat(kotlin.math.abs(index - focusedSegment)) {
-                            handleCursorMove(if (index < focusedSegment) -1 else 1, adjustSegment = false)
+                            handleCursorMove(if (index < focusedSegment) -1 else 1, adjustSegment = false, forceClauseMove = true)
                         }
                     }
                 }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (48 * resources.displayMetrics.density).toInt()))
