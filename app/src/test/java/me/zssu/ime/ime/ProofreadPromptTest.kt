@@ -32,7 +32,7 @@ class ProofreadPromptTest {
     @Test fun promptEmbedsTextInsideChatMarkers() {
         val prompt = ProofreadPrompt.prompt("誤字がある", ProofreadPrompt.Style.FIX)
         assertTrue(prompt.startsWith("<|im_start|>system\n"))
-        assertTrue(prompt.contains("\n<|im_start|>user\n誤字がある /no_think<|im_end|>\n<|im_start|>assistant\n"))
+        assertTrue(prompt.contains("\n<|im_start|>user\n誤字がある<|im_end|>\n<|im_start|>assistant\n"))
     }
 
     @Test fun qwenPromptHardDisablesThinking() {
@@ -41,7 +41,7 @@ class ProofreadPromptTest {
         // A closed, empty thinking block is prefilled so the first token is the answer.
         assertTrue(assistant.startsWith("<" + "think" + ">"))
         assertTrue(assistant.contains("<" + "/" + "think" + ">"))
-        assertTrue(prompt.contains("/no_think"))
+        assertFalse(prompt.contains("/no_think"))
     }
 
     @Test fun promptCannotBeHijackedThroughUserText() {
@@ -81,5 +81,36 @@ class ProofreadPromptTest {
         assertEquals("校正後の文", ProofreadPrompt.extract("long reasoning</think>校正後の文"))
         assertEquals("校正後の文", ProofreadPrompt.extract("<|im_start|>校正後の文<|im_end|>"))
         assertEquals("本文", ProofreadPrompt.extract("本文"))
+    }
+    @Test fun copiedReasoningSwitchCannotBecomeAProofreadingResult() {
+        val source = "山田太郎(やまだたろう)"
+        assertTrue(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, "山田太郎（やまだたろう） /no_think"))
+        assertTrue(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, "/THINK 山田太郎"))
+        assertTrue(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, "山田太郎/no_think"))
+    }
+
+    @Test fun sourceWhichDiscussesTheCommandIsPreserved() {
+        val source = "/no_think の意味を説明します。"
+        assertFalse(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, source))
+        assertTrue(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, source + " /no_think"))
+        assertTrue(ProofreadPrompt.hasUnexpectedReasoningSwitch(source, source + " /think"))
+    }
+
+    @Test fun ordinaryPathsAreNotMistakenForReasoningSwitches() {
+        assertFalse(ProofreadPrompt.hasUnexpectedReasoningSwitch("本文", "本文 /thinking /no_thinkable"))
+        assertFalse(ProofreadPrompt.hasUnexpectedReasoningSwitch("本文", "本文"))
+    }
+
+    @Test fun bothFamiliesKeepUserTurnFreeOfAddedCommands() {
+        for (format in ProofreadPrompt.Format.entries) {
+            val prompt = ProofreadPrompt.prompt("人名と読み", ProofreadPrompt.Style.FIX, format = format)
+            val userTurn = when (format) {
+                ProofreadPrompt.Format.QWEN -> prompt.substringAfter("<|im_start|>user\n").substringBefore("<|im_end|>")
+                ProofreadPrompt.Format.GEMMA -> prompt.substringAfter("<start_of_turn>user\n").substringBefore("<end_of_turn>")
+            }
+            assertEquals("人名と読み", userTurn)
+            assertFalse(userTurn.contains("/no_think"))
+            assertFalse(userTurn.contains("/think"))
+        }
     }
 }

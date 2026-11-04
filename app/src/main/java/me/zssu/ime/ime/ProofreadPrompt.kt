@@ -97,13 +97,11 @@ internal object ProofreadPrompt {
             append(systemInstruction(style, freeInstruction))
             append("<|im_end|>\n<|im_start|>user\n")
             append(sanitize(text))
-            // Qwen's soft switch keeps the reasoning block out of the answer.
-            append(" /no_think")
             append("<|im_end|>\n<|im_start|>assistant\n")
             // Prefilling a closed thinking block hard-disables reasoning. This is exactly what
             // Qwen3's own chat template writes when enable_thinking is false, so the first
-            // generated token is already the rewritten sentence. The soft switch alone is not
-            // always honoured by small models.
+            // generated token should be the rewritten sentence. Keep reasoning controls in the
+            // assistant prefix, never appended to the user's text where they can be copied.
             append(THINK_OPEN).append("\n\n").append(THINK_CLOSE).append("\n\n")
         }
         Format.GEMMA -> buildString {
@@ -114,6 +112,16 @@ internal object ProofreadPrompt {
             append(sanitize(text))
             append("<end_of_turn>\n<start_of_turn>model\n")
         }
+    }
+
+    private val REASONING_SWITCH = Regex("/(?:no_think|think)(?![A-Za-z0-9_])", RegexOption.IGNORE_CASE)
+
+    /** Reject leaked switches, while preserving documents which actually discuss those commands. */
+    fun hasUnexpectedReasoningSwitch(source: String, result: String): Boolean {
+        fun counts(value: String) = REASONING_SWITCH.findAll(value)
+            .groupingBy { it.value.lowercase(java.util.Locale.ROOT) }.eachCount()
+        val original = counts(source)
+        return counts(result).any { (command, count) -> count > (original[command] ?: 0) }
     }
 
     /**

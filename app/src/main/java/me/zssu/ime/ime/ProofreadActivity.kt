@@ -349,6 +349,9 @@ class ProofreadActivity : Activity() {
             try {
                 val raw = ProofreadNative.generate(modelFile.absolutePath, prompt.toByteArray(Charsets.UTF_8), ticket)?.toString(Charsets.UTF_8)
                 val cleaned = ProofreadPrompt.extract(raw.orEmpty())
+                check(!ProofreadPrompt.hasUnexpectedReasoningSwitch(snapshot.text, cleaned)) {
+                    "結果に内部制御用の文字列が混ざったため破棄しました。元の文章は変更していません。"
+                }
                 check(cleaned.isNotBlank() && cleaned.length <= 1800 && !cleaned.contains('\uFFFD')) { "校正結果を取得できませんでした" }
                 post {
                     busy = false; progress = null; output = cleaned
