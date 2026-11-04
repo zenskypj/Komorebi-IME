@@ -28,9 +28,9 @@
       ],
     },
     {
-      group: "歴史",
+      group: "タイムライン",
       items: [
-        ["manual/12-history", "開発の歴史とタイムライン", "全37リリースを版ごとに整理", "docs/manual/12-history.md", "history timeline リリース 歴史"],
+        ["manual/12-history", "全バージョンのタイムライン", "全37リリースを版ごとに整理", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
       ],
     },
     {
@@ -366,6 +366,32 @@
     ["ethics", `https://gijutsusharin.li/badge.svg`],
   ];
 
+  const RECENT = [
+    ["2026-11-04", "v0.3.0-rc.35-dev", "統合データセット（複数辞書の同時有効化）"],
+    ["2026-11-04", "v0.3.0-rc.34-dev", "個別指定した辞書語の AI 優先 / NFC 移行の修正"],
+    ["2026-11-04", "v0.3.0-rc.33-dev", "追加システム辞書（NEologd / SKK）"],
+    ["2026-11-04", "v0.3.0-rc.32-dev", "キーボード高さ・予測順位・次文節への自動移行"],
+    ["2026-11-04", "v0.3.0-rc.31-dev", "文節境界の引き継ぎと左右キーの段階"],
+    ["2026-11-04", "v0.3.0-rc.30-dev", "候補の行数・スワイプ・文節調整の分離"],
+  ];
+
+  function recentTimeline() {
+    const rail = el("div", { class: "timeline timeline-compact" });
+    RECENT.forEach(([date, version, summary]) => {
+      rail.append(el("section", { class: "tl-entry" }, [
+        el("span", { class: "tl-date", text: date }),
+        el("h3", { text: version }),
+        el("p", { text: summary }),
+      ]));
+    });
+    return el("section", { class: "section" }, [
+      el("h2", { text: "最近のリリース" }),
+      el("p", { class: "sub", text: "最新6件。全37リリースの履歴は「タイムライン」にあります。" }),
+      rail,
+      el("p", { class: "sub" }, [el("a", { href: "#/doc/manual/12-history", text: "全バージョンのタイムラインを見る" })]),
+    ]);
+  }
+
   function renderHome() {
     document.title = "Komorebi IME ドキュメント";
     const home = el("div", { class: "home" });
@@ -396,8 +422,9 @@
         el("p", { class: "sub", text: "インストール後の初期設定は4ステップです。" }),
         steps,
       ]),
+      recentTimeline(),
       doclistSection("マニュアル", "目的から探す"),
-      doclistSection("歴史", "どの版で何が追加されたか"),
+      doclistSection("タイムライン", "どの版で何が追加されたか"),
       doclistSection("比較・検証", "閉源IMEの説明と実態"),
       doclistSection("設計・仕様", "細かい仕様と検証範囲"),
       doclistSection("リリースノート", "版ごとの変更"),

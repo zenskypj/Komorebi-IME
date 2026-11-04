@@ -90,10 +90,11 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
 
 body {
   margin: 0;
+  overflow-x: clip;
   background: var(--surface);
   color: var(--on-surface);
   font-family: var(--font);
@@ -254,7 +255,7 @@ a:hover { text-decoration: underline; }
 
 /* ---------------- prose ---------------- */
 
-.prose { max-width: var(--measure); }
+.prose { max-width: var(--measure); overflow-wrap: break-word; }
 .prose > :first-child { margin-top: 0; }
 .prose h2 {
   margin: 40px 0 12px;
@@ -387,6 +388,12 @@ a:hover { text-decoration: underline; }
 .tl-entry h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 600; }
 .tl-entry > :last-child { margin-bottom: 0; }
 
+.timeline-compact { margin: 12px 0 4px; }
+.timeline-compact .tl-entry { padding-bottom: 14px; }
+.timeline-compact .tl-date { display: block; font-size: 0.6875rem; color: var(--on-surface-variant); }
+.timeline-compact .tl-entry h3 { margin: 0 0 2px; font-size: 0.9375rem; }
+.timeline-compact .tl-entry p { margin: 0; font-size: 0.8125rem; color: var(--on-surface-variant); }
+
 /* ---------------- home ---------------- */
 
 .home { max-width: 1000px; margin: 0 auto; padding: 40px 32px 96px; }
@@ -497,6 +504,11 @@ a:hover { text-decoration: underline; }
   .content { grid-template-columns: minmax(0, 1fr) var(--toc-w); }
 }
 
+/* The page TOC is a desktop aid; on narrow screens it would land after the article. */
+@media (max-width: 1199px) {
+  .toc { display: none; }
+}
+
 @media (max-width: 1023px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
   .drawer-toggle { display: inline-flex; }
@@ -508,9 +520,10 @@ a:hover { text-decoration: underline; }
     border-right: 1px solid var(--outline-variant);
     box-shadow: var(--elev-1);
     transform: translateX(-102%);
-    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+    visibility: hidden;
+    transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), visibility 0.22s;
   }
-  body[data-drawer="open"] .sidebar { transform: none; }
+  body[data-drawer="open"] .sidebar { transform: none; visibility: visible; }
   body[data-drawer="open"] .scrim {
     display: block; position: fixed; inset: var(--topbar-h) 0 0 0; z-index: 45;
     border: 0; background: rgb(0 0 0 / 0.32);
@@ -520,11 +533,27 @@ a:hover { text-decoration: underline; }
 }
 
 @media (max-width: 760px) {
-  .intro h1 { font-size: 1.625rem; }
+  .intro h1 { font-size: 1.5rem; }
   .doc-head h1 { font-size: 1.5rem; }
   .prose table { font-size: 0.8125rem; }
   .prose th, .prose td { padding: 8px 10px; }
   .brand small { display: none; }
+}
+
+/* Phones: keep the top bar to one row and stop secondary buttons from pushing it off-screen. */
+@media (max-width: 720px) {
+  .topbar { padding: 0 6px; gap: 0; }
+  .brand { font-size: 1rem; padding: 0 4px; min-width: 0; }
+  .brand small { display: none; }
+  .topbar .iconbtn { min-width: 44px; min-height: 44px; padding: 0 8px; }
+  .topbar .iconbtn.wide { display: none; }
+  .topbar .iconbtn .label { display: none; }
+  .content, .home { padding: 20px 16px 64px; }
+  .intro { padding-bottom: 24px; }
+  .actions .btn { width: 100%; }
+  .prose h2 { font-size: 1.25rem; }
+  .prose pre { font-size: 0.8125rem; }
+  .doclist a { padding: 10px 4px; }
 }
 
 @media print {
