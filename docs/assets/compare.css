@@ -361,62 +361,6 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   .cmp-gallery-nav { display: none; }
 }
 
-/* ---------------- motion player ---------------- */
-
-.cmp-player {
-  margin: 0;
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--shape-lg);
-  overflow: hidden;
-  background: var(--surface);
-}
-.cmp-player-frame { padding: 18px 18px 6px; background: var(--surface-container-lowest); }
-.cmp-motion-art { display: block; width: 100%; height: auto; }
-
-.m-label { font-size: 13px; font-weight: 600; fill: var(--on-surface-variant); letter-spacing: 0.04em; }
-.m-dest { font-size: 11px; fill: var(--on-surface-variant); }
-.m-count { font-size: 40px; font-weight: 600; fill: var(--on-surface); font-variant-numeric: tabular-nums; }
-#count-a { fill: var(--error); }
-#count-b { fill: var(--primary); }
-.m-sublabel { font-size: 11px; fill: var(--on-surface-variant); }
-.p-other { fill: var(--error); }
-.p-komorebi { fill: var(--primary); }
-
-.cmp-player-bar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--outline-variant);
-  background: var(--surface);
-}
-.cmp-play {
-  flex: none;
-  width: 38px; height: 38px;
-  display: grid; place-items: center;
-  border: 1px solid var(--outline); border-radius: 50%;
-  background: var(--surface); color: var(--on-surface);
-  cursor: pointer;
-}
-.cmp-play:hover { background: var(--surface-container); }
-.cmp-progress {
-  flex: 1; height: 4px; border-radius: 2px;
-  background: var(--surface-container-high);
-  overflow: hidden;
-}
-.cmp-progress span {
-  display: block; height: 100%; width: 100%;
-  background: var(--primary);
-  transform: scaleX(0);
-  transform-origin: left center;
-}
-.cmp-textbtn {
-  border: 0; background: transparent;
-  color: var(--primary);
-  font: inherit; font-size: 0.875rem; font-weight: 600;
-  padding: 8px 10px; border-radius: 999px;
-  cursor: pointer;
-}
-.cmp-textbtn:hover { background: var(--surface-container); }
-
 /* ---------------- comparison table ---------------- */
 
 .cmp-table-wrap {
