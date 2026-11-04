@@ -5,6 +5,9 @@
 > [!TIP]
 > **最新版をダウンロード**: [GitHub Releases（latest）](https://github.com/zenskypj/Komorebi-IME/releases/latest)
 > 最新のテスト用APK（ユニバーサル debug 署名版・`me.zssu.ime.debug`）を掲載しています。
+>
+> **ユーザーマニュアル・ドキュメント**: <https://zenskypj.github.io/Komorebi-IME/>
+> 初心者向けの設定手順から、変換・AI・辞書・プライバシー・詳細仕様までを1冊にまとめています。本文は [`docs/`](docs) から取得して表示します。
 
 言葉を木漏れ日のようにそっと照らす、Android向けオープンソース日本語IMEです。
 入力内容を端末の外へ送らずに使えます。
