@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.38-dev", "rc.38-dev", "提供された固有名詞を同梱辞書へ合併", "docs/releases/v0.3.0-rc.38-dev.md", "release rc38"],
         ["releases/v0.3.0-rc.37-dev", "rc.37-dev", "補正と最優先指定・送信後の入力状態を修正", "docs/releases/v0.3.0-rc.37-dev.md", "release rc37"],
         ["releases/v0.3.0-rc.36-dev", "rc.36-dev", "辞書の切り替えを高速化・ドキュメントサイト公開", "docs/releases/v0.3.0-rc.36-dev.md", "release rc36"],
         ["releases/v0.3.0-rc.35-dev", "rc.35-dev", "複数の辞書を同時に使えるように", "docs/releases/v0.3.0-rc.35-dev.md", "release rc35"],
@@ -382,6 +383,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-05", "v0.3.0-rc.38-dev", "同梱固有名詞辞書を4,879語へ拡張"],
     ["2026-11-05", "v0.3.0-rc.37-dev", "表記ゆれ補正・AIより最優先・送信後の状態破棄"],
     ["2026-11-04", "v0.3.0-rc.35-dev", "統合データセット（複数辞書の同時有効化）"],
     ["2026-11-04", "v0.3.0-rc.34-dev", "個別指定した辞書語の AI 優先 / NFC 移行の修正"],

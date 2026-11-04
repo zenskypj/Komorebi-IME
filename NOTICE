@@ -120,3 +120,11 @@ lemmatizing conjugated forms. Rebuild: scripts/extra_dictionary/gen_orthographic
 Upstream COPYING and all acknowledgements: assets/legal/system-dictionaries/neologd-variants.txt.
 The pre-existing CC-BY-SA-3.0 katakana-English TSV is used as an exact-reading
 lookup; its original source notices and adapted data are preserved.
+
+Bundled proper-noun dictionary additions (2026-11-05): user-supplied JSONL,
+SHA-256 1bef2f82638be8e7e17af961319170e7bbbc23bcb623f97d740c816401f7746d.
+Integrated at the user's request into the pre-existing bundled proper-noun TSV,
+not a downloadable network dataset. Original data and cost fields are retained
+in data/dictionaries/proper-nouns-extra.jsonl; merge details are in that folder.
+The pre-existing base TSV's CC0 declaration applies to the original entries;
+no new CC0 declaration is made for the supplied additions.

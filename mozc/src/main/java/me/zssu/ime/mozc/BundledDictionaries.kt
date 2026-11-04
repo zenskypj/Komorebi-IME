@@ -59,13 +59,21 @@ object BundledDictionaries {
             // dictionary import gives these words a personal-word cost advantage, including
             // during typo correction. Empty imports also migrate existing installations.
             val systemDictionary = assetName in system || assetName == "katakana-english.txt"
+            // Keep an explicitly disabled bundled dictionary disabled on app updates too.
+            // These preference names are shared with the app's ImeSettings.
+            val preferences = context.getSharedPreferences("ime_settings", Context.MODE_PRIVATE)
+            val enabled = when (assetName) {
+                "proper-nouns.txt" -> preferences.getBoolean("use_pronoun_dict", true)
+                "ai-tech-nouns.txt" -> preferences.getBoolean("use_ai_tech_dict", true)
+                else -> true
+            }
             val output = engine.eval(
                 Input.newBuilder()
                     .setType(Input.CommandType.IMPORT_USER_DICTIONARY)
                     .setUserDictionaryImportData(
                         UserDictionaryImportData.newBuilder()
                             .setDictionaryName(dictionaryName)
-                            .setData(if (systemDictionary) "# migrated to system dictionary\n" else tsv)
+                            .setData(if (systemDictionary || !enabled) "# managed outside this user dictionary or disabled\n" else tsv)
                     )
             )
             if (output == null) {

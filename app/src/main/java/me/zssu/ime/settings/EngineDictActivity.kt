@@ -163,7 +163,7 @@ private fun EngineDictScreen() {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("変換辞書の切り替え", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
-                    SwitchRow("有名固有名詞", "企業名・サービス名・人名・地名", useDict) {
+                    SwitchRow("有名固有名詞", "同梱の企業名・サービス名・人名・地名。追加取得は不要", useDict) {
                         useDict = it; settings.useProperNounDictionary = it
                         Thread {
                             try { MozcEngine.get(context)?.setBundledDictionaryActive(context, "proper-nouns.txt", it) } catch (_: Exception) {}
