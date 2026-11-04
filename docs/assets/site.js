@@ -28,6 +28,12 @@
       ],
     },
     {
+      group: "歴史",
+      items: [
+        ["manual/12-history", "開発の歴史とタイムライン", "全37リリースを版ごとに整理", "docs/manual/12-history.md", "history timeline リリース 歴史"],
+      ],
+    },
+    {
       group: "比較・検証",
       items: [
         ["manual/11-hikaku", "他IME検証", "閉源IMEの説明と実態、Komorebi の立場", "docs/manual/11-hikaku.md", "compare privacy gboard simeji 比較 検証 批判"],
@@ -198,6 +204,28 @@
     });
   }
 
+  /* Version headings on the history page become a vertical timeline. */
+  function buildTimeline(body) {
+    const isVersion = (node) =>
+      node.nodeType === 1 && node.tagName === "H3" && /^v?\d+\.\d+/.test(node.textContent.trim());
+    const heads = Array.from(body.querySelectorAll("h3")).filter(isVersion);
+    if (heads.length < 3) return;
+    const rail = el("div", { class: "timeline" });
+    body.insertBefore(rail, heads[0]);
+    let current = null;
+    Array.from(body.childNodes).forEach((node) => {
+      if (node === rail) return;
+      if (isVersion(node)) {
+        current = el("section", { class: "tl-entry" });
+        rail.append(current);
+        current.append(node);
+        return;
+      }
+      if (node.nodeType === 1 && node.tagName === "H2") { current = null; return; }
+      if (current) current.append(node);
+    });
+  }
+
   function collectToc(root) {
     const headings = root.querySelectorAll("h2, h3");
     return Array.from(headings).map((h) => ({ id: h.id, text: h.textContent, depth: h.tagName === "H3" ? 3 : 2 }));
@@ -231,10 +259,10 @@
       }),
     ]);
     const row = el("div", { class: "row" });
-    const retry = el("button", { class: "btn btn-primary", type: "button", text: "再試行" });
+    const retry = el("button", { class: "btn btn-filled", type: "button", text: "再試行" });
     retry.addEventListener("click", () => renderFromHash(true));
     row.append(retry);
-    if (item) row.append(el("a", { class: "btn btn-ghost", href: BLOB + item.path, target: "_blank", rel: "noopener noreferrer", text: "GitHub で開く" }));
+    if (item) row.append(el("a", { class: "btn btn-outlined", href: BLOB + item.path, target: "_blank", rel: "noopener noreferrer", text: "GitHub で開く" }));
     box.append(row);
     view.replaceChildren(el("div", { class: "content" }, [box]));
   }
@@ -256,6 +284,7 @@
     const body = el("div", { class: "prose" });
     body.innerHTML = safe;
     decorateCallouts(body);
+    buildTimeline(body);
 
     const toc = collectToc(body);
     const main = el("h1", { text: item.title });
@@ -321,59 +350,28 @@
       el("h2", { text: "ページが見つかりません" }),
       el("p", { text: "指定されたドキュメントは目次にありません。" }),
     ]);
-    box.append(el("div", { class: "row" }, [el("a", { class: "btn btn-primary", href: "#/", text: "ホームへ戻る" })]));
+    box.append(el("div", { class: "row" }, [el("a", { class: "btn btn-filled", href: "#/", text: "ホームへ戻る" })]));
     view.replaceChildren(el("div", { class: "content" }, [box]));
   }
 
   /* ---------------- home ---------------- */
 
   const BADGES = [
-    ["release", `https://img.shields.io/github/v/release/${REPO}?include_prereleases&sort=semver&style=for-the-badge&label=release&color=146b46`],
-    ["license", `https://img.shields.io/github/license/${REPO}?style=for-the-badge&color=146b46`],
-    ["android", `https://img.shields.io/badge/Android-7.0%2B%20(API%2024)-3ddc84?style=for-the-badge&logo=android&logoColor=white`],
-    ["offline", `https://img.shields.io/badge/変換-オフライン-146b46?style=for-the-badge`],
-    ["telemetry", `https://img.shields.io/badge/telemetry-なし-146b46?style=for-the-badge`],
-    ["mozc", `https://img.shields.io/badge/Mozc-BSD--3--Clause-4a6dd8?style=for-the-badge`],
-    ["abi", `https://img.shields.io/badge/ABI-arm64--v8a%20%7C%20armeabi--v7a%20%7C%20x86__64%20%7C%20x86-4b5563?style=for-the-badge`],
+    ["release", `https://img.shields.io/github/v/release/${REPO}?include_prereleases&sort=semver&style=flat-square&label=release&color=006d3b`],
+    ["license", `https://img.shields.io/github/license/${REPO}?style=flat-square&color=44474a`],
+    ["android", `https://img.shields.io/badge/Android-7.0%2B%20(API%2024)-3ddc84?style=flat-square&logo=android&logoColor=white`],
+    ["offline", `https://img.shields.io/badge/conversion-offline-44474a?style=flat-square`],
+    ["telemetry", `https://img.shields.io/badge/telemetry-none-44474a?style=flat-square`],
+    ["mozc", `https://img.shields.io/badge/Mozc-BSD--3--Clause-44474a?style=flat-square`],
     ["ethics", `https://gijutsusharin.li/badge.svg`],
   ];
 
-  const SHIELD_SVG = `
-    <svg class="emblem" viewBox="0 0 120 134" role="img" aria-labelledby="emblem-title">
-      <title id="emblem-title">端末内で完結することを表す盾</title>
-      <path d="M60 3 113 21v49c0 34-24 55-53 63C31 125 7 104 7 70V21Z"
-            fill="var(--md-sys-color-primary-container)" stroke="var(--md-sys-color-primary)" stroke-width="2.5"/>
-      <g stroke="var(--md-sys-color-primary)" stroke-width="4" stroke-linecap="round" opacity="0.9">
-        <path d="M60 22v-7M86 32l5-5M34 32l-5-5"/>
-      </g>
-      <circle cx="60" cy="52" r="16" fill="var(--md-sys-color-primary)"/>
-      <path d="M60 78c-14 0-25 8-25 8s11 9 25 9 25-9 25-9-11-8-25-8Z" fill="var(--md-sys-color-primary)" opacity="0.35"/>
-      <path d="M60 84v22" stroke="var(--md-sys-color-primary)" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-    </svg>`;
-
   function renderHome() {
-    document.title = "Komorebi IME — ユーザーマニュアルとドキュメント";
+    document.title = "Komorebi IME ドキュメント";
     const home = el("div", { class: "home" });
 
     const badges = el("div", { class: "badges" });
-    BADGES.forEach(([name, src]) => badges.append(el("img", { src, alt: name, loading: "lazy", height: "26" })));
-
-    const hero = el("section", { class: "hero" }, [
-      el("div", { class: "hero-copy" }, [
-        el("p", { class: "eyebrow" }, [el("span", { class: "dot" }), document.createTextNode("Android 日本語IME · オフライン")]),
-        el("h1", {}, [document.createTextNode("言葉を、"), el("span", { class: "lit", text: "木漏れ日" }), document.createTextNode("のように。")]),
-        el("p", { class: "lede", text: "Mozc をネイティブに組み込んだ日本語IME。変換も AI も端末内で完結し、入力内容を外へ送りません。このサイトは、はじめての人向けの手順から細かい仕様までを一冊にまとめたユーザーマニュアルです。" }),
-        el("div", { class: "cta-row" }, [
-          el("a", { class: "btn btn-primary", href: "#/doc/manual/00-hajimete", text: "はじめての設定を読む" }),
-          el("a", { class: "btn btn-ghost", href: `https://github.com/${REPO}/releases/latest`, target: "_blank", rel: "noopener noreferrer", text: "最新版をダウンロード" }),
-        ]),
-        badges,
-      ]),
-      el("figure", { class: "shield-card" }, [
-        Object.assign(document.createElement("div"), { innerHTML: SHIELD_SVG }).firstElementChild,
-        el("figcaption", {}, [el("strong", { text: "入力は盾の内側に" }), document.createTextNode("変換・AI・辞書はすべて端末内。広告・解析・クラッシュ SDK なし。")]),
-      ]),
-    ]);
+    BADGES.forEach(([name, src]) => badges.append(el("img", { src, alt: name, loading: "lazy", height: "20" })));
 
     const steps = el("ol", { class: "steps" });
     [
@@ -381,38 +379,55 @@
       ["有効化", "設定 →「キーボードを有効化」で Komorebi IME をオン"],
       ["選択", "「キーボードを選択」で Komorebi IME を選ぶ"],
       ["試し入力", "設定の「試し入力」で変換を確認"],
-    ].forEach(([t, s]) => steps.append(el("li", {}, [el("strong", { text: t }), el("span", { text: s })])));
+    ].forEach(([t, s]) => steps.append(el("li", {}, [el("strong", { text: t }), document.createTextNode(" — " + s)])));
 
     home.append(
-      hero,
-      el("section", { class: "section" }, [el("h2", { text: "5 分で使いはじめる" }), el("p", { class: "sub", text: "インストール後の初期設定は 4 ステップです。AI やネット辞書は使う人だけが後から追加します。" }), steps]),
+      el("header", { class: "intro" }, [
+        el("h1", { text: "Komorebi IME ドキュメント" }),
+        el("p", { class: "lede", text: "Android 向け日本語IME「Komorebi IME」のユーザーマニュアルと仕様です。変換も AI も端末内で完結し、入力内容を端末の外へ送りません。" }),
+        el("div", { class: "actions" }, [
+          el("a", { class: "btn btn-filled", href: "#/doc/manual/00-hajimete", text: "はじめての設定" }),
+          el("a", { class: "btn btn-text", href: `https://github.com/${REPO}/releases/latest`, target: "_blank", rel: "noopener noreferrer", text: "最新版" }),
+        ]),
+        badges,
+      ]),
+      el("section", { class: "section" }, [
+        el("h2", { text: "はじめかた" }),
+        el("p", { class: "sub", text: "インストール後の初期設定は4ステップです。" }),
+        steps,
+      ]),
+      doclistSection("マニュアル", "目的から探す"),
+      doclistSection("歴史", "どの版で何が追加されたか"),
+      doclistSection("比較・検証", "閉源IMEの説明と実態"),
+      doclistSection("設計・仕様", "細かい仕様と検証範囲"),
+      doclistSection("リリースノート", "版ごとの変更"),
+      doclistSection("リポジトリ", "プロジェクト全体"),
+      el("p", { class: "footnote" }, [
+        el("span", { text: "本文は GitHub の docs/ から取得して表示しています。" }),
+        el("a", { href: `https://github.com/${REPO}/tree/${REF}/docs`, target: "_blank", rel: "noopener noreferrer", text: "docs/ を GitHub で見る" }),
+        el("a", { href: `https://github.com/${REPO}/releases`, target: "_blank", rel: "noopener noreferrer", text: "すべてのリリース" }),
+      ]),
     );
-    home.append(tileSection("マニュアル", "目的から探す", "manual/00-hajimete"));
-    home.append(tileSection("比較・検証", "他IMEの公開情報と並べて確認する", null));
-    home.append(tileSection("設計・仕様", "細かい仕様と検証範囲", "conversion-ui"));
-    home.append(tileSection("リリースノート", "版ごとの変更", null));
-
-    home.append(el("p", { class: "footnote" }, [
-      el("span", { text: "すべての本文は GitHub の docs/ から取得して表示しています。" }),
-      el("a", { href: `https://github.com/${REPO}/tree/${REF}/docs`, target: "_blank", rel: "noopener noreferrer", text: "docs/ を GitHub で見る ↗" }),
-      el("a", { href: `https://github.com/${REPO}/releases`, target: "_blank", rel: "noopener noreferrer", text: "すべてのリリース ↗" }),
-    ]));
 
     view.replaceChildren(home);
     updateNavCurrent("");
   }
 
-  function tileSection(groupName, sub, _unused) {
+  function doclistSection(groupName, sub) {
     const group = INDEX.find((g) => g.group === groupName);
-    const grid = el("div", { class: "grid" });
-    group.items.forEach((it, i) => {
-      const item = BY_ID.get(it[0]);
-      grid.append(el("a", { class: "tile", href: `#/doc/${item.id}` }, [
-        el("h3", {}, [el("span", { class: "num", text: String(i + 1).padStart(2, "0") }), document.createTextNode(item.title)]),
-        el("p", { text: item.blurb }),
-      ]));
+    const list = el("ul", { class: "doclist" });
+    group.items.forEach(([id]) => {
+      const item = BY_ID.get(id);
+      list.append(el("li", {}, [el("a", { href: `#/doc/${item.id}` }, [
+        el("span", { class: "t", text: item.title }),
+        el("span", { class: "d", text: item.blurb }),
+      ])]));
     });
-    return el("section", { class: "section" }, [el("h2", { text: groupName }), el("p", { class: "sub", text: sub }), grid]);
+    return el("section", { class: "section" }, [
+      el("h2", { text: groupName }),
+      sub ? el("p", { class: "sub", text: sub }) : null,
+      list,
+    ]);
   }
 
   /* ---------------- navigation ---------------- */
