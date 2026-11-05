@@ -191,8 +191,11 @@ class MozcSession(
         // next one. Finishing after every key breaks the table's suffix modifiers: `か` must still
         // be open when `*`, `[`, `]`, or backtick arrives so it can become が/ぱ/small kana.
         // Doing it here still makes repeated centre taps produce separate characters.
-        if (!phoneToggleEnabled && !FlickTableInput.isModifierKey(currentStyle, text)) {
-            stopKeyToggling()
+        if (FlickTableInput.shouldStopBeforeText(currentStyle, phoneToggleEnabled, text)) {
+            // The next key immediately supplies the visible candidates. Keep composition
+            // bookkeeping here without ranking/building a candidate list we discard.
+            engine?.sendCommand(SessionCommand.newBuilder()
+                .setType(SessionCommand.CommandType.STOP_KEY_TOGGLING).build())?.toState(includeCandidates = false)
         }
 
         val key = KeyEvent.newBuilder()
@@ -394,7 +397,7 @@ class MozcSession(
     private fun sendSessionCommand(type: SessionCommand.CommandType): State? =
         engine?.sendCommand(SessionCommand.newBuilder().setType(type).build())?.toState()
 
-    private fun Output.toState(): State {
+    private fun Output.toState(includeCandidates: Boolean = true): State {
         val preeditText = StringBuilder()
         var cursor = 0
         if (hasPreedit()) {
@@ -414,7 +417,7 @@ class MozcSession(
         if (hasResult() && result.value.isNotEmpty()) readingBoundary.clear()
         currentIsConverting = convertingOutput
         val reading = if (convertingOutput) lastInputReading else displayedPreedit
-        val candidateMetadata = if (hasAllCandidateWords()) {
+        val candidateMetadata = if (includeCandidates && hasAllCandidateWords()) {
             allCandidateWords.candidatesList.take(if (convertingOutput) CandidatePaging.MAX_CANDIDATES else CandidateRanking.MAX_LIVE_POOL_SIZE)
         } else {
             emptyList()
@@ -464,7 +467,7 @@ class MozcSession(
             candidateMetadata.map { candidate(it.id, it.value) }
                 .filter { it.text.isNotEmpty() }.distinctBy { it.id }
                 .sortedBy { when (it.priorityMatch) { PriorityMatch.EXACT -> 0; PriorityMatch.SIMILAR -> 1; PriorityMatch.NONE -> 2 } }
-        } else if (hasCandidateWindow()) {
+        } else if (includeCandidates && hasCandidateWindow()) {
             val visible = candidateWindow.candidateList.map { candidate(it.id, it.value) }
             val isLiveJapaneseSuggestion = CandidateRanking.shouldRankLive(candidateWindow.category, currentStyle?.fullWidthSpace == true)
             if (isLiveJapaneseSuggestion) {
@@ -509,7 +512,7 @@ class MozcSession(
         }
 
         val focusedId = ConversionOutput.focusedId(this)
-        val supplementary = if (currentStyle?.fullWidthSpace == true && reading.isNotEmpty() &&
+        val supplementary = if (includeCandidates && currentStyle?.fullWidthSpace == true && reading.isNotEmpty() &&
             (!convertingOutput || segments.size <= 1)) SupplementaryLexicons.english(reading).mapIndexed { index, value ->
             Candidate(-40_000 - index, value, inputReading = reading, sourceReading = reading,
                 priorityMatch = priorityLookup(reading, value), directCommit = true)
@@ -537,6 +540,12 @@ class MozcSession(
 
 /** Mozc table keys that transform the preceding chunk rather than starting a new character. */
 internal object FlickTableInput {
+    private val flickStyles = setOf(InputStyle.FLICK_HIRAGANA, InputStyle.TOGGLE_FLICK_HIRAGANA,
+        InputStyle.FLICK_HALFWIDTH_ASCII, InputStyle.TOGGLE_FLICK_HALFWIDTH_ASCII, InputStyle.TOGGLE_FLICK_NUMBER)
+    fun shouldStopBeforeText(style: InputStyle?, phoneToggle: Boolean, text: String): Boolean =
+        !phoneToggle && style in flickStyles &&
+            !isModifierKey(style, text)
+
     fun isModifierKey(style: InputStyle?, text: String): Boolean = when (style) {
         InputStyle.FLICK_HIRAGANA,
         InputStyle.TOGGLE_FLICK_HIRAGANA,

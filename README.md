@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.41-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.42-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -68,6 +68,8 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 [予測と補正の区別](docs/manual/02-henkan.md)をマニュアルへ反映しています。
 
 `rc.41-dev` は、かな読みからの英語候補を完全一致でも日本語候補の後ろに表示します。内蔵・追加辞書とも対象で、明示的な★指定は維持します。
+
+`rc.42-dev` はMozcを専用の直列ワーカーへ非同期化し、入力中の画面更新も軽量化。QWERTYの余分なコマンド、フリックの中間候補生成、候補欄の二重更新、2行候補・ツールバーの再生成を削減します。端末上の効果は未測定です。
 
 ## 特長
 

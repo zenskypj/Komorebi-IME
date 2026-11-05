@@ -40,6 +40,9 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     var listener: OnKeyOutputListener? = null
     var onTrackpadMove: ((Int) -> Unit)? = null
+    var onRepeatStopped: (() -> Unit)? = null
+    var isRepeatingOutput: Boolean = false
+        private set
 
     /** Relabels a space/convert key to match what pressing it will do right now. */
     var isConversionAvailable: Boolean = false
@@ -669,11 +672,16 @@ class FlickKeyboardView @JvmOverloads constructor(
         val initialDelay = if (skipInitialDelay) REPEAT_INTERVAL_MS else REPEAT_DELAY_MS
         val runnable = object : Runnable {
             override fun run() {
+                val firstOutput = !touch.repeated && !touch.firedOnPress
                 touch.repeated = true
                 if (theme.hapticFeedback) {
                     performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 }
-                emitOutput(output, key, direction)
+                // Keys resolved on release (including flick Backspace) have not sent a base
+                // press yet. Keep that first accepted press even if the hold ends while busy.
+                isRepeatingOutput = !firstOutput
+                try { emitOutput(output, key, direction) }
+                finally { isRepeatingOutput = false }
                 handler.postDelayed(this, REPEAT_INTERVAL_MS)
             }
         }
@@ -701,7 +709,11 @@ class FlickKeyboardView @JvmOverloads constructor(
             override fun run() {
                 if (!isAttachedToWindow || !activeTouches.containsValue(touch) || !touch.trackpad) return
                 val step = touch.spaceHoldMotion?.tick(touch.downX + touch.path.dx, android.os.SystemClock.uptimeMillis()) ?: 0
-                if (step != 0) onTrackpadMove?.invoke(step)
+                if (step != 0) {
+                    isRepeatingOutput = true
+                    try { onTrackpadMove?.invoke(step) }
+                    finally { isRepeatingOutput = false }
+                }
                 if (isAttachedToWindow && activeTouches.containsValue(touch)) handler.postDelayed(this, 32L)
             }
         }
@@ -728,6 +740,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun cancelRepeat() {
         repeatRunnable?.let { handler.removeCallbacks(it) }
         repeatRunnable = null
+        onRepeatStopped?.invoke()
     }
 
     private fun cancelLongPressTimer() {

@@ -6,6 +6,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FlickTableInputTest {
+    @Test fun qwertyAndNumericInputDoNotSendAnExtraStopCommandPerCharacter() {
+        for (style in listOf(InputStyle.QWERTY_HIRAGANA, InputStyle.QWERTY_HALFWIDTH_ASCII,
+            InputStyle.GODAN_HIRAGANA, InputStyle.FLICK_NUMBER)) {
+            assertFalse(style.name, FlickTableInput.shouldStopBeforeText(style, false, "a"))
+        }
+    }
+
+    @Test fun repeatedFlickKeysKeepTheirStopButModifiersAndToggleInputDoNot() {
+        assertTrue(FlickTableInput.shouldStopBeforeText(InputStyle.FLICK_HIRAGANA, false, "1"))
+        assertTrue(FlickTableInput.shouldStopBeforeText(InputStyle.TOGGLE_FLICK_NUMBER, false, "1"))
+        assertTrue(FlickTableInput.shouldStopBeforeText(InputStyle.TOGGLE_FLICK_HALFWIDTH_ASCII, false, "a"))
+        assertFalse(FlickTableInput.shouldStopBeforeText(InputStyle.FLICK_HIRAGANA, false, "*"))
+        assertFalse(FlickTableInput.shouldStopBeforeText(InputStyle.FLICK_HIRAGANA, true, "1"))
+    }
 
     @Test
     fun `kana modifier keys keep the preceding table chunk open`() {

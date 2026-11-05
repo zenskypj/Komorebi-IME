@@ -66,7 +66,14 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         set(value) {
             field = value
             for (i in 0 until container.childCount) {
-                applyTheme(container.getChildAt(i) as? TextView ?: continue)
+                val child = container.getChildAt(i)
+                val chips = if (child is TextView) listOf(child) else if (child in twoRowColumns)
+                    (0 until (child as LinearLayout).childCount).map { child.getChildAt(it) as TextView } else emptyList()
+                chips.forEach {
+                    applyTheme(it)
+                    it.compoundDrawablesRelative.filterNotNull().forEach { icon -> icon.setTint(value.candidateTextColor) }
+                    if (it.isSelected) it.setBackgroundColor(value.keyPressedColor)
+                }
             }
             invalidate()
         }
@@ -252,27 +259,9 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         }
 
         candidates.forEachIndexed { index, candidate ->
-            val view = container.getChildAt(index) as TextView
-            view.tag = candidate
-            val label = when {
-                candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE -> candidate.text
-                candidate.correction -> "補正 ${candidate.text}"
-                else -> candidate.text
-            }
-            if (view.text != label) view.text = label
-            val star = if (candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE) ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()?.apply {
-                setTint(theme.candidateTextColor); val size = (18 * resources.displayMetrics.density).toInt(); setBounds(0, 0, size, size)
-            } else null
-            view.setCompoundDrawablesRelative(star, null, null, null)
-            view.compoundDrawablePadding = (4 * resources.displayMetrics.density).toInt()
-            view.contentDescription = if (star != null) "最優先 ${candidate.text}" else label
+            bindChip(container.getChildAt(index) as TextView, candidate, index == focusedIndex)
         }
-
-        if (focusedChild != focusedIndex) {
-            highlight(focusedChild, false)
-            highlight(focusedIndex, true)
-            focusedChild = focusedIndex
-        }
+        focusedChild = focusedIndex
         val newTexts = candidates.map { it.text }
         if (newTexts != lastCandidateTexts) {
             scrollTo(0, 0)
@@ -281,6 +270,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     }
 
     private fun resetConversionPresentation() {
+        if (conversionData == null && conversionNavigate == null && !conversionExpanded && conversionBaseHeight == 0) return
         conversionPresentation++
         conversionData = null
         conversionNavigate = null
@@ -384,40 +374,58 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         container.addView(panel, LinearLayout.LayoutParams(viewportWidth, LinearLayout.LayoutParams.MATCH_PARENT))
     }
 
+    private val twoRowColumns = mutableListOf<LinearLayout>()
+
     private fun showTwoRows(candidates: List<MozcSession.Candidate>, focusedIndex: Int) {
         setContainerFillWidth(false)
-        container.removeAllViews()
-        focusedChild = -1
-        candidates.chunked(2).forEachIndexed { columnIndex, group ->
+        if (twoRowColumns.isEmpty() || twoRowColumns.first().parent !== container ||
+            container.childCount != twoRowColumns.size) {
+            container.removeAllViews()
+            twoRowColumns.clear()
+        }
+        val count = (candidates.size + 1) / 2
+        while (twoRowColumns.size > count) container.removeView(twoRowColumns.removeAt(twoRowColumns.lastIndex))
+        while (twoRowColumns.size < count) {
             val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            group.forEachIndexed { row, candidate ->
-                val chip = newChip()
-                chip.tag = candidate
-                val label = if (candidate.correction) "補正 ${candidate.text}" else candidate.text
-                chip.text = label
-                if (candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE) {
-                    val star = ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()?.apply {
-                        setTint(theme.candidateTextColor)
-                        val size = (18 * resources.displayMetrics.density).toInt()
-                        setBounds(0, 0, size, size)
-                    }
-                    chip.setCompoundDrawablesRelative(star, null, null, null)
-                    chip.contentDescription = "最優先 ${candidate.text}"
-                } else chip.contentDescription = label
-                if (columnIndex * 2 + row == focusedIndex) chip.setBackgroundColor(theme.keyPressedColor)
-                column.addView(chip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-            }
-            if (group.size == 1) column.addView(View(context), LinearLayout.LayoutParams(1, 0, 1f))
+            repeat(2) { column.addView(newChip(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)) }
+            twoRowColumns.add(column)
             container.addView(column, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
         }
+        twoRowColumns.forEachIndexed { columnIndex, column ->
+            repeat(2) { row ->
+                val index = columnIndex * 2 + row
+                val chip = column.getChildAt(row) as TextView
+                val candidate = candidates.getOrNull(index)
+                chip.visibility = if (candidate == null) View.INVISIBLE else View.VISIBLE
+                if (candidate != null) bindChip(chip, candidate, index == focusedIndex)
+                else { chip.text = ""; chip.tag = null }
+            }
+        }
+        focusedChild = -1
         val texts = candidates.map { it.text }
         if (texts != lastCandidateTexts) { scrollTo(0, 0); lastCandidateTexts = texts }
     }
 
-    private fun highlight(index: Int, on: Boolean) {
-        if (index < 0 || index >= container.childCount) return
-        val view = container.getChildAt(index) ?: return
-        if (on) view.setBackgroundColor(theme.keyPressedColor) else view.background = null
+    private fun bindChip(view: TextView, candidate: MozcSession.Candidate, focused: Boolean) {
+        val old = view.tag as? MozcSession.Candidate
+        val pinned = candidate.priorityMatch != me.zssu.ime.ime.PriorityMatch.NONE
+        val wasPinned = old?.priorityMatch?.let { it != me.zssu.ime.ime.PriorityMatch.NONE }
+        view.tag = candidate
+        val label = if (candidate.correction && !pinned) "補正 ${candidate.text}" else candidate.text
+        if (view.text != label) view.text = label
+        if (wasPinned != pinned) {
+            val star = if (pinned) ContextCompat.getDrawable(context, R.drawable.ic_ime_star)?.mutate()?.apply {
+                setTint(theme.candidateTextColor)
+                val size = dp(18); setBounds(0, 0, size, size)
+            } else null
+            view.setCompoundDrawablesRelative(star, null, null, null)
+            view.compoundDrawablePadding = dp(4)
+        }
+        view.contentDescription = if (pinned) "最優先 ${candidate.text}" else label
+        if (view.isSelected != focused || old == null) {
+            view.isSelected = focused
+            if (focused) view.setBackgroundColor(theme.keyPressedColor) else view.background = null
+        }
     }
 
     private fun newChip(): TextView = TextView(context).apply {
@@ -486,22 +494,25 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     fun showTools() {
         paletteHeight(false)
         resetConversionPresentation()
-        focusedChild = -1
-        lastCandidateTexts = emptyList()
-        container.removeAllViews()
-        setContainerFillWidth(true)
-        scrollTo(0, 0)
         // The menu button itself lives in the fixed bar beside this strip (see the host), so it
         // stays reachable while conversion candidates are showing. Only the tools live in here.
         val visibleTools = toolOrder().filter {
             toolPrefs.getBoolean("visible_" + it.name, true) &&
                 (it != ToolAction.MEETS_BEAM || me.zssu.ime.settings.MeetsBeamSettings.enabled(context))
         }.take(5)
+        val next = ToolbarState(visibleTools, oneHandMode, theme)
+        if (toolbarState == next) return
+        focusedChild = -1
+        lastCandidateTexts = emptyList()
+        container.removeAllViews()
+        setContainerFillWidth(true)
+        scrollTo(0, 0)
         for (action in visibleTools) {
             val button = if (action == ToolAction.ONE_HAND_CYCLE) oneHandButton(expand = true) { onToolAction?.invoke(action) }
                 else iconButton(toolIcon(action), toolLabel(action), true) { onToolAction?.invoke(action) }
             container.addView(button)
         }
+        toolbarState = next
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -897,7 +908,11 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             )
         }
 
+    private data class ToolbarState(val tools: List<ToolAction>, val hand: OneHandDisplayMode, val theme: KeyboardTheme)
+    private var toolbarState: ToolbarState? = null
+
     private fun setContainerFillWidth(fill: Boolean) {
+        if (!fill) toolbarState = null
         val width = if (fill) LayoutParams.MATCH_PARENT else LayoutParams.WRAP_CONTENT
         if (container.layoutParams.width != width) {
             container.layoutParams = LayoutParams(width, LayoutParams.MATCH_PARENT)
