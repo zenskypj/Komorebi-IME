@@ -17,7 +17,7 @@ internal object DictionaryPriority {
     fun isSpecified(candidate: MozcSession.Candidate, reading: String): Boolean {
         if (candidate.priorityMatch == PriorityMatch.EXACT) return true
         if (!sameReading(candidate, reading)) return false
-        return candidate.fromUserDictionary || candidate.id == REGISTERED_DICTIONARY_ID
+        return candidate.fromUserDictionary || candidate.dictionaryCompletion || candidate.id == REGISTERED_DICTIONARY_ID
     }
 
     /** The first individually specified candidate for [reading], in list order. */
@@ -47,7 +47,8 @@ internal object DictionaryPriority {
     private fun sameReading(candidate: MozcSession.Candidate, reading: String): Boolean {
         val input = ReadingSimilarity.normalize(reading)
         if (input.isEmpty()) return false
-        return ReadingSimilarity.normalize(candidate.inputReading) == input ||
-            (candidate.sourceReading.isNotEmpty() && ReadingSimilarity.normalize(candidate.sourceReading) == input)
+        // inputReading always contains the current keystrokes, including incomplete prefixes.
+        // Only the actual dictionary reading can establish a complete registration match.
+        return ReadingSimilarity.normalize(candidate.sourceReading.ifEmpty { candidate.inputReading }) == input
     }
 }

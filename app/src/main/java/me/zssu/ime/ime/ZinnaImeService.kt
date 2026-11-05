@@ -68,6 +68,7 @@ class ZinnaImeService : InputMethodService() {
     private lateinit var emojiRepository: EmojiRepository
     private lateinit var meaningDictionaries: MeaningDictionaryRepository
     private lateinit var priorityCandidates: PriorityCandidateRepository
+    private lateinit var dictionaryPredictions: DictionaryPredictions
     private lateinit var clipboardHistory: ClipboardHistory
     private var clipboardManager: ClipboardManager? = null
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -80,7 +81,6 @@ class ZinnaImeService : InputMethodService() {
     private lateinit var zenzai: ZenzaiEngine
     private var zenzaiCandidate: MozcSession.Candidate? = null
     private var zenzaiState: MozcSession.State? = null
-    private var zenzaiDictionary = emptyList<me.zssu.ime.mozc.UserDictionary.Entry>()
     private val enginePreferences by lazy { getSharedPreferences(ImeSettings.NAME, Context.MODE_PRIVATE) }
     private val enginePreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "zenzai_plus_enabled" || key == "zenzai_mozc_enabled") {
@@ -89,8 +89,9 @@ class ZinnaImeService : InputMethodService() {
             layout?.let { session.applyInputStyle(it.inputStyle) }
         } else if (key == "zenzai_reset_learning") {
             zenzai.resetLearning()
-        } else if ((key == me.zssu.ime.mozc.UserDictionary.REVISION_KEY || key == "zenzai_train_dictionary") && session.zenzaiEnabled) {
-            zenzai.syncDictionary { zenzaiDictionary = it }
+        } else if (key == me.zssu.ime.mozc.UserDictionary.REVISION_KEY || key == "zenzai_train_dictionary") {
+            refreshDictionaryPredictions()
+            if (session.zenzaiEnabled) zenzai.syncDictionary {}
         }
     }
     private lateinit var karukanEngine: KarukanEngine
@@ -164,6 +165,7 @@ class ZinnaImeService : InputMethodService() {
         emojiRepository = EmojiRepository(this)
         meaningDictionaries = MeaningDictionaryRepository(this)
         priorityCandidates = PriorityCandidateRepository(this)
+        dictionaryPredictions = DictionaryPredictions(this, priorityCandidates::entries)
         clipboardHistory = ClipboardHistory()
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboardManager?.addPrimaryClipChangedListener(clipboardListener)
@@ -305,10 +307,11 @@ class ZinnaImeService : InputMethodService() {
                         }
                     }
                 }
-                val exactPriority = candidate.priorityMatch == PriorityMatch.EXACT
+                val registrationReading = if (candidate.dictionaryCompletion) candidate.sourceReading else candidate.inputReading
+                val exactPriority = priorityCandidates.match(registrationReading, candidate.text) == PriorityMatch.EXACT
                 popupView.show(
                     term = candidate.text,
-                    reading = entries.firstOrNull()?.reading ?: candidate.inputReading,
+                    reading = entries.firstOrNull()?.reading ?: registrationReading,
                     definitions = definitions,
                     canDelete = candidate.deletable,
                     onDelete = {
@@ -319,16 +322,17 @@ class ZinnaImeService : InputMethodService() {
                             Toast.LENGTH_SHORT,
                         ).show()
                     },
-                    canPrioritize = candidate.inputReading.isNotEmpty(),
+                    canPrioritize = registrationReading.isNotEmpty(),
                     isPrioritized = exactPriority,
                     onTogglePriority = {
                         val saved = if (exactPriority) {
-                            priorityCandidates.unpin(candidate.inputReading, candidate.text)
+                            priorityCandidates.unpin(registrationReading, candidate.text)
                         } else {
-                            priorityCandidates.pin(candidate.inputReading, candidate.text)
+                            priorityCandidates.pin(registrationReading, candidate.text)
                         }
                         if (saved) {
                             refreshCandidatePriorities()
+                            refreshDictionaryPredictions()
                             Toast.makeText(
                                 this@ZinnaImeService,
                                 if (exactPriority) {
@@ -841,6 +845,7 @@ class ZinnaImeService : InputMethodService() {
         tryApplyProofreadResult()
         editAnchor = null
         priorityCandidates.invalidate()
+        refreshDictionaryPredictions()
         refreshZenzai()
         meaningPopup?.hide(notify = false)
         appProfiles.recordSeenPackage(info?.packageName)
@@ -1061,6 +1066,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        dictionaryPredictions.close()
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
         mainHandler.removeCallbacks(proofreadApplyRetry)
         cancelKarukanSuggestions()
@@ -1743,6 +1749,7 @@ class ZinnaImeService : InputMethodService() {
                 val committed = ic.commitText(state.committedText, 1)
                 if (committed && !fieldPolicy.incognito &&
                     (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
+                    learningCandidate?.takeIf { it.text == state.committedText }?.let(session::learnDictionaryCompletion)
                     val stats = getSharedPreferences("input_statistics", Context.MODE_PRIVATE)
                     if (stats.getBoolean("enabled", false)) {
                         val length = state.committedText.codePointCount(0, state.committedText.length)
@@ -1825,7 +1832,13 @@ class ZinnaImeService : InputMethodService() {
         zenzaiState = null
         session.setZenzaiEnabled(enabled, settings.zenzaiMozcEnabled)
         zenzai.setEnabled(enabled)
-        if (enabled) zenzai.syncDictionary { zenzaiDictionary = it }
+        if (enabled) zenzai.syncDictionary {}
+    }
+
+    private fun refreshDictionaryPredictions() {
+        dictionaryPredictions.refresh {
+            zenzaiState?.takeIf { isComposing && !isConverting }?.let(::requestZenzai)
+        }
     }
 
     private fun requestZenzai(state: MozcSession.State) {
@@ -1833,11 +1846,17 @@ class ZinnaImeService : InputMethodService() {
         val reading = state.preeditReading
         val preceding = session.clientContext?.precedingText.orEmpty()
         val prompt = if (session.zenzaiEnabled) ZenzaiConversion.prompt(reading, preceding) else null
-        val registered = if (prompt != null) zenzaiDictionary.filter { ZenzaiConversion.prompt(it.reading, "") == ZenzaiConversion.prompt(reading, "") }
-            .map { MozcSession.Candidate(DictionaryPriority.REGISTERED_DICTIONARY_ID, it.word, inputReading = reading, directCommit = true) } else emptyList()
         // Pins are explicit commitments, even when Mozc's bounded live pool or either AI did
         // not return that value. Match the complete reading; never use fuzzy pins to override AI.
-        val base = (registered + state.candidates).distinctBy { it.text }
+        val suggestions = dictionaryPredictions.candidates(reading,
+            settings.useProperNounDictionary, settings.useAiTechDictionary).map { candidate ->
+            state.candidates.firstOrNull {
+                it.text == candidate.text && ReadingSimilarity.normalize(it.sourceReading) == candidate.sourceReading
+            }?.copy(dictionaryCompletion = true, correction = false, prediction = candidate.prediction) ?: candidate
+        }
+        val pool = (suggestions + state.candidates).distinctBy { it.text }
+        val base = CandidateRanking.rankLiveJapaneseSuggestions(pool,
+            maxOf(state.candidates.size, minOf(8, pool.size)))
         var neural: MozcSession.Candidate? = null
         var karukan: List<MozcSession.Candidate> = emptyList()
         fun publish() {
@@ -1846,15 +1865,19 @@ class ZinnaImeService : InputMethodService() {
                 MozcSession.Candidate(-30_000 - index, entry.value, inputReading = reading,
                     sourceReading = reading, priorityMatch = PriorityMatch.EXACT, directCommit = true)
             }
-            val combined = (pinned + karukan + base).distinctBy { it.text }.map {
+            val combined = (pinned + base).distinctBy { it.text }.map {
                 it.copy(priorityMatch = priorityCandidates.match(reading, it.text))
             }
             karukanSuggestionCandidate = karukan.firstOrNull()
+            val ai = neural ?: karukan.firstOrNull()
             // A user/network dictionary entry the user registered or pinned outranks the neural
             // converters; everything else keeps the neural candidate first.
             val specified = DictionaryPriority.firstSpecified(combined, reading)
-            lastCandidates = DictionaryPriority.order(combined, neural, reading)
-            lastFocusedCandidateIndex = if (specified != null || neural != null || karukan.isNotEmpty()) 0 else state.focusedCandidateIndex
+            val ordered = DictionaryPriority.order(combined, ai, reading)
+            lastCandidates = (ordered + karukan.drop(1)).distinctBy { it.text }
+            val nativeFocused = state.candidates.getOrNull(state.focusedCandidateIndex)?.id
+            lastFocusedCandidateIndex = if (specified != null || ai != null) 0
+                else nativeFocused?.let { id -> lastCandidates.indexOfFirst { it.id == id } } ?: -1
             candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = isConverting)
         }
         fun fallback() {

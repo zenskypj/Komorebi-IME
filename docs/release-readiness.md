@@ -77,3 +77,22 @@ rc.36までの別AI更新を土台とし、正式版の受け入れ基準を満�
 Release/AAB/ABI別ビルド・実機確認は省略。ユニバーサルdebug署名APKだけ作成する。
 実機での削除範囲、方向・距離の操作感、長押しとの排他、エディタ互換性は未確認。
 関連docsとアプリ内ガイドを実装とともに更新する。
+
+## rc.40-dev の作成条件
+
+更新されたAGENTS.mdに従い、JDK 21・Gradle worker 1・ヒープ上限2 GiBで自動ゲートを実行。
+前方一致候補の段階的な昇格、英語辞書の除外、完全一致登録と未完成の読みの区別、
+AI・★指定との優先関係を単体テストへ追加した。
+
+単体テスト255件（app 253、karukan 2）成功、debug／releaseのlintエラー0件。
+通常debug／release APK・AABと、別呼び出しのABI別APK（各4 ABI＋universal）を生成した。
+全10 ABI別APKのID・versionCode 64・versionName、全release APKの16 KB配置、
+Mozc・arm64 Karukan／C++・辞書・法務文書を確認。プライバシーとNOTICEの公開／アプリ内版は一致。
+R8 mappingとrelease DEXを併用し、MozcJNI／KarukanNativeのクラス名・全nativeメソッド名を確認した。
+公開用の通常ユニバーサルdebug APKも内容・署名を確認し、SHA-256を添付する。
+
+端末を用意できない旨の利用者回答により、
+API 24 / 29 / 34 / 35 / 36の実機・エミュレータマトリクスは引き続き未実施。
+候補順位・入力遅延・入力先ごとの互換性を実機で検証済みとは扱わず、正式版合格も主張しない。
+公開するのはユニバーサルdebug署名APK（`me.zssu.ime.debug`）のみであり、
+未署名release APKとAABは配布しない。

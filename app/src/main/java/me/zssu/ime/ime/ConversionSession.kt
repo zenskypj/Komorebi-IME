@@ -86,9 +86,13 @@ internal class ConversionSession(private val context: Context, private val prior
     fun selectCandidate(candidate: MozcSession.Candidate): MozcSession.State? {
         if (usesMozc) return native().selectCandidate(candidate)
         kana.clear()
-        return MozcSession.State(committedText = candidate.text, consumed = true)
+        return MozcSession.State(committedText = candidate.text,
+            committedReading = if (candidate.dictionaryCompletion) candidate.sourceReading else "", consumed = true)
     }
     fun currentPreedit(): String = if (usesMozc) native().currentPreedit() else kana.text
+    fun learnDictionaryCompletion(candidate: MozcSession.Candidate) {
+        if (usesMozc) native().learnDictionaryCompletion(candidate)
+    }
     var visibleConversionCandidateIds: List<Int> = emptyList()
     fun convertOrSpace(): MozcSession.State? = if (usesMozc) native().convertOrSpace(visibleConversionCandidateIds)
         else when (StandaloneSpace.route(kana.text.isNotEmpty(), style.fullWidthSpace)) {

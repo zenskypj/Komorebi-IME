@@ -22,8 +22,8 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.39-dev`、それ以前のテスト版は
-> pre-release です。自動テストを通過したビルドでも、公開前に複数Android世代・
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.40-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
@@ -62,6 +62,10 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.39-dev` はフリック削除キーの距離で二段階の削除を選べます。左は「左の単語→行頭まで」、
 上は「右の単語→行末まで」。表示を確認して指を離すと1回実行し、改行は残します。
 [操作と制限](docs/manual/01-nyuryoku.md)を参照してください。
+
+`rc.40-dev` は固有名詞・登録語を読みの途中から予測し、読みの進み具合・Mozc順位・学習で
+段階的に上位へ出します。英語辞書は完全一致のままです。★の完全一致優先を維持し、
+[予測と補正の区別](docs/manual/02-henkan.md)をマニュアルへ反映しています。
 
 ## 特長
 

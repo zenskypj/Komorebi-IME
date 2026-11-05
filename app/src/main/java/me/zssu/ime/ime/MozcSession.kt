@@ -84,6 +84,8 @@ class MozcSession(
         /** Client-generated kana spelling that commits directly instead of addressing a Mozc id. */
         internal val directCommit: Boolean = false,
         internal val canonicalSpelling: Boolean = false,
+        internal val dictionaryCompletion: Boolean = false,
+        internal val nativeOrder: Int = -1,
     )
     data class Segment(val text: String, val highlighted: Boolean, val reading: String = "")
 
@@ -349,7 +351,8 @@ class MozcSession(
         // would remain alive behind the editor text and reappear on the next key.
         resetContext()
         lastInputReading = ""
-        return State(committedText = candidate.text, consumed = true)
+        return State(committedText = candidate.text,
+            committedReading = if (candidate.dictionaryCompletion) candidate.sourceReading else "", consumed = true)
     }
 
     fun highlightCandidate(candidateId: Int): State? = engine?.sendCommand(
@@ -358,6 +361,13 @@ class MozcSession(
             .setId(candidateId)
             .build()
     )?.toState()
+
+    fun learnDictionaryCompletion(candidate: Candidate) {
+        if (incognito || !candidate.dictionaryCompletion || !candidate.directCommit || candidate.sourceReading.isEmpty()) return
+        engine?.eval(Input.newBuilder().setType(Input.CommandType.ADD_USER_HISTORY)
+            .setUserHistoryData(org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.UserHistoryData.newBuilder()
+                .setKey(candidate.sourceReading).setValue(candidate.text)))
+    }
 
     fun deleteCandidateFromHistory(candidateId: Int): State? = engine?.sendCommand(
         SessionCommand.newBuilder()
@@ -446,6 +456,7 @@ class MozcSession(
                 prediction = differentReading && !corrected,
                 priorityMatch = priorityLookup(reading, value),
                 canonicalSpelling = SupplementaryLexicons.isCanonical(metadata?.key.orEmpty().ifEmpty { reading }, value),
+                nativeOrder = if (metadata?.hasIndex() == true) metadata.index else -1,
             )
         }
         val candidates = if (convertingOutput && candidateMetadata.isNotEmpty()) {
@@ -541,8 +552,8 @@ internal object FlickTableInput {
 /**
  * Provenance-aware client-side adjustment for the unfocused Japanese toolbar.
  *
- * Explicit pins come first, followed by useful full-reading conversions, the verbatim reading,
- * typo corrections, and predictions of text the user has not typed yet. Native order is stable
+ * Explicit pins come first. Registered prefix completions gradually share full-reading/history
+ * lanes as their reading approaches; unrelated corrections remain lower. Native order is stable
  * within each lane. This prevents a more aggressive corrector from hiding intentional input while
  * keeping genuine recovery candidates ahead of speculative completions.
  */
@@ -560,23 +571,55 @@ internal object CandidateRanking {
     ): List<MozcSession.Candidate> {
         if (limit <= 0 || candidates.isEmpty()) return emptyList()
 
+        data class Ranked(val candidate: MozcSession.Candidate, val score: Int, val coverage: Double)
         val ranked = candidates.withIndex()
-            .sortedBy { indexed ->
-                lane(indexed.value) * LANE_STRIDE +
-                    indexed.index + if (isLatinUserDictionaryEntry(indexed.value)) {
+            .map { indexed ->
+                val candidate = indexed.value
+                val coverage = completionCoverage(candidate)
+                val order = candidate.nativeOrder.takeIf { it >= 0 }
+                    ?: if (candidate.dictionaryCompletion && candidate.directCommit) 1 else indexed.index
+                val score = lane(candidate, coverage) * LANE_STRIDE + order +
+                    (if (coverage > 0) ((1.0 - coverage) * 8).toInt() else 0) +
+                    if (isLatinUserDictionaryEntry(candidate) && !candidate.dictionaryCompletion) {
                     LATIN_USER_DICTIONARY_PENALTY
                 } else {
                     0
                 }
-            }
-            .map { it.value }
+                Ranked(candidate, score, coverage)
+            }.sortedBy { it.score }
 
-        return KanaScriptVariants.ensurePresentAtEnd(ranked, limit)
+        val early = ranked.firstOrNull { it.coverage > 0 }?.candidate
+        val visible = ranked.map { it.candidate }.toMutableList()
+        // A credible prefix must not disappear behind kana spellings or many exact homonyms.
+        // Keep it within the first three ordinary choices until its score naturally rises.
+        val position = maxOf(2, visible.count { it.priorityMatch != PriorityMatch.NONE })
+        if (early != null && visible.indexOf(early) > position) {
+            visible.remove(early)
+            visible.add(position, early)
+        }
+        val budget = if (early == null) limit else maxOf(limit, 7)
+        return KanaScriptVariants.ensurePresentAtEnd(visible, budget)
     }
 
-    private fun lane(candidate: MozcSession.Candidate): Int = when {
+    private fun completionCoverage(candidate: MozcSession.Candidate): Double {
+        if (!(candidate.dictionaryCompletion || candidate.fromUserDictionary || candidate.fromUserHistory) ||
+            candidate.correction || !candidate.prediction) return 0.0
+        if (isLatinFromKana(candidate) && !candidate.dictionaryCompletion) return 0.0
+        val input = ReadingSimilarity.normalize(candidate.inputReading)
+        val source = ReadingSimilarity.normalize(candidate.sourceReading)
+        if (input.isEmpty() || source.length <= input.length || !source.startsWith(input)) return 0.0
+        if (input.length < 2 && !candidate.fromUserHistory) return 0.0
+        val coverage = input.length.toDouble() / source.length
+        return if (coverage >= 0.2) coverage else 0.0
+    }
+
+    private fun lane(candidate: MozcSession.Candidate, coverage: Double): Int = when {
         candidate.priorityMatch == PriorityMatch.EXACT -> 0
         candidate.priorityMatch == PriorityMatch.SIMILAR -> 1
+        coverage >= 0.8 -> 2
+        candidate.fromUserHistory && coverage >= 0.5 -> 2
+        coverage >= 0.5 -> 3
+        coverage > 0.0 -> 4
         isLatinFromKana(candidate) -> 8
         hasKatakanaGrammarInPrediction(candidate) -> 7
         candidate.fromUserHistory && isFullReadingConversion(candidate) -> 2
@@ -639,7 +682,7 @@ internal object CandidateRanking {
      * Keep these candidates available at the end instead of letting them displace natural text.
      */
     private fun hasKatakanaGrammarInPrediction(candidate: MozcSession.Candidate): Boolean {
-        if (candidate.fromUserDictionary || !candidate.text.any(::isKanjiOrHiragana)) return false
+        if (candidate.fromUserDictionary || candidate.dictionaryCompletion || !candidate.text.any(::isKanjiOrHiragana)) return false
         return KATAKANA_RUN.findAll(candidate.text).any { it.value in KATAKANA_GRAMMAR }
     }
 
