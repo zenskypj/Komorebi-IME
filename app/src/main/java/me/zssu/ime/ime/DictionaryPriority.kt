@@ -16,6 +16,8 @@ internal object DictionaryPriority {
 
     fun isSpecified(candidate: MozcSession.Candidate, reading: String): Boolean {
         if (candidate.priorityMatch == PriorityMatch.EXACT) return true
+        // Bulk user/system dictionaries are not an explicit request to prefer English.
+        if (EnglishCandidateOrder.isFallback(candidate)) return false
         if (!sameReading(candidate, reading)) return false
         return candidate.fromUserDictionary || candidate.dictionaryCompletion || candidate.id == REGISTERED_DICTIONARY_ID
     }
@@ -35,11 +37,12 @@ internal object DictionaryPriority {
         neural: MozcSession.Candidate?,
         reading: String,
     ): List<MozcSession.Candidate> {
-        val specified = firstSpecified(base, reading)
+        val ranked = EnglishCandidateOrder.order(base)
+        val specified = firstSpecified(ranked, reading)
         if (specified == null) {
-            return if (neural == null) base else ZenzaiConversion.candidates(base, neural, reading)
+            return if (neural == null) ranked else ZenzaiConversion.candidates(ranked, neural, reading)
         }
-        val rest = base.filterNot { it.id == specified.id && it.text == specified.text }
+        val rest = ranked.filterNot { it.id == specified.id && it.text == specified.text }
         return if (neural == null || neural.text == specified.text) listOf(specified) + rest
         else listOf(specified) + ZenzaiConversion.candidates(rest, neural, reading)
     }

@@ -85,6 +85,7 @@ class MozcSession(
         internal val directCommit: Boolean = false,
         internal val canonicalSpelling: Boolean = false,
         internal val dictionaryCompletion: Boolean = false,
+        internal val personalRegistration: Boolean = false,
         internal val nativeOrder: Int = -1,
     )
     data class Segment(val text: String, val highlighted: Boolean, val reading: String = "")
@@ -513,7 +514,7 @@ class MozcSession(
             Candidate(-40_000 - index, value, inputReading = reading, sourceReading = reading,
                 priorityMatch = priorityLookup(reading, value), directCommit = true)
         } else emptyList()
-        val combinedCandidates = (candidates + supplementary).distinctBy { it.text }
+        val combinedCandidates = EnglishCandidateOrder.order((candidates + supplementary).distinctBy { it.text })
         val reorderedFocused =
             focusedId?.let { id -> combinedCandidates.indexOfFirst { it.id == id } } ?: -1
 
@@ -598,7 +599,7 @@ internal object CandidateRanking {
             visible.add(position, early)
         }
         val budget = if (early == null) limit else maxOf(limit, 7)
-        return KanaScriptVariants.ensurePresentAtEnd(visible, budget)
+        return EnglishCandidateOrder.order(KanaScriptVariants.ensurePresentAtEnd(visible, budget))
     }
 
     private fun completionCoverage(candidate: MozcSession.Candidate): Double {

@@ -6,7 +6,7 @@ import org.junit.Test
 class DictionaryCompletionTest {
     private fun completion(input: String, source: String = "まいくろそふと", value: String = "Microsoft") =
         MozcSession.Candidate(-50000, value, inputReading = input, sourceReading = source,
-            prediction = input != source, directCommit = true, dictionaryCompletion = true)
+            prediction = input != source, directCommit = true, dictionaryCompletion = true, personalRegistration = true)
 
     private fun ranked(input: String) = CandidateRanking.rankLiveJapaneseSuggestions(listOf(
         MozcSession.Candidate(1, "通常", inputReading = input, sourceReading = input),

@@ -9,7 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /** Prefix completion for bundled names/terms and personal registrations. No English dictionary. */
 internal class DictionaryPredictions(context: Context, private val pins: () -> List<PriorityCandidateRepository.Entry>) {
-    private data class Word(val reading: String, val value: String, val pinned: Boolean = false)
+    private data class Word(val reading: String, val value: String, val pinned: Boolean = false,
+        val personal: Boolean = false)
     private class Index(entries: List<Word>) {
         private val words = entries.sortedWith(compareBy<Word> { it.reading }.thenBy { it.value })
             .distinctBy { it.reading to it.value }
@@ -61,8 +62,8 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
                 val suppressed = entries.filter { it.pos == "抑制単語" || it.pos == "SUPPRESSION_WORD" }
                     .mapTo(hashSetOf()) { ReadingSimilarity.normalize(it.reading) to it.word }
                 val registrations = entries.filterNot { it.pos == "抑制単語" || it.pos == "SUPPRESSION_WORD" }
-                    .map { Word(ReadingSimilarity.normalize(it.reading), it.word) }
-                val preferred = pins().map { Word(ReadingSimilarity.normalize(it.reading), it.value, pinned = true) }
+                    .map { Word(ReadingSimilarity.normalize(it.reading), it.word, personal = true) }
+                val preferred = pins().map { Word(ReadingSimilarity.normalize(it.reading), it.value, pinned = true, personal = true) }
                 val index = Index(preferred + registrations)
                 if (!closed && ticket == generation.get()) {
                     personal = Personal(index, suppressed)
@@ -93,7 +94,7 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
             .thenBy { !it.pinned }.thenBy { it.reading.length }).take(12).mapIndexed { index, word ->
             MozcSession.Candidate(-50_000 - index, word.value, inputReading = reading,
                 sourceReading = word.reading, prediction = word.reading != prefix,
-                directCommit = true, dictionaryCompletion = true)
+                directCommit = true, dictionaryCompletion = true, personalRegistration = word.personal)
         }
     }
 

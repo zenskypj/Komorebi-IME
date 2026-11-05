@@ -12,7 +12,7 @@ class DictionaryPriorityTest {
         MozcSession.Candidate(id = id, text = text, inputReading = reading)
 
     private fun userDict(id: Int, text: String, reading: String) =
-        MozcSession.Candidate(id = id, text = text, fromUserDictionary = true, inputReading = reading)
+        MozcSession.Candidate(id = id, text = text, fromUserDictionary = true, inputReading = reading, personalRegistration = true)
 
     private fun registered(text: String, reading: String) =
         MozcSession.Candidate(

@@ -1852,7 +1852,8 @@ class ZinnaImeService : InputMethodService() {
             settings.useProperNounDictionary, settings.useAiTechDictionary).map { candidate ->
             state.candidates.firstOrNull {
                 it.text == candidate.text && ReadingSimilarity.normalize(it.sourceReading) == candidate.sourceReading
-            }?.copy(dictionaryCompletion = true, correction = false, prediction = candidate.prediction) ?: candidate
+            }?.copy(dictionaryCompletion = true, personalRegistration = candidate.personalRegistration,
+                correction = false, prediction = candidate.prediction) ?: candidate
         }
         val pool = (suggestions + state.candidates).distinctBy { it.text }
         val base = CandidateRanking.rankLiveJapaneseSuggestions(pool,

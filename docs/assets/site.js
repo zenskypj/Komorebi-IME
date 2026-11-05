@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.41-dev", "rc.41-dev", "英語の完全一致候補より日本語を優先", "docs/releases/v0.3.0-rc.41-dev.md", "release rc41 英語"],
         ["releases/v0.3.0-rc.40-dev", "rc.40-dev", "固有名詞・登録語を途中から先読み", "docs/releases/v0.3.0-rc.40-dev.md", "release rc40 予測"],
         ["releases/v0.3.0-rc.39-dev", "rc.39-dev", "フリック削除を単語・行の二段階に", "docs/releases/v0.3.0-rc.39-dev.md", "release rc39 削除"],
         ["releases/v0.3.0-rc.38-dev", "rc.38-dev", "提供された固有名詞を同梱辞書へ合併", "docs/releases/v0.3.0-rc.38-dev.md", "release rc38"],
@@ -385,6 +386,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-05", "v0.3.0-rc.41-dev", "英語辞書の完全一致候補も日本語候補より後ろへ"],
     ["2026-11-05", "v0.3.0-rc.40-dev", "固有名詞・登録語の段階的な先読み候補"],
     ["2026-11-05", "v0.3.0-rc.39-dev", "フリック削除キーに単語・行の二段階操作"],
     ["2026-11-05", "v0.3.0-rc.38-dev", "同梱固有名詞辞書を4,879語へ拡張"],

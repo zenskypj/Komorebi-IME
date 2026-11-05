@@ -96,3 +96,17 @@ API 24 / 29 / 34 / 35 / 36の実機・エミュレータマトリクスは引き
 候補順位・入力遅延・入力先ごとの互換性を実機で検証済みとは扱わず、正式版合格も主張しない。
 公開するのはユニバーサルdebug署名APK（`me.zssu.ime.debug`）のみであり、
 未署名release APKとAABは配布しない。
+
+## rc.41-dev の作成条件
+
+英語辞書の完全一致候補の表示順を修正。内蔵・追加辞書相当のNative候補、旧ユーザー辞書属性、
+全角英字、かな表記の補充、辞書完全一致優先での再昇格、★と個人登録の例外、
+初回変換で元のNative IDを選択する経路を単体テストで確認する。
+低負荷設定でAGENTS.mdの自動ゲートを実施。単体テスト262件（app 260、karukan 2）成功、
+debug／releaseのlintエラー0件。通常APK・AABと別呼び出しのABI別APKを生成した。
+全10 ABI別APKのID・versionCode 65・versionName、全release APKの16 KB配置、
+Mozc・arm64 Karukan／C++・辞書・法務文書、プライバシーとNOTICEの一致を確認。
+R8 mappingとrelease DEXでJNI名を確認。公開APKは署名検証成功、rc.40と同一証明書。
+SHA-256を添付する。
+実機・エミュレータは用意できないためAPI 24 / 29 / 34 / 35 / 36のマトリクスは未実施。
+未署名release成果物は公開せず、`.debug`のテスト用ユニバーサルAPKを配布する。
