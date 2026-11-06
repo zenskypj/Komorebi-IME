@@ -87,31 +87,38 @@ class BeamHandoverTest {
     }
 
     @Test
+    fun placeholderP2pAddressIsRejected() {
+        assertFalse(BeamHandover.isUsableP2pAddress("02:00:00:00:00:00"))
+        assertFalse(BeamHandover.isUsableP2pAddress("00:00:00:00:00:00"))
+        assertFalse(BeamHandover.isUsableP2pAddress(null))
+        assertTrue(BeamHandover.isUsableP2pAddress("02:11:22:33:44:55"))
+    }
+
+    @Test
     fun beamHandoverStreamSendAndReceiveOverLoopback() {
         val port = ServerSocket(0).use { it.localPort }
         val token = BeamHandover.generateToken()
         val testData = ByteArray(128 * 1024) { (it % 251).toByte() }
 
-        val serverLatch = CountDownLatch(1)
+        val readyLatch = CountDownLatch(1)
         val clientLatch = CountDownLatch(1)
         var sendSuccess = false
         var receiveSuccess = false
         val receivedOutput = ByteArrayOutputStream()
 
         val serverThread = Thread {
-            serverLatch.countDown()
             sendSuccess = BeamHandover.sendStream(
                 "127.0.0.1",
                 port,
                 token,
                 ByteArrayInputStream(testData),
                 testData.size.toLong(),
+                onReady = { readyLatch.countDown() },
             )
         }
         serverThread.start()
 
-        assertTrue("Server failed to bind", serverLatch.await(5, TimeUnit.SECONDS))
-        Thread.sleep(100)
+        assertTrue("Server failed to bind", readyLatch.await(5, TimeUnit.SECONDS))
 
         val clientThread = Thread {
             receiveSuccess = BeamHandover.receiveStream(

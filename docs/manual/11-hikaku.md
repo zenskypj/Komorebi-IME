@@ -9,7 +9,7 @@
 <div class="metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
 </div>
 
-<p>権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の任意取得、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
+<p>権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の任意取得、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。Android 13 以降でも Wi-Fi Direct の検出には端末の位置情報モードをオンにする必要があります。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
 
 ## 一目でわかる比較
 

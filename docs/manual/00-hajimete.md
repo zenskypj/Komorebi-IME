@@ -33,6 +33,8 @@ Komorebi IME は、Android 向けのオープンソース日本語入力（IME�
 | クラウドバックアップ | 無効（`allowBackup=false`） |
 
 > [!NOTE]
+> Wi-Fi Direct の検出には、Android 13 以降でも端末の位置情報モードをオンにする必要があります（アプリは位置情報を取得しません）。
+>
 > 現在は正式版に向けた Release Candidate（`0.3.0-rc.x`）です。テスト用 APK はすべて debug 署名で、正式署名版ではありません。
 
 ## インストールと初期設定

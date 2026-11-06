@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.44-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.45-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -74,6 +74,8 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.43-dev` は、変換キーを1回押して候補が開いた直後の確定を、選択中の文節ではなく文全体の確定に変更しました。変換キーをもう一度押す、文節を移動・タップする、候補を選ぶ、入力を編集する、のいずれかを行った後は従来どおり文節ごとに確定します。[変換と候補](docs/manual/02-henkan.md)を参照してください。
 
 `rc.44-dev` は、Meets Beam の大容量データ転送に Wi-Fi Direct（P2P）を追加しました。NFC で接続情報と一時トークンを交換し、端末同士を直接接続して画像・動画・音楽・文書・TSV辞書を転送します。転送は AES-GCM、宣言サイズ、SHA-256 で検証し、受信した辞書は内容を確認してからユーザー辞書へ取り込みます。Wi-Fi Direct の実機2台での検証は未実施です。[Meets Beam](docs/meets-beam.md)を参照してください。
+
+`rc.45-dev` は Wi-Fi Direct の接続失敗を減らす修正です。Wi-Fi Direct の検出には全Androidで位置情報モードをオンにする必要があるため、送受信前に確認します（アプリが位置を取得・送信するわけではありません）。あわせて、NFC送信前に受信サーバーを先に開いて空きポートを通知する方式、グループオーナーの端末アドレス取得の再試行とプレースホルダーMACの拒否、受信側の接続リトライ、接続状態の確認を追加しました。実機2台での最終確認はまだ必要です。
 
 ## 特長
 
