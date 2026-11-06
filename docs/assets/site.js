@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.44-dev", "rc.44-dev", "Meets BeamのWi-Fi Directハンドオフと大容量ファイル・辞書共有", "docs/releases/v0.3.0-rc.44-dev.md", "release rc44 beam nfc direct"],
         ["releases/v0.3.0-rc.43-dev", "rc.43-dev", "変換1回直後の確定で文全体を確定", "docs/releases/v0.3.0-rc.43-dev.md", "release rc43 確定"],
         ["releases/v0.3.0-rc.42-dev", "rc.42-dev", "Mozc非同期化と候補表示の軽量化", "docs/releases/v0.3.0-rc.42-dev.md", "release rc42 性能"],
         ["releases/v0.3.0-rc.41-dev", "rc.41-dev", "英語の完全一致候補より日本語を優先", "docs/releases/v0.3.0-rc.41-dev.md", "release rc41 英語"],

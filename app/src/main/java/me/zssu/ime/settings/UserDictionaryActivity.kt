@@ -1,5 +1,6 @@
 package me.zssu.ime.settings
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -100,6 +101,17 @@ private fun UserDictionaryScreen() {
                         onClick = { exportFile.launch("komorebi-user-dictionary.txt") },
                         enabled = entries.isNotEmpty(),
                     ) { Text("書出") }
+                    TextButton(
+                        onClick = {
+                            val tsv = dictionary.exportTsv()
+                            val intent = Intent(context, MeetsBeamActivity::class.java).apply {
+                                putExtra("beam_dict_tsv", tsv)
+                                putExtra("beam_dict_name", "ユーザー辞書 (${entries.size}語)")
+                            }
+                            context.startActivity(intent)
+                        },
+                        enabled = entries.isNotEmpty(),
+                    ) { Text("Beam") }
                 },
             )
         },
