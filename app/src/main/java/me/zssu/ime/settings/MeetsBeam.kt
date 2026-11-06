@@ -496,7 +496,7 @@ class MeetsBeamActivity : ComponentActivity() {
             override fun onSuccess() {
                 status = "Wi-Fi Direct グループを作成しました。接続情報を準備しています..."
                 var proceeded = false
-                fun proceed(groupOwnerAddress: String?) {
+                fun proceed(groupOwnerAddress: String?, groupOwnerName: String?) {
                     if (proceeded) return
                     proceeded = true
                     manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
@@ -506,14 +506,13 @@ class MeetsBeamActivity : ComponentActivity() {
                             ?: infoAddress
                             ?: "192.168.49.1"
                         withLocalP2pAddress(groupOwnerAddress) { ownerAddress ->
-                            if (!BeamHandover.isUsableP2pAddress(ownerAddress)) {
-                                busy = false
-                                status = "Wi-Fi Direct の端末アドレスを取得できません"
-                                directTransferActive = false
-                                removeP2pGroup()
-                                return@withLocalP2pAddress
+                            val resolvedAddress = if (BeamHandover.isUsableP2pAddress(ownerAddress)) {
+                                ownerAddress ?: ""
+                            } else {
+                                ""
                             }
-                            val usableOwnerAddress = requireNotNull(ownerAddress)
+                            val resolvedName = groupOwnerName?.takeIf { it.isNotBlank() }
+                                ?: localP2pDevice?.deviceName.orEmpty()
                             val draft = outgoing
                             if (draft == null) {
                                 busy = false
@@ -522,7 +521,11 @@ class MeetsBeamActivity : ComponentActivity() {
                                 removeP2pGroup()
                                 return@withLocalP2pAddress
                             }
-                            status = "Wi-Fi Direct の受信サーバーを準備しています..."
+                            status = if (resolvedAddress.isEmpty()) {
+                                "端末アドレスを取得できないため、端末名と探索結果で接続します..."
+                            } else {
+                                "Wi-Fi Direct の受信サーバーを準備しています..."
+                            }
                             Thread({
                                 try {
                                     val server = BeamHandover.openServer(ownerIp)
@@ -533,10 +536,11 @@ class MeetsBeamActivity : ComponentActivity() {
                                             name = draft.name.ifBlank { "beam_file" },
                                             size = draft.size,
                                             mimeType = draft.mimeType.ifBlank { "application/octet-stream" },
-                                            ownerAddress = usableOwnerAddress,
+                                            ownerAddress = resolvedAddress,
                                             ownerIp = ownerIp,
                                             port = server.localPort,
-                                            token = BeamHandover.generateToken()
+                                            token = BeamHandover.generateToken(),
+                                            ownerName = resolvedName,
                                         )
                                         val updated = draft.copy(value = payload.toJson())
                                         startDirectSend(updated, payload, server) { startNfcSend(updated) }
@@ -554,9 +558,9 @@ class MeetsBeamActivity : ComponentActivity() {
                     }
                 }
                 manager.requestGroupInfo(channel) { group ->
-                    proceed(group?.owner?.deviceAddress)
+                    proceed(group?.owner?.deviceAddress, group?.owner?.deviceName)
                 }
-                mainHandler.postDelayed({ proceed(localP2pDevice?.deviceAddress) }, 3000)
+                mainHandler.postDelayed({ proceed(localP2pDevice?.deviceAddress, localP2pDevice?.deviceName) }, 3000)
             }
 
             override fun onFailure(reason: Int) {
@@ -741,11 +745,22 @@ class MeetsBeamActivity : ComponentActivity() {
         val channel = p2pChannel ?: return
         manager.requestPeers(channel) { peers ->
             if (p2pConnecting || p2pReceiveTransferStarted) return@requestPeers
-            val device = peers.deviceList.firstOrNull { it.deviceAddress.equals(payload.ownerAddress, ignoreCase = true) }
-            if (device != null) {
-                connectToOwner(device.deviceAddress)
-            } else if (direct) {
-                connectToOwner(payload.ownerAddress)
+            val devices = peers.deviceList
+            val byAddress = if (BeamHandover.isUsableP2pAddress(payload.ownerAddress)) {
+                devices.firstOrNull { it.deviceAddress.equals(payload.ownerAddress, ignoreCase = true) }
+            } else {
+                null
+            }
+            val byName = if (byAddress == null && payload.ownerName.isNotBlank()) {
+                devices.firstOrNull { it.deviceName == payload.ownerName }
+            } else {
+                null
+            }
+            val chosen = byAddress ?: byName ?: devices.singleOrNull()
+            when {
+                chosen != null -> connectToOwner(chosen.deviceAddress)
+                direct && BeamHandover.isUsableP2pAddress(payload.ownerAddress) -> connectToOwner(payload.ownerAddress)
+                direct -> status = "Wi-Fi Direct の相手を特定できません。端末名を確認して再試行してください"
             }
         }
     }

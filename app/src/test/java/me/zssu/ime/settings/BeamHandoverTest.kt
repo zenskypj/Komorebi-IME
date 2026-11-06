@@ -20,7 +20,8 @@ class BeamHandoverTest {
             ownerAddress = "02:11:22:33:44:55",
             ownerIp = "192.168.49.1",
             port = 49152,
-            token = "secret-token-xyz-1234"
+            token = "secret-token-xyz-1234",
+            ownerName = "Komorebi Sender",
         )
         val json = original.toJson()
         val parsed = BeamHandover.HandoverPayload.fromJson(json)
@@ -33,6 +34,24 @@ class BeamHandoverTest {
         assertEquals(original.ownerIp, parsed.ownerIp)
         assertEquals(original.port, parsed.port)
         assertEquals(original.token, parsed.token)
+        assertEquals(original.ownerName, parsed.ownerName)
+    }
+
+    @Test
+    fun handoverPayloadAllowsAnEmptyAddressWhenTheOwnerNameIsKnown() {
+        val original = BeamHandover.HandoverPayload(
+            targetType = "file",
+            name = "photo.jpg",
+            size = 1024L,
+            mimeType = "image/jpeg",
+            ownerAddress = "",
+            ownerIp = "192.168.49.1",
+            token = "secret-token-xyz-1234",
+            ownerName = "Komorebi Sender",
+        )
+        val parsed = BeamHandover.HandoverPayload.fromJson(original.toJson())
+        assertEquals("", parsed.ownerAddress)
+        assertEquals("Komorebi Sender", parsed.ownerName)
     }
 
     @Test
