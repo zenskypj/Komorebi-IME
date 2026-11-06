@@ -1,0 +1,10 @@
+[package]
+name = "komorebi-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+komorebi-mozc = { path = "../komorebi-mozc" }
+prost.workspace = true

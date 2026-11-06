@@ -1,0 +1,242 @@
+diff --git a/src/linux/BUILD.bazel b/src/linux/BUILD.bazel
+new file mode 100644
+index 0000000..0566029
+--- /dev/null
++++ b/src/linux/BUILD.bazel
+@@ -0,0 +1,23 @@
++load("//:build_defs.bzl", "mozc_cc_binary")
++
++mozc_cc_binary(
++    name = "komorebi_mozc",
++    srcs = [
++        "komorebi_mozc.cc",
++        "komorebi_mozc.h",
++    ],
++    linkshared = 1,
++    visibility = ["//visibility:public"],
++    deps = [
++        "//base:encryptor",
++        "//base:system_util",
++        "//base:util",
++        "//data_manager",
++        "//engine",
++        "//protocol:commands_cc_proto",
++        "//session:session_handler",
++        "@com_google_absl//absl/log",
++        "@com_google_absl//absl/status:statusor",
++        "@com_google_absl//absl/strings",
++    ],
++)
+diff --git a/src/linux/komorebi_mozc.cc b/src/linux/komorebi_mozc.cc
+new file mode 100644
+index 0000000..8106e13
+--- /dev/null
++++ b/src/linux/komorebi_mozc.cc
+@@ -0,0 +1,160 @@
++#include "linux/komorebi_mozc.h"
++
++#include <cstdlib>
++#include <cstring>
++#include <memory>
++#include <mutex>
++#include <string>
++#include <utility>
++
++#include "absl/log/log.h"
++#include "absl/status/statusor.h"
++#include "absl/strings/string_view.h"
++#include "base/password_manager.h"
++#include "base/system_util.h"
++#include "data_manager/data_manager.h"
++#include "engine/engine.h"
++#include "protocol/commands.pb.h"
++#include "session/session_handler.h"
++
++struct KmbMozc {
++  std::unique_ptr<mozc::SessionHandler> handler;
++  std::string data_version;
++};
++
++namespace {
++
++std::mutex g_mutex;
++
++void SetError(char **error, const std::string &message) {
++  if (error == nullptr) {
++    return;
++  }
++  *error = static_cast<char *>(std::malloc(message.size() + 1));
++  if (*error == nullptr) {
++    return;
++  }
++  std::memcpy(*error, message.c_str(), message.size() + 1);
++}
++
++std::unique_ptr<mozc::SessionHandler> CreateSessionHandler(
++    const std::string &data_path, std::string *data_version) {
++  std::unique_ptr<mozc::EngineInterface> engine;
++  if (data_path.empty()) {
++    LOG(ERROR) << "Mozc data path is empty; falling back to a minimal engine";
++    engine = mozc::Engine::CreateEngine();
++  } else {
++    absl::StatusOr<std::unique_ptr<const mozc::DataManager>> data_manager =
++        mozc::DataManager::CreateFromFile(data_path);
++    if (!data_manager.ok()) {
++      LOG(ERROR) << "Falling back to a minimal engine: "
++                 << data_manager.status();
++      engine = mozc::Engine::CreateEngine();
++    } else {
++      const std::string version((*data_manager)->GetDataVersion());
++      auto created = mozc::Engine::CreateEngine(*std::move(data_manager));
++      if (!created.ok()) {
++        LOG(ERROR) << "Failed to create the engine for " << data_path
++                   << " (data version " << version << "): " << created.status()
++                   << "; falling back to a minimal engine";
++        engine = mozc::Engine::CreateEngine();
++      } else {
++        *data_version = version;
++        engine = *std::move(created);
++      }
++    }
++  }
++  if (!engine) {
++    return nullptr;
++  }
++  return std::make_unique<mozc::SessionHandler>(std::move(engine));
++}
++
++}  // namespace
++
++extern "C" {
++
++KmbMozc *kmb_mozc_create(const char *profile_dir, const char *data_path,
++                         const uint8_t *key, size_t key_len, char **error) {
++  std::lock_guard<std::mutex> lock(g_mutex);
++  if (profile_dir == nullptr || profile_dir[0] == '\0') {
++    SetError(error, "profile directory is required");
++    return nullptr;
++  }
++
++  const std::string original_dir = mozc::SystemUtil::GetUserProfileDirectory();
++  mozc::SystemUtil::SetUserProfileDirectory(profile_dir);
++
++  if (key != nullptr && key_len > 0) {
++    if (!mozc::PasswordManager::SetInjectedPassword(
++            absl::string_view(reinterpret_cast<const char *>(key), key_len))) {
++      mozc::SystemUtil::SetUserProfileDirectory(original_dir);
++      SetError(error, "Mozc rejected the injected profile key");
++      return nullptr;
++    }
++  }
++
++  auto *engine = new KmbMozc();
++  engine->handler = CreateSessionHandler(
++      data_path == nullptr ? std::string() : std::string(data_path),
++      &engine->data_version);
++  if (!engine->handler) {
++    delete engine;
++    mozc::SystemUtil::SetUserProfileDirectory(original_dir);
++    SetError(error, "failed to create the Mozc session handler");
++    return nullptr;
++  }
++  return engine;
++}
++
++int kmb_mozc_eval(KmbMozc *engine, const uint8_t *input, size_t input_len,
++                  uint8_t **output, size_t *output_len, char **error) {
++  if (engine == nullptr || output == nullptr || output_len == nullptr) {
++    SetError(error, "invalid engine, output, or output length");
++    return 1;
++  }
++  if (input == nullptr && input_len != 0) {
++    SetError(error, "null input with a non-zero length");
++    return 1;
++  }
++
++  mozc::commands::Command command;
++  if (!command.ParseFromArray(input, static_cast<int>(input_len))) {
++    SetError(error, "failed to parse a mozc Command");
++    return 1;
++  }
++
++  {
++    std::lock_guard<std::mutex> lock(g_mutex);
++    engine->handler->EvalCommand(&command);
++  }
++
++  const size_t size = command.ByteSizeLong();
++  auto *buffer = static_cast<uint8_t *>(std::malloc(size == 0 ? 1 : size));
++  if (buffer == nullptr) {
++    SetError(error, "out of memory while serializing a mozc Command");
++    return 1;
++  }
++  if (size != 0 &&
++      !command.SerializeToArray(buffer, static_cast<int>(size))) {
++    std::free(buffer);
++    SetError(error, "failed to serialize a mozc Command");
++    return 1;
++  }
++  *output = buffer;
++  *output_len = size;
++  return 0;
++}
++
++const char *kmb_mozc_data_version(KmbMozc *engine) {
++  if (engine == nullptr) {
++    return "";
++  }
++  return engine->data_version.c_str();
++}
++
++void kmb_mozc_free_bytes(uint8_t *ptr) { std::free(ptr); }
++void kmb_mozc_free_string(char *ptr) { std::free(ptr); }
++void kmb_mozc_destroy(KmbMozc *engine) { delete engine; }
++
++}  // extern "C"
+diff --git a/src/linux/komorebi_mozc.h b/src/linux/komorebi_mozc.h
+new file mode 100644
+index 0000000..0c373ff
+--- /dev/null
++++ b/src/linux/komorebi_mozc.h
+@@ -0,0 +1,29 @@
++#ifndef MOZC_LINUX_KOMOREBI_MOZC_H_
++#define MOZC_LINUX_KOMOREBI_MOZC_H_
++
++#include <stddef.h>
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct KmbMozc KmbMozc;
++
++KmbMozc *kmb_mozc_create(const char *profile_dir, const char *data_path,
++                         const uint8_t *key, size_t key_len, char **error);
++
++int kmb_mozc_eval(KmbMozc *engine, const uint8_t *input, size_t input_len,
++                  uint8_t **output, size_t *output_len, char **error);
++
++const char *kmb_mozc_data_version(KmbMozc *engine);
++
++void kmb_mozc_free_bytes(uint8_t *ptr);
++void kmb_mozc_free_string(char *ptr);
++void kmb_mozc_destroy(KmbMozc *engine);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif  // MOZC_LINUX_KOMOREBI_MOZC_H_
+diff --git a/src/session/BUILD.bazel b/src/session/BUILD.bazel
+index 2da5b8d..f17d161 100644
+--- a/src/session/BUILD.bazel
++++ b/src/session/BUILD.bazel
+@@ -155,6 +155,7 @@ mozc_cc_library(
+     visibility = [
+         "//android/jni:__pkg__",
+         "//ios:__pkg__",
++        "//linux:__pkg__",
+     ],
+     deps = [
+         ":keymap",

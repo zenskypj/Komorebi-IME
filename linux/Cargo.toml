@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/komorebi-core",
+    "crates/komorebi-mozc",
+    "crates/komorebictl",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.92"
+license = "Apache-2.0"
+version = "0.1.0"
+
+[workspace.dependencies]
+prost = "0.14"
+prost-build = "0.14"
+protoc-bin-vendored = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

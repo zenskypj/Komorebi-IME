@@ -30,6 +30,12 @@ local.properties
 /third_party/karukan/target/
 !/third_party/karukan/Cargo.lock
 
+# Linux frontend build output
+/linux/target/
+/linux/bridge/lib/
+/linux/bridge/include/
+/linux/data/
+
 # IDE
 .idea/
 *.iml
