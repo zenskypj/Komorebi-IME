@@ -160,6 +160,45 @@ class BeamHandoverTest {
     }
 
     @Test
+    fun serverReceiverAndClientSenderOverLoopback() {
+        val server = BeamHandover.openServer("127.0.0.1", 0)
+        val port = server.localPort
+        val token = BeamHandover.generateToken()
+        val testData = ByteArray(96 * 1024) { (it % 239).toByte() }
+        val receivedOutput = ByteArrayOutputStream()
+
+        var sendSuccess = false
+        var receiveSuccess = false
+
+        val serverThread = Thread {
+            receiveSuccess = BeamHandover.receiveStreamFromHost(
+                server,
+                token,
+                receivedOutput,
+                testData.size.toLong(),
+            )
+        }
+        serverThread.start()
+
+        val clientThread = Thread {
+            sendSuccess = BeamHandover.sendStreamToHost(
+                "127.0.0.1",
+                port..port,
+                token,
+                ByteArrayInputStream(testData),
+                testData.size.toLong(),
+            )
+        }
+        clientThread.start()
+
+        clientThread.join(10000)
+        serverThread.join(10000)
+        assertTrue("sendStreamToHost returned false", sendSuccess)
+        assertTrue("receiveStreamFromHost returned false", receiveSuccess)
+        assertArrayEquals(testData, receivedOutput.toByteArray())
+    }
+
+    @Test
     fun beamHandoverRejectsInvalidToken() {
         val port = ServerSocket(0).use { it.localPort }
         val serverToken = BeamHandover.generateToken()

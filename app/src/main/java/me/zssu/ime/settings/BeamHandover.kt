@@ -33,6 +33,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 object BeamHandover {
     const val DEFAULT_PORT = 49152
+    val PORT_RANGE: IntRange = DEFAULT_PORT..(DEFAULT_PORT + 9)
     const val MAX_TRANSFER_BYTES = 2L * 1024 * 1024 * 1024
     private const val BUFFER_SIZE = 65536
     private const val MAX_NAME_LENGTH = 100
@@ -40,6 +41,7 @@ object BeamHandover {
     private const val BIND_ATTEMPTS = 60
     private const val SERVER_ACCEPT_TIMEOUT_MS = 120000
     private const val CONNECT_TIMEOUT_MS = 2000
+    private const val RANGE_CONNECT_TIMEOUT_MS = 500
     private val random = SecureRandom()
     private val macPattern = Regex("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}")
     private val ipv4Pattern = Regex("(\\d{1,3}\\.){3}\\d{1,3}")
@@ -148,6 +150,31 @@ object BeamHandover {
             .any { it.hostAddress == address }
     }.getOrDefault(false)
 
+    /** Connects to the first reachable port in the shared range, retrying while the peer starts. */
+    private fun connectToAny(hostAddress: String, ports: IntRange): Socket? {
+        for (attempt in 0 until CONNECT_ATTEMPTS) {
+            for (port in ports) {
+                var socket: Socket? = null
+                try {
+                    socket = Socket()
+                    socket.connect(InetSocketAddress(hostAddress, port), RANGE_CONNECT_TIMEOUT_MS)
+                    socket.soTimeout = 30000
+                    return socket
+                } catch (error: IOException) {
+                    runCatching { socket?.close() }
+                }
+            }
+            if (attempt < CONNECT_ATTEMPTS - 1) {
+                try {
+                    Thread.sleep(500)
+                } catch (error: InterruptedException) {
+                    return null
+                }
+            }
+        }
+        return null
+    }
+
     /**
      * 送信側。Wi-Fi Direct のグループオーナーアドレスにだけバインドし、
      * 1 クライアントへ暗号化ストリームを送る。
@@ -173,6 +200,27 @@ object BeamHandover {
         val server = serverSocket ?: throw (lastError ?: IOException("Wi-Fi Direct の受信サーバーを開けません"))
         server.soTimeout = SERVER_ACCEPT_TIMEOUT_MS
         return server
+    }
+
+    /** Binds the first free port in the shared range; the peer probes the same range. */
+    fun openServerInRange(bindAddress: String): ServerSocket {
+        require(bindAddress.isNotBlank()) { "Wi-Fi Direct のアドレスがありません" }
+        var lastError: IOException? = null
+        for (attempt in 0 until BIND_ATTEMPTS) {
+            for (port in PORT_RANGE) {
+                try {
+                    return ServerSocket().apply {
+                        reuseAddress = true
+                        bind(InetSocketAddress(InetAddress.getByName(bindAddress), port))
+                        soTimeout = SERVER_ACCEPT_TIMEOUT_MS
+                    }
+                } catch (error: IOException) {
+                    lastError = error
+                }
+            }
+            if (attempt < BIND_ATTEMPTS - 1) Thread.sleep(500)
+        }
+        throw (lastError ?: IOException("Wi-Fi Direct の受信サーバーを開けません"))
     }
 
     fun sendStream(
@@ -351,6 +399,238 @@ object BeamHandover {
                 if (received != totalBytes ||
                     !MessageDigest.isEqual(digest.digest(), expectedHash)
                 ) {
+                    return false
+                }
+                output.flush()
+                true
+            }
+        } catch (error: IOException) {
+            false
+        } catch (error: GeneralSecurityException) {
+            false
+        } finally {
+            runCatching { connected.close() }
+        }
+    }
+
+    /** Client side that sends the stream to a server in the shared port range. */
+    fun sendStreamToHost(
+        hostAddress: String,
+        ports: IntRange,
+        token: String,
+        input: InputStream,
+        totalBytes: Long,
+        onProgress: (bytesSent: Long, total: Long) -> Unit = { _, _ -> },
+        cancelFlag: AtomicBoolean = AtomicBoolean(false)
+    ): Boolean {
+        require(totalBytes in 1..MAX_TRANSFER_BYTES) { "転送サイズが範囲外です" }
+        require(hostAddress.isNotBlank()) { "Wi-Fi Direct のアドレスがありません" }
+        require(token.isNotEmpty()) { "認証トークンがありません" }
+        val connected = connectToAny(hostAddress, ports) ?: return false
+        return try {
+            connected.use { socket ->
+                val out = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
+                val inStream = DataInputStream(BufferedInputStream(socket.getInputStream()))
+
+                val clientNonce = ByteArray(12).also(random::nextBytes)
+                out.write(clientNonce)
+                val clientProof = MessageDigest.getInstance("SHA-256")
+                    .digest(token.toByteArray(Charsets.UTF_8) + clientNonce)
+                out.write(clientProof)
+                out.flush()
+                if (inStream.readByte().toInt() != 0) return false
+
+                val buffer = ByteArray(BUFFER_SIZE)
+                val digest = MessageDigest.getInstance("SHA-256")
+                var sent = 0L
+                var zeroReads = 0
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                val streamNonce = ByteArray(12).also(random::nextBytes)
+                out.write(streamNonce)
+                cipher.init(Cipher.ENCRYPT_MODE, deriveKey(token), GCMParameterSpec(128, streamNonce))
+
+                while (sent < totalBytes && !cancelFlag.get()) {
+                    val toRead = minOf(buffer.size.toLong(), totalBytes - sent).toInt()
+                    val read = input.read(buffer, 0, toRead)
+                    if (read < 0) return false
+                    if (read == 0) {
+                        if (++zeroReads > 3) return false
+                        continue
+                    }
+                    zeroReads = 0
+                    digest.update(buffer, 0, read)
+                    val encryptedChunk = cipher.update(buffer, 0, read)
+                    if (encryptedChunk != null && encryptedChunk.isNotEmpty()) {
+                        out.writeInt(encryptedChunk.size)
+                        out.write(encryptedChunk)
+                    }
+                    sent += read
+                    onProgress(sent, totalBytes)
+                }
+
+                if (cancelFlag.get() || sent != totalBytes) return false
+                val finalBytes = cipher.doFinal()
+                if (finalBytes != null && finalBytes.isNotEmpty()) {
+                    out.writeInt(finalBytes.size)
+                    out.write(finalBytes)
+                }
+                out.writeInt(-1)
+                out.write(digest.digest())
+                out.flush()
+                true
+            }
+        } catch (error: IOException) {
+            false
+        } catch (error: GeneralSecurityException) {
+            false
+        } finally {
+            runCatching { connected.close() }
+        }
+    }
+
+    /** Server side that receives the stream from a client. */
+    fun receiveStreamFromHost(
+        server: ServerSocket,
+        token: String,
+        output: OutputStream,
+        totalBytes: Long,
+        onProgress: (bytesReceived: Long, total: Long) -> Unit = { _, _ -> },
+        cancelFlag: AtomicBoolean = AtomicBoolean(false)
+    ): Boolean {
+        require(totalBytes in 1..MAX_TRANSFER_BYTES) { "転送サイズが範囲外です" }
+        require(token.isNotEmpty()) { "認証トークンがありません" }
+        return try {
+            val client = server.accept()
+            client.soTimeout = 30000
+            client.use { socket ->
+                val out = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
+                val inStream = DataInputStream(BufferedInputStream(socket.getInputStream()))
+
+                val clientNonce = ByteArray(12)
+                inStream.readFully(clientNonce)
+                val expectedProof = MessageDigest.getInstance("SHA-256")
+                    .digest(token.toByteArray(Charsets.UTF_8) + clientNonce)
+                val clientProof = ByteArray(32)
+                inStream.readFully(clientProof)
+                if (!MessageDigest.isEqual(expectedProof, clientProof)) {
+                    out.writeByte(0xFF)
+                    out.flush()
+                    return false
+                }
+                out.writeByte(0x00)
+                out.flush()
+
+                val streamNonce = ByteArray(12)
+                inStream.readFully(streamNonce)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, deriveKey(token), GCMParameterSpec(128, streamNonce))
+                val digest = MessageDigest.getInstance("SHA-256")
+
+                var received = 0L
+                while (!cancelFlag.get()) {
+                    val chunkSize = inStream.readInt()
+                    if (chunkSize == -1) break
+                    if (chunkSize <= 0 || chunkSize > BUFFER_SIZE * 2) return false
+                    val chunk = ByteArray(chunkSize)
+                    inStream.readFully(chunk)
+                    val decrypted = cipher.update(chunk)
+                    if (decrypted != null && decrypted.isNotEmpty()) {
+                        if (received + decrypted.size > totalBytes) return false
+                        digest.update(decrypted)
+                        output.write(decrypted)
+                        received += decrypted.size
+                        onProgress(received, totalBytes)
+                    }
+                }
+
+                if (cancelFlag.get()) return false
+                val finalBytes = cipher.doFinal()
+                if (finalBytes != null && finalBytes.isNotEmpty()) {
+                    if (received + finalBytes.size > totalBytes) return false
+                    digest.update(finalBytes)
+                    output.write(finalBytes)
+                    received += finalBytes.size
+                    onProgress(received, totalBytes)
+                }
+                val expectedHash = ByteArray(32)
+                inStream.readFully(expectedHash)
+                if (received != totalBytes || !MessageDigest.isEqual(digest.digest(), expectedHash)) {
+                    return false
+                }
+                output.flush()
+                true
+            }
+        } catch (error: IOException) {
+            false
+        } catch (error: GeneralSecurityException) {
+            false
+        } finally {
+            runCatching { server.close() }
+        }
+    }
+
+    /** Client side that receives the stream from a group owner in the shared port range. */
+    fun receiveStreamFromRange(
+        hostAddress: String,
+        ports: IntRange,
+        token: String,
+        output: OutputStream,
+        totalBytes: Long,
+        onProgress: (bytesReceived: Long, total: Long) -> Unit = { _, _ -> },
+        cancelFlag: AtomicBoolean = AtomicBoolean(false)
+    ): Boolean {
+        require(totalBytes in 1..MAX_TRANSFER_BYTES) { "転送サイズが範囲外です" }
+        require(hostAddress.isNotBlank()) { "Wi-Fi Direct のアドレスがありません" }
+        require(token.isNotEmpty()) { "認証トークンがありません" }
+        val connected = connectToAny(hostAddress, ports) ?: return false
+        return try {
+            connected.use { socket ->
+                val out = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
+                val inStream = DataInputStream(BufferedInputStream(socket.getInputStream()))
+
+                val clientNonce = ByteArray(12).also(random::nextBytes)
+                out.write(clientNonce)
+                val clientProof = MessageDigest.getInstance("SHA-256")
+                    .digest(token.toByteArray(Charsets.UTF_8) + clientNonce)
+                out.write(clientProof)
+                out.flush()
+                if (inStream.readByte().toInt() != 0) return false
+
+                val streamNonce = ByteArray(12)
+                inStream.readFully(streamNonce)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, deriveKey(token), GCMParameterSpec(128, streamNonce))
+                val digest = MessageDigest.getInstance("SHA-256")
+
+                var received = 0L
+                while (!cancelFlag.get()) {
+                    val chunkSize = inStream.readInt()
+                    if (chunkSize == -1) break
+                    if (chunkSize <= 0 || chunkSize > BUFFER_SIZE * 2) return false
+                    val chunk = ByteArray(chunkSize)
+                    inStream.readFully(chunk)
+                    val decrypted = cipher.update(chunk)
+                    if (decrypted != null && decrypted.isNotEmpty()) {
+                        if (received + decrypted.size > totalBytes) return false
+                        digest.update(decrypted)
+                        output.write(decrypted)
+                        received += decrypted.size
+                        onProgress(received, totalBytes)
+                    }
+                }
+
+                if (cancelFlag.get()) return false
+                val finalBytes = cipher.doFinal()
+                if (finalBytes != null && finalBytes.isNotEmpty()) {
+                    if (received + finalBytes.size > totalBytes) return false
+                    digest.update(finalBytes)
+                    output.write(finalBytes)
+                    received += finalBytes.size
+                    onProgress(received, totalBytes)
+                }
+                val expectedHash = ByteArray(32)
+                inStream.readFully(expectedHash)
+                if (received != totalBytes || !MessageDigest.isEqual(digest.digest(), expectedHash)) {
                     return false
                 }
                 output.flush()
