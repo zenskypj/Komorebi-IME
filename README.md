@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.42-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.43-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -71,6 +71,8 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 
 `rc.42-dev` はMozcを専用の直列ワーカーへ非同期化し、入力中の画面更新も軽量化。QWERTYの余分なコマンド、フリックの中間候補生成、候補欄の二重更新、2行候補・ツールバーの再生成を削減します。端末上の効果は未測定です。
 
+`rc.43-dev` は、変換キーを1回押して候補が開いた直後の確定を、選択中の文節ではなく文全体の確定に変更しました。変換キーをもう一度押す、文節を移動・タップする、候補を選ぶ、入力を編集する、のいずれかを行った後は従来どおり文節ごとに確定します。[変換と候補](docs/manual/02-henkan.md)を参照してください。
+
 ## 特長
 
 - **入力内容は端末内** — Mozc変換は完全オフラインです。任意のKarukanモデル取得時だけ
@@ -108,6 +110,10 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 
 - Android 7.0（API 24）以上
 - `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86`
+
+## Linux版（開発中）
+
+fcitx5 / IBus / タッチOSK 向けのLinuxフロントエンドを `linux/` で開発しています。現在はM0で、パッチ済みMozcのLinuxビルド、C ABI、Rustコア、CLI（`komorebictl convert`）までです。fcitx5アドオンはまだありません。ビルドと現在の制限は [Linux版のビルド](docs/linux/build.md) を参照してください。
 
 ## インストールと初期設定
 

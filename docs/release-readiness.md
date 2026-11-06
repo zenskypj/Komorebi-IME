@@ -50,6 +50,18 @@
 - arm64-v8a実機でのKarukan品質、発熱、ピークメモリ、推論キャンセル
 - Play Consoleのpre-launch report、アクセシビリティ、クラッシュ／ANR
 
+## Linux（M0）
+
+LinuxフロントエンドはAndroid版とは別の成果物です。M0では次を満たすことだけを確認し、fcitx5/IBus/OSKの利用者向け品質は主張しません。
+
+- `./scripts/build_mozc_linux.sh` が成功し、`libkomorebi_mozc.so` と `mozc.data` が生成される
+- `cargo test -p komorebi-core` が全件成功する
+- `cargo run -p komorebictl -- convert きょうはいいてんき` がMozc候補と`今日はいい天気`のpreeditを返す
+- `cargo run -p komorebictl -- convert きょうはいいてんき --commit` で確定でき、`~/.local/share/komorebi/mozc/.history.db` が平文の確定文字列を含まない
+- `~/.local/share/komorebi/key` が32バイト・0600で作られ、再起動後も同じ学習が読める
+- 追加パッチ `0008` / `0009` が冪等に適用され、Androidビルドの挙動を変えない
+- fcitx5アドオン、IBus、OSK、ニューラル変換、辞書管理UI、Android移行は未実装と明記する
+
 ## rc.33-dev の作成条件
 
 2026年11月4日の利用者の指定「精製したら検証は省いてapkにしよう」により、
@@ -125,4 +137,16 @@ Mozc・arm64 Karukan／C++・辞書・法務文書、R8 mappingとDEXのJNI名�
 SHA-256を添付する。
 実機・エミュレータは利用できないため、API別マトリクス、入力遅延、FPS、メモリ、
 連打・2行候補・ツールバー・入力先ごとの互換性は未確認。性能向上率は主張しない。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.43-dev の作成条件
+
+変換キー1回で候補が開いた直後の確定を文全体の確定に変更。文節移動・候補選択・二回目の変換・
+候補一覧展開・入力編集の後は従来の文節確定へ戻る。`WholeSentenceConfirm` と3件の単体テストを追加。
+AGENTS.mdの自動ゲートを低負荷で実行。単体テスト280件（app 278、karukan 2）成功、
+debug／releaseのlintエラー0件。通常debug／release APK・AABと、別呼び出しのABI別APKを生成。
+全10 ABI別APKのID・versionCode 67・versionName、全release APKの16 KB配置とzipalign、
+Mozc 4 ABI・arm64 Karukan／C++・辞書・法務文書、R8後DEXのJNI名を確認。
+プライバシーとNOTICEの公開／アプリ内版は一致。公開APKはAndroid Debug証明書で署名検証成功。
+実機・エミュレータは利用できないため、変換操作とAPI 24 / 29 / 34 / 35 / 36のマトリクスは未実施。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。

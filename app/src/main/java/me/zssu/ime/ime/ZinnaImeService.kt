@@ -139,8 +139,18 @@ class ZinnaImeService : InputMethodService() {
      */
     private var isComposing = false
     private var isConverting = false
-        set(value) { field = value; conversionInteraction.observe(value); if (!value && !isComposing) conversionInteraction.reset(); if (!value) segmentEditing = false }
+        set(value) {
+            field = value
+            conversionInteraction.observe(value)
+            if (!value) {
+                confirmCommitsWholeSentence = false
+                segmentEditing = false
+                if (!isComposing) conversionInteraction.reset()
+            }
+        }
     private var currentSegmentCount = 0
+    /** True only for a conversion opened by one Convert press and left untouched. */
+    private var confirmCommitsWholeSentence = false
     private var suppressPartialLearning = false
     private var learningCandidate: MozcSession.Candidate? = null
     private var renderedPreeditCursor = 0
@@ -378,11 +388,13 @@ class ZinnaImeService : InputMethodService() {
             }
             onConversionPageChanged = { ids -> session.visibleConversionCandidateIds = ids }
             onSegmentEditRequested = {
+                confirmCommitsWholeSentence = false
                 segmentEditing = !segmentEditing
                 candidateView?.segmentEditing = segmentEditing
                 segmentBar?.visibility = if (isConverting && segmentEditing) View.VISIBLE else View.GONE
             }
             onCandidateFocusRequested = { candidate -> enqueueInput {
+                confirmCommitsWholeSentence = false
                 if (isConverting && !candidate.directCommit && lastCandidates.any { it.id == candidate.id && it.text == candidate.text }) {
                     conversionInteraction.chooseCandidates()
                     cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -472,6 +484,7 @@ class ZinnaImeService : InputMethodService() {
         }
 
         candidates.onPanelExpanded = { expanded ->
+            if (expanded) confirmCommitsWholeSentence = false
             keyboard.visibility = if (expanded) View.GONE else View.VISIBLE
             menuButton.visibility = if (expanded) View.GONE else View.VISIBLE
             segmentBar?.visibility = if (!expanded && isConverting && segmentEditing) View.VISIBLE else View.GONE
@@ -1176,7 +1189,11 @@ class ZinnaImeService : InputMethodService() {
             clientContext.precedingText = before.dropLast(if (isComposing) renderedPreeditCursor.coerceAtMost(before.length) else 0).takeLast(80)
         }
         session.clientContext = clientContext.build()
-        when (val action = output.action) {
+        val action = output.action
+        if (action !is KeyAction.Space && action !is KeyAction.Convert && action !is KeyAction.Enter) {
+            confirmCommitsWholeSentence = false
+        }
+        when (action) {
             is KeyAction.Input -> {
                 cancelKarukanConversion()
                 render(session.sendText(action.text, output.label))
@@ -1244,7 +1261,9 @@ class ZinnaImeService : InputMethodService() {
      * nothing at all, so space appeared to work only as the second keystroke of a word.
      */
     private suspend fun handleSpace() {
+        val wasConverting = isConverting
         conversionInteraction.convertPressed(isComposing, isConverting)
+        confirmCommitsWholeSentence = WholeSentenceConfirm.arm(isComposing, wasConverting)
         if (karukanConversionActive) {
             // The user is navigating Mozc's candidates; discard an outstanding neural result.
             cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -1400,6 +1419,16 @@ class ZinnaImeService : InputMethodService() {
      * also fire the editor action and send the message you were only trying to finalise.
      */
     private suspend fun handleEnter() {
+        val commitsWholeSentence = WholeSentenceConfirm.commitsAll(
+            converting = isConverting,
+            armed = confirmCommitsWholeSentence,
+            segmentCount = currentSegmentCount,
+        )
+        confirmCommitsWholeSentence = false
+        if (commitsWholeSentence) {
+            submitCurrentComposition()
+            return
+        }
         val partial = ConversionNavigation.partialCandidate(
             isConverting, currentSegmentCount, lastCandidates, lastFocusedCandidateIndex,
         )
@@ -1662,6 +1691,7 @@ class ZinnaImeService : InputMethodService() {
 
     private suspend fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {
         synchronizeEditorComposition()
+        if (isComposing) confirmCommitsWholeSentence = false
         if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
         if (
@@ -2136,6 +2166,7 @@ class ZinnaImeService : InputMethodService() {
 
     private suspend fun commitCandidate(candidate: MozcSession.Candidate, partial: Boolean = isConverting && currentSegmentCount > 1 && !candidate.directCommit) {
         if (lastCandidates.none { it.id == candidate.id && it.text == candidate.text }) return
+        confirmCommitsWholeSentence = false
         if (synchronizeEditorComposition()) return
         learningCandidate = candidate
         suppressPartialLearning = partial
