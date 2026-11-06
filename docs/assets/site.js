@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.45-dev", "rc.45-dev", "Wi-Fi Directの検出と接続を修正", "docs/releases/v0.3.0-rc.45-dev.md", "release rc45 beam wifi direct"],
         ["releases/v0.3.0-rc.44-dev", "rc.44-dev", "Meets BeamのWi-Fi Directハンドオフと大容量ファイル・辞書共有", "docs/releases/v0.3.0-rc.44-dev.md", "release rc44 beam nfc direct"],
         ["releases/v0.3.0-rc.43-dev", "rc.43-dev", "変換1回直後の確定で文全体を確定", "docs/releases/v0.3.0-rc.43-dev.md", "release rc43 確定"],
         ["releases/v0.3.0-rc.42-dev", "rc.42-dev", "Mozc非同期化と候補表示の軽量化", "docs/releases/v0.3.0-rc.42-dev.md", "release rc42 性能"],
@@ -389,6 +390,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-06", "v0.3.0-rc.45-dev", "Wi-Fi Directの位置情報モード・接続確立・アドレス解決を修正"],
     ["2026-11-06", "v0.3.0-rc.44-dev", "Meets BeamのWi-Fi Direct転送と大容量ファイル共有"],
     ["2026-11-06", "v0.3.0-rc.43-dev", "変換1回直後の確定で文全体を確定"],
     ["2026-11-05", "v0.3.0-rc.42-dev", "Mozcの非同期化・入力処理と候補表示を軽量化"],

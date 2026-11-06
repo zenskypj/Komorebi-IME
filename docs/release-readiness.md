@@ -165,3 +165,16 @@ versionName、全release APKの16 KB配置とzipalign、Mozc 4 ABI・arm64 Karuk
 **Wi-Fi Directの実機2台接続・転送は未実施**。API 24 / 29 / 34 / 35 / 36のマトリクス、
 大容量ファイル、画面消灯・バックグラウンド、共有元アプリごとの互換性は未確認。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.45-dev の作成条件
+
+rc.44のWi-Fi Direct接続失敗を受け、全Androidで位置情報モードを確認、NFC前の受信サーバーバインドと
+空きポート通知、グループオーナー端末アドレスの再試行とプレースホルダーMAC拒否、p2pインターフェース
+IP走査、受信側の接続リトライ・NetworkInfo確認・タイムアウト延長を追加。共有元サイズの
+AssetFileDescriptor補完と段階別の状態表示も追加。
+単体テスト289件（app 287、karukan 2）成功、debug／releaseのlintエラー0件。通常APK・AABとABI別APKを生成し、
+versionCode 69、全release APKの16 KB配置とzipalign、Mozc 4 ABI・Karukan・辞書・法務文書・FileProvider、
+R8後DEXのJNI名を確認。PRIVACY／NOTICEの公開・アプリ内版は一致。公開APKの署名検証成功。
+**Wi-Fi Directの実機2台接続・転送は修正後も未実施**。位置情報モード、バインド順、アドレス取得、
+接続リトライを修正したが、端末固有のP2P実装差は未確認。rc.44で失敗した端末での再確認が必要。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。

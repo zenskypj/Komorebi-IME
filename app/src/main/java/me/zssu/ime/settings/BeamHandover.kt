@@ -8,13 +8,16 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.security.GeneralSecurityException
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -33,7 +36,10 @@ object BeamHandover {
     const val MAX_TRANSFER_BYTES = 2L * 1024 * 1024 * 1024
     private const val BUFFER_SIZE = 65536
     private const val MAX_NAME_LENGTH = 100
-    private const val CONNECT_ATTEMPTS = 10
+    private const val CONNECT_ATTEMPTS = 30
+    private const val BIND_ATTEMPTS = 60
+    private const val SERVER_ACCEPT_TIMEOUT_MS = 120000
+    private const val CONNECT_TIMEOUT_MS = 2000
     private val random = SecureRandom()
     private val macPattern = Regex("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}")
     private val ipv4Pattern = Regex("(\\d{1,3}\\.){3}\\d{1,3}")
@@ -74,7 +80,9 @@ object BeamHandover {
                 require(name.isNotBlank() && name.length <= 200)
                 require(size in 1..MAX_TRANSFER_BYTES)
                 require(mimeType.isNotBlank() && mimeType.length <= 120)
-                require(macPattern.matches(ownerAddress)) { "送信側の Wi-Fi Direct アドレスが不正です" }
+                require(macPattern.matches(ownerAddress) && isUsableP2pAddress(ownerAddress)) {
+                    "送信側の Wi-Fi Direct アドレスが不正です"
+                }
                 require(isIPv4(ownerIp)) { "送信側の IP アドレスが不正です" }
                 require(port in 1..65535)
                 require(token.length in 16..128)
@@ -85,6 +93,14 @@ object BeamHandover {
                 ipv4Pattern.matches(value) && value.split('.').all { it.toIntOrNull() in 0..255 }
         }
     }
+
+    fun isUsableP2pAddress(address: String?): Boolean =
+        !address.isNullOrBlank() &&
+            macPattern.matches(address) &&
+            run {
+                val hex = address.replace(":", "").lowercase()
+                hex != "000000000000" && hex != "020000000000"
+            }
 
     fun generateToken(): String {
         val bytes = ByteArray(32)
@@ -106,9 +122,55 @@ object BeamHandover {
     }
 
     /**
+     * The P2P interface address is not always reported by requestConnectionInfo
+     * immediately after createGroup. Scanning the interface avoids binding to a
+     * not-yet-assigned address.
+     */
+    fun findP2pIpv4(): String? = runCatching {
+        Collections.list(NetworkInterface.getNetworkInterfaces())
+            .filter { it.isUp && it.name.startsWith("p2p") }
+            .flatMap { Collections.list(it.inetAddresses) }
+            .filterIsInstance<Inet4Address>()
+            .firstOrNull { !it.isLoopbackAddress }
+            ?.hostAddress
+    }.getOrNull()
+
+    /** True when the address is already assigned to one of this device's interfaces. */
+    fun isAssignedIpv4(address: String): Boolean = runCatching {
+        Collections.list(NetworkInterface.getNetworkInterfaces())
+            .filter { it.isUp }
+            .flatMap { Collections.list(it.inetAddresses) }
+            .filterIsInstance<Inet4Address>()
+            .any { it.hostAddress == address }
+    }.getOrDefault(false)
+
+    /**
      * 送信側。Wi-Fi Direct のグループオーナーアドレスにだけバインドし、
      * 1 クライアントへ暗号化ストリームを送る。
      */
+    fun openServer(bindAddress: String, port: Int = 0): ServerSocket {
+        require(bindAddress.isNotBlank()) { "Wi-Fi Direct のアドレスがありません" }
+        var serverSocket: ServerSocket? = null
+        var lastError: IOException? = null
+        for (attempt in 0 until BIND_ATTEMPTS) {
+            try {
+                serverSocket = ServerSocket().apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress(InetAddress.getByName(bindAddress), port))
+                }
+                break
+            } catch (error: IOException) {
+                lastError = error
+                runCatching { serverSocket?.close() }
+                serverSocket = null
+                if (attempt < BIND_ATTEMPTS - 1) Thread.sleep(500)
+            }
+        }
+        val server = serverSocket ?: throw (lastError ?: IOException("Wi-Fi Direct の受信サーバーを開けません"))
+        server.soTimeout = SERVER_ACCEPT_TIMEOUT_MS
+        return server
+    }
+
     fun sendStream(
         bindAddress: String,
         port: Int,
@@ -116,17 +178,28 @@ object BeamHandover {
         input: InputStream,
         totalBytes: Long,
         onProgress: (bytesSent: Long, total: Long) -> Unit = { _, _ -> },
+        cancelFlag: AtomicBoolean = AtomicBoolean(false),
+        onReady: () -> Unit = {}
+    ): Boolean {
+        require(totalBytes in 1..MAX_TRANSFER_BYTES) { "転送サイズが範囲外です" }
+        val server = openServer(bindAddress, port)
+        onReady()
+        return sendStream(server, token, input, totalBytes, onProgress, cancelFlag)
+    }
+
+    fun sendStream(
+        server: ServerSocket,
+        token: String,
+        input: InputStream,
+        totalBytes: Long,
+        onProgress: (bytesSent: Long, total: Long) -> Unit = { _, _ -> },
         cancelFlag: AtomicBoolean = AtomicBoolean(false)
     ): Boolean {
         require(totalBytes in 1..MAX_TRANSFER_BYTES) { "転送サイズが範囲外です" }
-        require(bindAddress.isNotBlank()) { "Wi-Fi Direct のアドレスがありません" }
-        val serverSocket = ServerSocket()
-        serverSocket.reuseAddress = true
-        serverSocket.bind(InetSocketAddress(InetAddress.getByName(bindAddress), port))
-        serverSocket.soTimeout = 30000
+        require(token.isNotEmpty()) { "認証トークンがありません" }
 
         return try {
-            val client = serverSocket.accept()
+            val client = server.accept()
             client.soTimeout = 30000
             client.use { socket ->
                 val out = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
@@ -186,7 +259,7 @@ object BeamHandover {
                 true
             }
         } finally {
-            runCatching { serverSocket.close() }
+            runCatching { server.close() }
         }
     }
 
@@ -210,7 +283,7 @@ object BeamHandover {
         for (attempt in 0 until CONNECT_ATTEMPTS) {
             try {
                 socket = Socket().apply {
-                    connect(InetSocketAddress(hostAddress, port), 3000)
+                    connect(InetSocketAddress(hostAddress, port), CONNECT_TIMEOUT_MS)
                     soTimeout = 30000
                 }
                 break

@@ -26,6 +26,8 @@
 
 > [!NOTE]
 > AndroidX が非公開ブロードキャスト受信用の署名権限 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` を自動宣言します。ユーザーの許可は不要で、外部アプリには付与されません。
+>
+> Wi-Fi Direct の `discoverPeers` / `requestPeers` は、Android 13 以降でも端末の位置情報モードがオンのときだけ動作します。アプリは位置情報を取得・送信しません。
 
 ## ネイティブへの適用パッチ
 
