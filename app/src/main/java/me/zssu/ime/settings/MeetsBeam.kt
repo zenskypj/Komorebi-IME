@@ -183,7 +183,7 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
 class MeetsBeamActivity : ComponentActivity() {
     private companion object {
         const val MAX_DICTIONARY_BYTES = 5 * 1024 * 1024
-        const val P2P_CONNECT_TIMEOUT_MS = 90000L
+        const val P2P_CONNECT_TIMEOUT_MS = 180000L
         const val P2P_DIRECT_CONNECT_DELAY_MS = 5000L
         const val P2P_CONNECT_RETRIES = 2
     }
@@ -209,6 +209,8 @@ class MeetsBeamActivity : ComponentActivity() {
     private var receivePayload: BeamHandover.HandoverPayload? = null
     private var p2pConnecting = false
     private var p2pConnectAttempts = 0
+    private var pendingSenderPayload: BeamHandover.HandoverPayload? = null
+    private var p2pSendTransferStarted = false
     private var p2pReceiveTransferStarted = false
     private var directTransferActive = false
     private var pendingP2pAction: (() -> Unit)? = null
@@ -482,13 +484,56 @@ class MeetsBeamActivity : ComponentActivity() {
         val manager = p2pManager ?: return
         val channel = p2pChannel ?: return
         busy = true
-        status = "Wi-Fi Direct のグループを作成しています..."
+        status = "Wi-Fi Direct の準備をしています..."
         transferCancel.set(false)
         directTransferActive = true
+        p2pSendTransferStarted = false
+        pendingSenderPayload = null
+        outgoing = message
         manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() = createGroup(manager, channel)
-            override fun onFailure(reason: Int) = createGroup(manager, channel)
+            override fun onSuccess() = beginSenderHandshake(manager, channel, message)
+            override fun onFailure(reason: Int) = beginSenderHandshake(manager, channel, message)
         })
+    }
+
+    private fun beginSenderHandshake(
+        manager: WifiP2pManager,
+        channel: WifiP2pManager.Channel,
+        message: BeamMessage,
+    ) {
+        withLocalP2pAddress { ownerAddress ->
+            val payload = BeamHandover.HandoverPayload(
+                targetType = message.targetType.ifBlank { "file" },
+                name = message.name.ifBlank { "beam_file" },
+                size = message.size,
+                mimeType = message.mimeType.ifBlank { "application/octet-stream" },
+                ownerAddress = if (BeamHandover.isUsableP2pAddress(ownerAddress)) ownerAddress ?: "" else "",
+                ownerIp = "192.168.49.1",
+                port = BeamHandover.DEFAULT_PORT,
+                token = BeamHandover.generateToken(),
+                ownerName = localP2pDevice?.deviceName.orEmpty(),
+            )
+            pendingSenderPayload = payload
+            val updated = message.copy(value = payload.toJson())
+            manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() {
+                    status = "相手の接続を待っています..."
+                }
+
+                override fun onFailure(reason: Int) {
+                    status = "Wi-Fi Direct の検索を開始できません ($reason)。NFC は送信できます"
+                }
+            })
+            startNfcSend(updated)
+            mainHandler.postDelayed({
+                if (!p2pSendTransferStarted && pendingSenderPayload === payload) {
+                    busy = false
+                    directTransferActive = false
+                    status = "Wi-Fi Direct の接続がタイムアウトしました"
+                    removeP2pGroup()
+                }
+            }, P2P_CONNECT_TIMEOUT_MS)
+        }
     }
 
     private fun createGroup(manager: WifiP2pManager, channel: WifiP2pManager.Channel) {
@@ -795,35 +840,137 @@ class MeetsBeamActivity : ComponentActivity() {
     }
 
     private fun requestP2pConnectionInfo() {
-        val payload = receivePayload ?: return
-        if (p2pReceiveTransferStarted) return
+        if (p2pReceiveTransferStarted || p2pSendTransferStarted) return
         val manager = p2pManager ?: return
         val channel = p2pChannel ?: return
         manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
-            if (info.groupFormed && !p2pReceiveTransferStarted) {
-                p2pReceiveTransferStarted = true
-                p2pConnecting = false
-                val ownerIp = info.groupOwnerAddress?.hostAddress ?: payload.ownerIp
-                status = "接続成立 (${ownerIp})。受信を開始します..."
-                startReceiveTransfer(payload, ownerIp)
-            } else if (!info.groupFormed && p2pConnecting) {
-                status = "Wi-Fi Direct の接続成立を待っています..."
+            if (!info.groupFormed) {
+                if (p2pConnecting) status = "Wi-Fi Direct の接続成立を待っています..."
+                return@requestConnectionInfo
+            }
+            when {
+                receivePayload != null -> {
+                    p2pReceiveTransferStarted = true
+                    p2pConnecting = false
+                    startReceiveTransfer(info)
+                }
+                pendingSenderPayload != null -> {
+                    p2pSendTransferStarted = true
+                    startSenderTransfer(info)
+                }
             }
         }
     }
 
-    private fun startReceiveTransfer(payload: BeamHandover.HandoverPayload, ownerIp: String) {
+    private fun startSenderTransfer(info: WifiP2pInfo) {
+        val payload = pendingSenderPayload ?: return
+        val message = outgoing ?: return
+        val ownerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
+        busy = true
+        status = if (info.isGroupOwner) {
+            "グループ成立（送信側GO）。受信を待っています..."
+        } else {
+            "グループ成立（送信側クライアント）。接続しています..."
+        }
+        Thread({
+            val stream = runCatching {
+                when {
+                    message.extra.startsWith("content://") -> contentResolver.openInputStream(Uri.parse(message.extra))
+                    payload.targetType == "dict" && message.extra.isNotEmpty() -> message.extra.byteInputStream(Charsets.UTF_8)
+                    else -> null
+                }
+            }.getOrNull()
+            if (stream == null) {
+                runOnUiThread {
+                    busy = false
+                    directTransferActive = false
+                    status = "送信データを開けません"
+                    removeP2pGroup()
+                }
+                return@Thread
+            }
+            try {
+                stream.use { input ->
+                    val success = if (info.isGroupOwner) {
+                        val server = BeamHandover.openServerInRange(ownerIp)
+                        BeamHandover.sendStream(
+                            server = server,
+                            token = payload.token,
+                            input = input,
+                            totalBytes = payload.size,
+                            onProgress = { cur, total ->
+                                runOnUiThread { status = "送信中... ${formatSize(cur)} / ${formatSize(total)}" }
+                            },
+                            cancelFlag = transferCancel,
+                        )
+                    } else {
+                        BeamHandover.sendStreamToHost(
+                            hostAddress = ownerIp,
+                            ports = BeamHandover.PORT_RANGE,
+                            token = payload.token,
+                            input = input,
+                            totalBytes = payload.size,
+                            onProgress = { cur, total ->
+                                runOnUiThread { status = "送信中... ${formatSize(cur)} / ${formatSize(total)}" }
+                            },
+                            cancelFlag = transferCancel,
+                        )
+                    }
+                    if (!success) error("転送データを検証できませんでした")
+                }
+                runOnUiThread {
+                    busy = false
+                    directTransferActive = false
+                    status = "Wi-Fi Direct 転送完了: ${payload.name}"
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    busy = false
+                    directTransferActive = false
+                    status = "Wi-Fi Direct 送信エラー: ${e.message}"
+                }
+            } finally {
+                mainHandler.postDelayed({ removeP2pGroup() }, 5000)
+            }
+        }, "beam-direct-sender").start()
+    }
+
+    private fun startReceiveTransfer(info: WifiP2pInfo) {
+        val payload = receivePayload ?: return
         val safeName = BeamHandover.sanitizeFileName(payload.name)
         val directory = File(filesDir, "beam").apply { mkdirs() }
         val file = File(directory, "${System.currentTimeMillis()}_$safeName")
+        val ownerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
         busy = true
         status = "受信中... ${formatSize(payload.size)}"
         Thread({
             try {
                 file.outputStream().use { out ->
-                    val success = BeamHandover.receiveStream(ownerIp, payload.port, payload.token, out, payload.size, onProgress = { cur, total ->
-                        runOnUiThread { status = "受信中... ${formatSize(cur)} / ${formatSize(total)}" }
-                    }, cancelFlag = transferCancel)
+                    val success = if (info.isGroupOwner) {
+                        val server = BeamHandover.openServerInRange(ownerIp)
+                        BeamHandover.receiveStreamFromHost(
+                            server = server,
+                            token = payload.token,
+                            output = out,
+                            totalBytes = payload.size,
+                            onProgress = { cur, total ->
+                                runOnUiThread { status = "受信中... ${formatSize(cur)} / ${formatSize(total)}" }
+                            },
+                            cancelFlag = transferCancel,
+                        )
+                    } else {
+                        BeamHandover.receiveStreamFromRange(
+                            hostAddress = ownerIp,
+                            ports = BeamHandover.PORT_RANGE,
+                            token = payload.token,
+                            output = out,
+                            totalBytes = payload.size,
+                            onProgress = { cur, total ->
+                                runOnUiThread { status = "受信中... ${formatSize(cur)} / ${formatSize(total)}" }
+                            },
+                            cancelFlag = transferCancel,
+                        )
+                    }
                     if (!success) error("転送データを検証できませんでした")
                 }
                 runOnUiThread {

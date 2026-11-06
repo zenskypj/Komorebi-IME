@@ -189,3 +189,14 @@ AES-GCMトークン認証は維持。単体テスト290件（app 288、karukan 2
 法務文書・FileProvider、R8後JNI名、PRIVACY／NOTICE一致、署名を確認。権限の変更なし。
 **Wi-Fi Directの実機2台接続・転送は修正後も未実施**。rc.45で失敗した端末での再確認が必要。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.47-dev の作成条件
+
+rc.44〜rc.46の実機失敗を受け、Wi-Fi Directを送信側`createGroup`固定から標準のグループ交渉へ変更。
+受信側が検出した相手へ`connect`し、グループオーナーはフレームワークが自動決定する。GOが受信サーバーを
+開き、クライアントが49152〜49161を探索する対称構成とし、サーバー送信・サーバー受信・クライアント送信・
+クライアント受信の4経路を実装。接続待ちは180秒。単体テスト291件（app 289、karukan 2）成功、
+debug／releaseのlintエラー0件。通常APK・AABとABI別APKを生成し、versionCode 71、16 KB配置、zipalign、
+Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一致、署名を確認。権限の変更なし。
+**Wi-Fi Directの実機2台接続・転送は変更後も未実施**。今回は接続方式自体を変えたため、実機での再確認が必須。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
