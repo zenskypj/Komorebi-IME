@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream
 import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class BeamHandoverTest {
 
@@ -15,14 +14,13 @@ class BeamHandoverTest {
     fun handoverPayloadJsonRoundtrip() {
         val original = BeamHandover.HandoverPayload(
             targetType = "dict",
-            name = "櫻坂46辞書パック.kdict",
+            name = "辭書パック.tsv",
             size = 1048576L,
             mimeType = "text/tab-separated-values",
-            ssid = "DIRECT-Komorebi-Test",
-            passphrase = "test-passphrase-1234",
+            ownerAddress = "02:11:22:33:44:55",
+            ownerIp = "192.168.49.1",
             port = 49152,
-            token = "secret-token-xyz",
-            sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            token = "secret-token-xyz-1234"
         )
         val json = original.toJson()
         val parsed = BeamHandover.HandoverPayload.fromJson(json)
@@ -31,11 +29,10 @@ class BeamHandoverTest {
         assertEquals(original.name, parsed.name)
         assertEquals(original.size, parsed.size)
         assertEquals(original.mimeType, parsed.mimeType)
-        assertEquals(original.ssid, parsed.ssid)
-        assertEquals(original.passphrase, parsed.passphrase)
+        assertEquals(original.ownerAddress, parsed.ownerAddress)
+        assertEquals(original.ownerIp, parsed.ownerIp)
         assertEquals(original.port, parsed.port)
         assertEquals(original.token, parsed.token)
-        assertEquals(original.sha256, parsed.sha256)
     }
 
     @Test
@@ -46,7 +43,7 @@ class BeamHandoverTest {
             BeamMessage("url", "https://example.com/test"),
             BeamMessage("app", "me.zssu.ime"),
             BeamMessage("dict", "とうきょう\t東京\t名詞\t首都", name = "追加辞書", size = 20L),
-            BeamMessage("file", "base64-or-path", name = "photo.jpg", mimeType = "image/jpeg", size = 1024L),
+            BeamMessage("file", "content://example/photo", name = "photo.jpg", mimeType = "image/jpeg", size = 1024L),
             BeamMessage("handover", "{\"test\":true}", name = "backup.tar", size = 5000000L)
         )
 
@@ -58,12 +55,39 @@ class BeamHandoverTest {
             assertEquals(msg.name, opened.name)
             assertEquals(msg.mimeType, opened.mimeType)
             assertEquals(msg.size, opened.size)
+            assertEquals("", opened.extra)
         }
     }
 
     @Test
+    fun largeLocalExtraNeverCrossesTheNfcLimit() {
+        val password = "test-password".toCharArray()
+        val message = BeamMessage(
+            type = "handover",
+            value = "{\"name\":\"backup.tar\"}",
+            name = "backup.tar",
+            mimeType = "application/octet-stream",
+            size = 100_000L,
+            extra = "x".repeat(100_000)
+        )
+
+        val sealed = BeamTransport.seal(message, password)
+        val opened = BeamTransport.open(sealed, password)
+
+        assertEquals("", opened.extra)
+        assertEquals(100_000L, opened.size)
+    }
+
+    @Test
+    fun sanitizeFileNameKeepsOnlyOneSafeComponent() {
+        assertEquals("passwd", BeamHandover.sanitizeFileName("../../etc/passwd"))
+        assertEquals("辞書.tsv", BeamHandover.sanitizeFileName("辞書.tsv"))
+        assertEquals("beam_file", BeamHandover.sanitizeFileName(".."))
+        assertEquals("c.txt", BeamHandover.sanitizeFileName("a/b\\c.txt"))
+    }
+
+    @Test
     fun beamHandoverStreamSendAndReceiveOverLoopback() {
-        // Find an available ephemeral port
         val port = ServerSocket(0).use { it.localPort }
         val token = BeamHandover.generateToken()
         val testData = ByteArray(128 * 1024) { (it % 251).toByte() }
@@ -76,16 +100,27 @@ class BeamHandoverTest {
 
         val serverThread = Thread {
             serverLatch.countDown()
-            val input = ByteArrayInputStream(testData)
-            sendSuccess = BeamHandover.sendStream(port, token, input, testData.size.toLong())
+            sendSuccess = BeamHandover.sendStream(
+                "127.0.0.1",
+                port,
+                token,
+                ByteArrayInputStream(testData),
+                testData.size.toLong(),
+            )
         }
         serverThread.start()
 
         assertTrue("Server failed to bind", serverLatch.await(5, TimeUnit.SECONDS))
-        Thread.sleep(100) // Give serverSocket.accept a moment
+        Thread.sleep(100)
 
         val clientThread = Thread {
-            receiveSuccess = BeamHandover.receiveStream("127.0.0.1", port, token, receivedOutput, testData.size.toLong())
+            receiveSuccess = BeamHandover.receiveStream(
+                "127.0.0.1",
+                port,
+                token,
+                receivedOutput,
+                testData.size.toLong(),
+            )
             clientLatch.countDown()
         }
         clientThread.start()
@@ -112,7 +147,13 @@ class BeamHandoverTest {
 
         val serverThread = Thread {
             serverLatch.countDown()
-            sendSuccess = BeamHandover.sendStream(port, serverToken, ByteArrayInputStream(testData), testData.size.toLong())
+            sendSuccess = BeamHandover.sendStream(
+                "127.0.0.1",
+                port,
+                serverToken,
+                ByteArrayInputStream(testData),
+                testData.size.toLong(),
+            )
         }
         serverThread.start()
 
@@ -120,7 +161,13 @@ class BeamHandoverTest {
         Thread.sleep(100)
 
         val clientThread = Thread {
-            receiveSuccess = BeamHandover.receiveStream("127.0.0.1", port, clientWrongToken, ByteArrayOutputStream(), testData.size.toLong())
+            receiveSuccess = BeamHandover.receiveStream(
+                "127.0.0.1",
+                port,
+                clientWrongToken,
+                ByteArrayOutputStream(),
+                testData.size.toLong(),
+            )
             clientLatch.countDown()
         }
         clientThread.start()
@@ -130,5 +177,48 @@ class BeamHandoverTest {
 
         assertFalse("Server should reject invalid token", sendSuccess)
         assertFalse("Client should fail on rejected token", receiveSuccess)
+    }
+
+    @Test
+    fun receiverRejectsAStreamThatDoesNotMatchTheDeclaredSize() {
+        val port = ServerSocket(0).use { it.localPort }
+        val token = BeamHandover.generateToken()
+        val testData = ByteArray(4096) { 7 }
+
+        val serverThread = Thread {
+            BeamHandover.sendStream(
+                "127.0.0.1",
+                port,
+                token,
+                ByteArrayInputStream(testData),
+                testData.size.toLong(),
+            )
+        }
+        serverThread.start()
+        Thread.sleep(100)
+
+        val receiveSuccess = BeamHandover.receiveStream(
+            "127.0.0.1",
+            port,
+            token,
+            ByteArrayOutputStream(),
+            testData.size.toLong() + 1,
+        )
+        serverThread.join(5000)
+
+        assertFalse("A size mismatch must fail", receiveSuccess)
+    }
+
+    @Test
+    fun streamRequiresAPositiveBoundedSize() {
+        assertThrows(IllegalArgumentException::class.java) {
+            BeamHandover.sendStream(
+                "127.0.0.1",
+                1,
+                "token-1234567890",
+                ByteArrayInputStream(ByteArray(1)),
+                0,
+            )
+        }
     }
 }

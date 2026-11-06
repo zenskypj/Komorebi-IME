@@ -4,10 +4,12 @@
 
 <div class="metrics">
 <div class="metric"><span class="n">0</span><span class="l">外へ送る入力データ</span></div>
-<div class="metric"><span class="n">1</span><span class="l">要求する権限（INTERNET）</span></div>
+<div class="metric"><span class="n">7</span><span class="l">要求する権限（NFC・Wi-Fi Direct含む）</span></div>
 <div class="metric"><span class="n">0</span><span class="l">広告SDK・解析SDK</span></div>
 <div class="metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
 </div>
+
+<p>権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の任意取得、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
 
 ## 一目でわかる比較
 
@@ -26,6 +28,8 @@
 | 学習履歴を暗号化して保存する | <span class="yes">✓</span> | <span class="unknown">?</span> | <span class="unknown">?</span> | <span class="unknown">?</span> |
 | クラウドバックアップを無効にできる | <span class="yes">✓</span> | <span class="unknown">?</span> | <span class="unknown">?</span> | <span class="unknown">?</span> |
 | ネット辞書（NEologd / SKK）を使える | <span class="yes">✓</span> | <span class="no">✗</span> | <span class="no">✗</span> | <span class="no">✗</span> |
+| NFC / Wi-Fi Direct で端末間転送できる | <span class="yes">✓</span> | <span class="muted">—</span> | <span class="muted">—</span> | <span class="muted">—</span> |
+| 要求する権限の用途をコードで確認できる | <span class="yes">✓</span> | <span class="unknown">?</span> | <span class="unknown">?</span> | <span class="unknown">?</span> |
 | 音声入力できる | <span class="muted">—</span> | <span class="yes">✓</span> | <span class="muted">—</span> | <span class="yes">✓</span> |
 | 翻訳できる | <span class="muted">—</span> | <span class="yes">✓</span> | <span class="muted">—</span> | <span class="yes">✓</span> |
 | 多言語を入力できる | <span class="partial">△</span> | <span class="yes">✓</span> | <span class="partial">△</span> | <span class="yes">✓</span> |
@@ -44,7 +48,7 @@
 <div class="hl">
 <span class="hl-num">01</span>
 <h3>入力した文字を、外に出さない</h3>
-<p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。通信するのは、あなたがモデルや追加辞書の「取得」を押したときだけです。入力・文脈・辞書・学習履歴は送りません。</p>
+<p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。外部通信は、あなたがモデルや追加辞書の「取得」を押したときだけです。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力・文脈・辞書・学習履歴は外部へ送りません。</p>
 </div>
 
 <div class="hl">
@@ -85,7 +89,7 @@
 
 <details class="faq-item">
 <summary>入力は本当に送られませんか？</summary>
-<p>送りません。要求する権限は <code>INTERNET</code> だけで、使うのはモデルや追加辞書をあなたが取得したときだけです。疑うなら、コードを読むか、通信を自分で観測してください。それができるのが、ソース公開の意味です。</p>
+<p>外部サーバーへ送りません。要求する権限は、任意取得用の <code>INTERNET</code>、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り Wi-Fi Direct 検出用の位置情報です。位置の記録・送信はしません。Meets Beam は端末間 P2P だけで、クラウドを経由しません。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p>
 </details>
 
 <details class="faq-item">

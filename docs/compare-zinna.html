@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Komorebi IME と Zinna-IME — プライバシーは互角、機能で選ぶ</title>
-<meta name="description" content="Komorebi IME とフォーク元 Zinna-IME の比較。プライバシーはほぼ互角。違いは、AI・辞書・移行・便利機能の数です。">
+<title>Komorebi IME と Zinna-IME — 入力の扱いは同じ、権限は Zinna が少ない</title>
+<meta name="description" content="Komorebi IME とフォーク元 Zinna-IME の比較。入力の扱いは同じで、権限は Zinna が少ない。Komorebi は Meets Beam・移行のため NFC・Wi-Fi Direct を追加。違いは AI・辞書・移行・便利機能の数です。">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 134'%3E%3Cpath d='M60 4 112 22v48c0 33-23 53-52 61C31 123 8 103 8 70V22Z' fill='%23006d3b'/%3E%3Ccircle cx='60' cy='55' r='15' fill='%23fff'/%3E%3C/svg%3E">
@@ -43,7 +43,7 @@
     <div>
       <p class="cmp-kicker">フォーク元との比較</p>
       <h1 class="cmp-title">同じ mozc。<br>できることが、違う。</h1>
-      <p class="cmp-lede">Zinna-IME は、このアプリの土台です。プライバシーはほぼ互角。違いが出るのは、<strong>AI・辞書・移行・便利機能の数</strong>です。</p>
+      <p class="cmp-lede">Zinna-IME は、このアプリの土台です。入力の扱いは同じ。権限は Zinna が少なく、Komorebi は Meets Beam と移行のために NFC・Wi-Fi Direct の権限を追加しています。違いが出るのは、<strong>AI・辞書・移行・便利機能の数</strong>です。</p>
       <div class="cmp-cta-row">
         <a class="cmp-btn cmp-btn-primary" href="https://github.com/zenskypj/Komorebi-IME/releases/latest" target="_blank" rel="noopener noreferrer">最新版をダウンロード</a>
         <a class="cmp-btn cmp-btn-ghost" href="#compare">比較を見る</a>
@@ -82,12 +82,12 @@
 
   <section class="cmp-section" aria-labelledby="privacy-h">
     <div class="cmp-section-head" data-reveal>
-      <p class="cmp-eyebrow">まず、共通のところ</p>
-      <h2 class="cmp-h2" id="privacy-h">プライバシーは、ほぼ互角です。</h2>
-      <p class="cmp-sub">どちらも入力・学習・辞書を端末内で扱い、Keystore で暗号化し、クラウドバックアップを無効にしています。Zinna は権限ゼロ、Komorebi は任意取得のための <code>INTERNET</code> だけ。この点は Zinna が上です。</p>
+      <p class="cmp-eyebrow">入力の扱いと権限</p>
+      <h2 class="cmp-h2" id="privacy-h">入力の扱いは同じ。権限は Zinna が少ない。</h2>
+      <p class="cmp-sub">どちらも入力・学習・辞書を端末内で扱い、Keystore で暗号化し、クラウドバックアップを無効にしています。Zinna は権限ゼロ、Komorebi は任意取得の <code>INTERNET</code> に加え、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り検出用の位置情報を要求します。この点は Zinna が上です。</p>
     </div>
     <div class="cmp-notebox" data-reveal>
-      <h3>ここは、差がつきません</h3>
+      <h3>入力の扱いは、差がつきません</h3>
       <ul>
         <li>入力・変換・学習を端末内で処理</li>
         <li>入力内容を外部へ送信しない</li>
@@ -251,6 +251,11 @@
             <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
             <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
           </tr>
+          <tr>
+            <th scope="row">Wi-Fi Direct で大容量ファイル・辞書を送る</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-no" aria-hidden="true">✗</span><span class="sr-only">いいえ</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -281,7 +286,7 @@
       <article class="cmp-reason" data-reveal>
         <span class="num">03</span>
         <h3>機種変更が、NFC で終わる</h3>
-        <p>暗号化バックアップと復元、NFC による設定・学習の移行、NFC でテキストを送る Meets Beam。移行まわりは Komorebi で足した部分です。</p>
+        <p>暗号化バックアップと復元、NFC による設定・学習の移行、NFC でテキストを送り Wi-Fi Direct で大容量ファイル・辞書を送る Meets Beam。移行まわりは Komorebi で足した部分です。</p>
       </article>
       <article class="cmp-reason" data-reveal>
         <span class="num">04</span>
@@ -299,7 +304,7 @@
     <div class="cmp-faq" data-reveal>
       <details>
         <summary>Zinna-IME より安全ですか？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>プライバシーはほぼ互角です。Zinna は権限がゼロで、Komorebi は任意取得のための <code>INTERNET</code> だけ。入力・学習・辞書を端末内で扱い、暗号化する点は同じです。機能を取るか、権限ゼロを取るか、という違いです。</p></div>
+        <div class="answer"><p>入力の扱いは同じです。Zinna は権限がゼロ、Komorebi は任意取得の <code>INTERNET</code> に加えて、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り検出用の位置情報を要求します。位置の記録・送信はしません。入力・学習・辞書を端末内で扱い、暗号化する点は同じです。機能を取るか、権限の少なさを取るか、という違いです。</p></div>
       </details>
       <details>
         <summary>元に戻せますか？<span class="plus" aria-hidden="true"></span></summary>
@@ -315,14 +320,14 @@
       </details>
       <details>
         <summary>どちらを選べばいいですか？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>権限ゼロと最小構成を重視するなら Zinna。AI・追加辞書・移行・便利機能まで使うなら Komorebi。プライバシーの芯は同じなので、欲しい機能で選んでください。</p></div>
+        <div class="answer"><p>権限ゼロと最小構成を重視するなら Zinna。AI・追加辞書・移行・便利機能まで使うなら Komorebi。Komorebi は Meets Beam と移行のために NFC・Wi-Fi Direct の権限を追加していますが、入力の扱いは同じです。欲しい機能で選んでください。</p></div>
       </details>
     </div>
   </section>
 
   <section class="cmp-final" data-reveal>
     <h2>同じ芯で、できることが多いほうへ。</h2>
-    <p>プライバシーはそのままに、機能を足しました。</p>
+    <p>入力の扱いはそのままに、機能を足しました。権限は増えています。</p>
     <div class="cmp-cta-row">
       <a class="cmp-btn cmp-btn-primary" href="https://github.com/zenskypj/Komorebi-IME/releases/latest" target="_blank" rel="noopener noreferrer">最新版をダウンロード</a>
       <a class="cmp-btn cmp-btn-ghost" href="compare.html">Gboard・Simeji とも比べる</a>

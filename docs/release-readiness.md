@@ -150,3 +150,18 @@ Mozc 4 ABI・arm64 Karukan／C++・辞書・法務文書、R8後DEXのJNI名を�
 プライバシーとNOTICEの公開／アプリ内版は一致。公開APKはAndroid Debug証明書で署名検証成功。
 実機・エミュレータは利用できないため、変換操作とAPI 24 / 29 / 34 / 35 / 36のマトリクスは未実施。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.44-dev の作成条件
+
+Meets Beam に Wi-Fi Direct（P2P）の大容量転送、ファイル共有、TSV辞書共有を追加。
+NFCでグループオーナーの端末アドレス・IP・一時トークンを交換し、グループオーナーIPへだけ接続。
+AES-GCM、宣言サイズ、SHA-256、ファイル名サニタイズ、辞書取り込み前の確認を追加。
+`BeamHandoverTest` 8件を追加し、AGENTS.mdの自動ゲートを低負荷で実行。
+単体テスト288件（app 286、karukan 2）成功、debug／releaseのlintエラー0件。
+通常debug／release APK・AABと、別呼び出しのABI別APKを生成。全10 ABI別APKのID・versionCode 68・
+versionName、全release APKの16 KB配置とzipalign、Mozc 4 ABI・arm64 Karukan／C++・辞書・
+法務文書・FileProvider、R8後DEXのJNI名を確認。プライバシーとNOTICEの公開／アプリ内版は一致。
+公開APKはAndroid Debug証明書で署名検証成功。
+**Wi-Fi Directの実機2台接続・転送は未実施**。API 24 / 29 / 34 / 35 / 36のマトリクス、
+大容量ファイル、画面消灯・バックグラウンド、共有元アプリごとの互換性は未確認。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。

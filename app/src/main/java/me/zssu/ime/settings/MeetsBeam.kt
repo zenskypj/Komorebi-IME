@@ -1,12 +1,23 @@
 package me.zssu.ime.settings
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.Uri
+import android.net.wifi.WpsInfo
+import android.net.wifi.p2p.WifiP2pConfig
+import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pInfo
+import android.net.wifi.p2p.WifiP2pManager
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.cardemulation.CardEmulation
@@ -14,10 +25,13 @@ import android.nfc.cardemulation.HostApduService
 import android.nfc.tech.IsoDep
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.OpenableColumns
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +39,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import me.zssu.ime.theme.ZinnaTheme
 import org.json.JSONObject
 import java.io.File
@@ -48,7 +63,8 @@ internal data class BeamMessage(
     val name: String = "",
     val mimeType: String = "",
     val size: Long = 0L,
-    val extra: String = ""
+    val extra: String = "",
+    val targetType: String = ""
 )
 
 internal object BeamInbox {
@@ -67,7 +83,6 @@ internal object BeamTransport {
         if (message.name.isNotEmpty()) obj.put("name", message.name)
         if (message.mimeType.isNotEmpty()) obj.put("mimeType", message.mimeType)
         if (message.size > 0L) obj.put("size", message.size)
-        if (message.extra.isNotEmpty()) obj.put("extra", message.extra)
         val data = obj.toString().toByteArray(Charsets.UTF_8)
         require(data.size in 1..MAX_BYTES)
         val nonce = ByteArray(12).also(SecureRandom()::nextBytes)
@@ -81,12 +96,14 @@ internal object BeamTransport {
         val type = obj.getString("type"); val value = obj.getString("value")
         require(type in setOf("text", "url", "app", "dict", "file", "handover") && value.isNotEmpty() && value.toByteArray().size <= MAX_BYTES)
         if (type == "app") require(value.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+")))
-        if (type == "url") require(BeamAccessibilityService.normalize(value) == value)
+        if (type == "url") {
+            val parsed = runCatching { java.net.URI(value) }.getOrNull()
+            require(parsed != null && (parsed.scheme == "http" || parsed.scheme == "https") && !parsed.host.isNullOrBlank())
+        }
         val name = obj.optString("name", "")
         val mimeType = obj.optString("mimeType", "")
         val size = obj.optLong("size", 0L)
-        val extra = obj.optString("extra", "")
-        return BeamMessage(type, value, name, mimeType, size, extra)
+        return BeamMessage(type, value, name, mimeType, size)
     }
 }
 
@@ -159,9 +176,19 @@ internal class BeamReceiver(private val activity: ComponentActivity, private val
     }
 }
 
+// Wi-Fi Direct calls are reached only after withP2pPermission() granted the runtime permission.
+@SuppressLint("MissingPermission")
 class MeetsBeamActivity : ComponentActivity() {
+    private companion object {
+        const val MAX_DICTIONARY_BYTES = 5 * 1024 * 1024
+        const val P2P_CONNECT_TIMEOUT_MS = 45000L
+        const val P2P_DIRECT_CONNECT_DELAY_MS = 3000L
+    }
+
     private var status by mutableStateOf("")
     private var received by mutableStateOf<BeamMessage?>(null)
+    private var receivedFile by mutableStateOf<File?>(null)
+    private var pendingDictionary by mutableStateOf<BeamMessage?>(null)
     private var enabled by mutableStateOf(false)
     private var busy by mutableStateOf(false)
     private var receiver: BeamReceiver? = null
@@ -169,6 +196,28 @@ class MeetsBeamActivity : ComponentActivity() {
     private var pendingTag: Tag? = null
     private var outgoing: BeamMessage? = null
     private val adapter by lazy { NfcAdapter.getDefaultAdapter(this) }
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val transferCancel = AtomicBoolean(false)
+
+    private var p2pManager: WifiP2pManager? = null
+    private var p2pChannel: WifiP2pManager.Channel? = null
+    private var p2pReceiver: BroadcastReceiver? = null
+    private var localP2pDevice: WifiP2pDevice? = null
+    private var receivePayload: BeamHandover.HandoverPayload? = null
+    private var p2pConnecting = false
+    private var p2pReceiveTransferStarted = false
+    private var directTransferActive = false
+    private var pendingP2pAction: (() -> Unit)? = null
+
+    private val p2pPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val action = pendingP2pAction
+        pendingP2pAction = null
+        if (granted) {
+            if (locationServicesReady()) action?.invoke() else status = "Wi-Fi Direct を使うには位置情報をオンにしてください"
+        } else {
+            status = "Wi-Fi Direct の権限が必要です"
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -181,10 +230,16 @@ class MeetsBeamActivity : ComponentActivity() {
         setContent { ZinnaTheme { Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Meets Beam", style = MaterialTheme.typography.headlineSmall)
-                Text("双方の端末で有効にして NFC をオンにし、画面を開いたまま近づけてください。大容量ファイルや辞書パックは Wi-Fi Direct へ自動ハンドオフして高速転送します。")
+                Text("双方の端末で有効にして NFC をオンにし、画面を開いたまま近づけてください。大容量ファイルや辞書パックは Wi-Fi Direct（P2P）で端末間を直接転送します。")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Meets Beam を有効にする", modifier = Modifier.weight(1f))
-                    Switch(checked = enabled, onCheckedChange = { enabled = it; MeetsBeamSettings.setEnabled(this@MeetsBeamActivity, it); if (!it) { receiver?.stop(); NfcMigrationSession.clear(); receivingSelected = false; busy = false } })
+                    Switch(checked = enabled, onCheckedChange = {
+                        enabled = it; MeetsBeamSettings.setEnabled(this@MeetsBeamActivity, it)
+                        if (!it) {
+                            receiver?.stop(); NfcMigrationSession.clear(); receivingSelected = false; busy = false
+                            transferCancel.set(true); removeP2pGroup(); directTransferActive = false
+                        }
+                    })
                 }
                 Text("ブラウザの URL 自動取得は、送信操作時だけ対応ブラウザのアドレス欄を読みます。")
                 OutlinedButton(onClick = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("URL 自動取得のユーザー補助設定") }
@@ -200,27 +255,14 @@ class MeetsBeamActivity : ComponentActivity() {
                 }
                 if (status.isNotEmpty()) Text(status)
                 if (adapter == null) Text("この端末では NFC を利用できません。")
-                else if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_NFC_HOST_CARD_EMULATION)) Text("この端末は NFC の送信機能に対応していません。受信側としてお試しください。")
-                Button(enabled = enabled && !busy && outgoing != null && adapter?.isEnabled == true && packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_NFC_HOST_CARD_EMULATION), onClick = {
+                else if (!packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION)) Text("この端末は NFC の送信機能に対応していません。受信側としてお試しください。")
+                Button(enabled = enabled && !busy && outgoing != null && adapter?.isEnabled == true && packageManager.hasSystemFeature(PackageManager.FEATURE_NFC_HOST_CARD_EMULATION), onClick = {
                     val message = outgoing ?: return@Button
-                    runCatching {
-                        val password = NfcMigrationSession.newPassword()
-                        val chars = password.toCharArray()
-                        val bytes = try { BeamTransport.seal(message, chars) } finally { chars.fill('\u0000') }
-                        NfcMigrationSession.prepare(bytes, password, BeamTransport.aid,
-                            onDetected = { runOnUiThread { status = "相手の NFC を検出しました。端末を近づけたままにしてください。" } },
-                            onComplete = { runOnUiThread {
-                                adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
-                                busy = false
-                                if (message.type == "handover") {
-                                    startDirectSend(message)
-                                } else {
-                                    status = "送信しました。受信側を確認してください。"
-                                }
-                            } })
-                        runCatching { CardEmulation.getInstance(adapter).setPreferredService(this@MeetsBeamActivity, ComponentName(this@MeetsBeamActivity, MeetsBeamHostService::class.java)) }
-                        busy = true; status = "送信待ちです。受信側に端末を近づけてください。"
-                    }.onFailure { status = "送信準備に失敗しました: ${it.message}" }
+                    if (message.type == "handover") {
+                        withP2pPermission { prepareP2pSend(message) }
+                    } else {
+                        startNfcSend(message)
+                    }
                 }) { Text("送信側になる") }
                 Button(enabled = enabled && !busy && adapter?.isEnabled == true, onClick = {
                     receivingSelected = true
@@ -229,6 +271,8 @@ class MeetsBeamActivity : ComponentActivity() {
                 if (adapter != null && adapter?.isEnabled != true) OutlinedButton(onClick = { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }) { Text("NFC をオンにする") }
                 if (busy) OutlinedButton(onClick = {
                     receivingSelected = false; receiver?.stop(); NfcMigrationSession.clear()
+                    transferCancel.set(true); removeP2pGroup(); directTransferActive = false
+                    p2pConnecting = false; p2pReceiveTransferStarted = false
                     adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
                     busy = false; status = "中止しました。"
                 }) { Text("中止") }
@@ -236,23 +280,37 @@ class MeetsBeamActivity : ComponentActivity() {
                     if (message.type == "url") Button(onClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(message.value))) }) { Text("受信した URL を開く") }
                     if (message.type == "app") Button(onClick = { openApp(message.value) }) { Text("受信したアプリを開く") }
                     if (message.type == "dict") {
-                        Button(onClick = {
-                            val res = runCatching { me.zssu.ime.mozc.UserDictionary(this@MeetsBeamActivity).importTsv(message.value) }
-                            status = if (res.isSuccess) "辞書をユーザー辞書に取り込みました（${res.getOrNull()?.getOrNull()?.size ?: 0}語）"
-                            else "辞書の取り込みに失敗しました: ${res.exceptionOrNull()?.message}"
-                        }) { Text("ユーザー辞書に取り込む") }
+                        Button(onClick = { pendingDictionary = message }) { Text("ユーザー辞書に取り込む") }
                     }
                     if (message.type == "handover") {
                         val payload = runCatching { BeamHandover.HandoverPayload.fromJson(message.value) }.getOrNull()
                         if (payload != null) {
-                            Button(onClick = { startDirectReceive(payload) }) { Text("Wi-Fi Direct で受信を開始") }
+                            Button(onClick = { withP2pPermission { beginP2pReceive(payload) } }) { Text("Wi-Fi Direct で受信を開始") }
                         }
+                    }
+                    receivedFile?.let { file ->
+                        Button(onClick = { openReceivedFile(file, message.mimeType) }) { Text("ファイルを開く／共有") }
                     }
                 }
                 if (!busy && receivingSelected) OutlinedButton(onClick = { startReceiver() }) { Text("受信を再試行") }
                 OutlinedButton(onClick = { finish() }) { Text("戻る") }
             }
-        } } }
+        }
+        pendingDictionary?.let { message ->
+            AlertDialog(
+                onDismissRequest = { pendingDictionary = null },
+                title = { Text("ユーザー辞書を取り込む") },
+                text = { Text("現在のユーザー辞書を、受信した内容で置き換えます。必要な場合は先に書き出してください。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        importDictionary(message)
+                        pendingDictionary = null
+                    }) { Text("置き換える") }
+                },
+                dismissButton = { TextButton(onClick = { pendingDictionary = null }) { Text("キャンセル") } },
+            )
+        }
+        } }
     }
 
     private fun formatSize(bytes: Long): String = when {
@@ -274,10 +332,6 @@ class MeetsBeamActivity : ComponentActivity() {
                     if (sizeIndex != -1) size = cursor.getLong(sizeIndex)
                 }
             }
-        } else if (uri.scheme == "file") {
-            val f = File(uri.path.orEmpty())
-            name = f.name
-            size = f.length()
         }
         return name to size
     }
@@ -289,17 +343,7 @@ class MeetsBeamActivity : ComponentActivity() {
             return if (size <= 28000) {
                 BeamMessage("dict", tsv, name = name, mimeType = "text/tab-separated-values", size = size)
             } else {
-                val payload = BeamHandover.HandoverPayload(
-                    targetType = "dict",
-                    name = name,
-                    size = size,
-                    mimeType = "text/tab-separated-values",
-                    ssid = "DIRECT-Komorebi-Beam",
-                    passphrase = BeamHandover.generateToken().take(16),
-                    port = BeamHandover.DEFAULT_PORT,
-                    token = BeamHandover.generateToken()
-                )
-                BeamMessage("handover", payload.toJson(), name = name, mimeType = "text/tab-separated-values", size = size, extra = tsv)
+                BeamMessage("handover", "", name = name, mimeType = "text/tab-separated-values", size = size, extra = tsv, targetType = "dict")
             }
         }
 
@@ -309,20 +353,13 @@ class MeetsBeamActivity : ComponentActivity() {
             } else {
                 @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
             }
-            if (streamUri != null) {
+            if (streamUri != null && streamUri.scheme == "content") {
                 val mime = intent.type ?: contentResolver.getType(streamUri) ?: "application/octet-stream"
                 val (name, size) = resolveFileInfo(streamUri)
-                val payload = BeamHandover.HandoverPayload(
-                    targetType = if (mime.startsWith("text/") || name.endsWith(".tsv") || name.endsWith(".kdict")) "dict" else "file",
-                    name = name,
-                    size = size,
-                    mimeType = mime,
-                    ssid = "DIRECT-Komorebi-Beam",
-                    passphrase = BeamHandover.generateToken().take(16),
-                    port = BeamHandover.DEFAULT_PORT,
-                    token = BeamHandover.generateToken()
-                )
-                return BeamMessage("handover", payload.toJson(), name = name, mimeType = mime, size = size, extra = streamUri.toString())
+                if (size > 0) {
+                    val target = if (mime.startsWith("text/") || name.endsWith(".tsv")) "dict" else "file"
+                    return BeamMessage("handover", "", name = name, mimeType = mime, size = size, extra = streamUri.toString(), targetType = target)
+                }
             }
         }
 
@@ -341,68 +378,416 @@ class MeetsBeamActivity : ComponentActivity() {
         return BeamMessage("app", pkg)
     }
 
-    private fun startDirectSend(message: BeamMessage) {
-        val payload = runCatching { BeamHandover.HandoverPayload.fromJson(message.value) }.getOrNull() ?: return
-        busy = true
-        status = "Wi-Fi Direct で接続待機中..."
-        Thread({
-            runCatching {
-                val stream = if (message.extra.startsWith("content://") || message.extra.startsWith("file://")) {
-                    contentResolver.openInputStream(Uri.parse(message.extra)) ?: error("ファイルを開けません")
-                } else {
-                    message.extra.byteInputStream(Charsets.UTF_8)
+    private fun withP2pPermission(action: () -> Unit) {
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)) {
+            status = "この端末は Wi-Fi Direct に対応していません"
+            return
+        }
+        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.NEARBY_WIFI_DEVICES else Manifest.permission.ACCESS_FINE_LOCATION
+        if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
+            if (locationServicesReady()) action() else status = "Wi-Fi Direct を使うには位置情報をオンにしてください"
+        } else {
+            pendingP2pAction = action
+            p2pPermissionLauncher.launch(permission)
+        }
+    }
+
+    private fun locationServicesReady(): Boolean {
+        if (Build.VERSION.SDK_INT >= 33) return true
+        val manager = getSystemService(LocationManager::class.java) ?: return true
+        val enabled = if (Build.VERSION.SDK_INT >= 28) {
+            manager.isLocationEnabled
+        } else {
+            manager.isProviderEnabled(LocationManager.GPS_PROVIDER) || manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }
+        if (!enabled) status = "Wi-Fi Direct を使うには位置情報をオンにしてください"
+        return enabled
+    }
+
+    private fun ensureP2p(): Boolean {
+        p2pManager?.let { return true }
+        val manager = getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager ?: run {
+            status = "この端末は Wi-Fi Direct に対応していません"
+            return false
+        }
+        val channel = manager.initialize(this, mainLooper, null) ?: run {
+            status = "Wi-Fi Direct を初期化できません"
+            return false
+        }
+        p2pManager = manager
+        p2pChannel = channel
+        registerP2pReceiver()
+        return true
+    }
+
+    private fun registerP2pReceiver() {
+        if (p2pReceiver != null) return
+        val filter = IntentFilter().apply {
+            addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
+            addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+            addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+            addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
+                        if (intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1) != WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                            status = "Wi-Fi をオンにしてください"
+                        }
+                    }
+                    WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> requestP2pConnectionInfo()
+                    WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> tryConnectToOwner()
+                    WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
+                        @Suppress("DEPRECATION")
+                        val device = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE) as? WifiP2pDevice
+                        if (device != null) localP2pDevice = device
+                    }
                 }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(receiver, filter)
+        }
+        p2pReceiver = receiver
+    }
+
+    private fun prepareP2pSend(message: BeamMessage) {
+        val size = message.size
+        if (size !in 1..BeamHandover.MAX_TRANSFER_BYTES) {
+            status = "ファイルサイズを取得できません。別のアプリから共有してください"
+            return
+        }
+        if (!ensureP2p()) return
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        busy = true
+        status = "Wi-Fi Direct のグループを作成しています..."
+        transferCancel.set(false)
+        directTransferActive = true
+        manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() = createGroup(manager, channel)
+            override fun onFailure(reason: Int) = createGroup(manager, channel)
+        })
+    }
+
+    private fun createGroup(manager: WifiP2pManager, channel: WifiP2pManager.Channel) {
+        manager.createGroup(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
+                    val ownerIp = info.groupOwnerAddress?.hostAddress ?: "192.168.49.1"
+                    withLocalP2pAddress { ownerAddress ->
+                        if (ownerAddress.isNullOrBlank() || !ownerAddress.matches(Regex("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}"))) {
+                            busy = false
+                            status = "Wi-Fi Direct の端末アドレスを取得できません"
+                            directTransferActive = false
+                            removeP2pGroup()
+                            return@withLocalP2pAddress
+                        }
+                        val draft = outgoing
+                        if (draft == null) {
+                            busy = false
+                            status = "送信データがありません"
+                            directTransferActive = false
+                            removeP2pGroup()
+                            return@withLocalP2pAddress
+                        }
+                        val payload = BeamHandover.HandoverPayload(
+                            targetType = draft.targetType.ifBlank { "file" },
+                            name = draft.name.ifBlank { "beam_file" },
+                            size = draft.size,
+                            mimeType = draft.mimeType.ifBlank { "application/octet-stream" },
+                            ownerAddress = ownerAddress,
+                            ownerIp = ownerIp,
+                            token = BeamHandover.generateToken()
+                        )
+                        val updated = draft.copy(value = payload.toJson())
+                        startDirectSend(updated, payload)
+                        startNfcSend(updated)
+                    }
+                }
+            }
+
+            override fun onFailure(reason: Int) {
+                busy = false
+                directTransferActive = false
+                status = "Wi-Fi Direct グループを作成できません ($reason)"
+            }
+        })
+    }
+
+    private fun withLocalP2pAddress(block: (String?) -> Unit) {
+        val current = localP2pDevice?.deviceAddress
+        if (!current.isNullOrBlank()) {
+            block(current)
+            return
+        }
+        val manager = p2pManager
+        val channel = p2pChannel
+        if (Build.VERSION.SDK_INT >= 29 && manager != null && channel != null) {
+            manager.requestDeviceInfo(channel) { device ->
+                localP2pDevice = device
+                block(device?.deviceAddress)
+            }
+        } else {
+            block(null)
+        }
+    }
+
+    private fun startNfcSend(message: BeamMessage) {
+        if (adapter?.isEnabled != true) {
+            status = "NFC をオンにしてください"
+            busy = false
+            return
+        }
+        runCatching {
+            val password = NfcMigrationSession.newPassword()
+            val chars = password.toCharArray()
+            val bytes = try { BeamTransport.seal(message, chars) } finally { chars.fill('\u0000') }
+            NfcMigrationSession.prepare(bytes, password, BeamTransport.aid,
+                onDetected = { runOnUiThread { status = "相手の NFC を検出しました。端末を近づけたままにしてください。" } },
+                onComplete = { runOnUiThread {
+                    adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
+                    busy = false
+                    status = if (message.type == "handover") {
+                        "接続情報を送信しました。受信側で「Wi-Fi Direct で受信を開始」を押してください。"
+                    } else {
+                        "送信しました。受信側を確認してください。"
+                    }
+                } })
+            runCatching { CardEmulation.getInstance(adapter).setPreferredService(this@MeetsBeamActivity, ComponentName(this@MeetsBeamActivity, MeetsBeamHostService::class.java)) }
+            busy = true
+            status = "送信待ちです。受信側に端末を近づけてください。"
+        }.onFailure {
+            busy = false
+            directTransferActive = false
+            removeP2pGroup()
+            status = "送信準備に失敗しました: ${it.message}"
+        }
+    }
+
+    private fun startDirectSend(message: BeamMessage, payload: BeamHandover.HandoverPayload) {
+        val stream = runCatching {
+            when {
+                message.extra.startsWith("content://") -> contentResolver.openInputStream(Uri.parse(message.extra))
+                payload.targetType == "dict" && message.extra.isNotEmpty() -> message.extra.byteInputStream(Charsets.UTF_8)
+                else -> null
+            }
+        }.getOrNull()
+        if (stream == null) {
+            busy = false
+            directTransferActive = false
+            removeP2pGroup()
+            status = "送信データを開けません"
+            return
+        }
+        Thread({
+            try {
                 stream.use { input ->
-                    val success = BeamHandover.sendStream(payload.port, payload.token, input, payload.size, onProgress = { cur, total ->
+                    val success = BeamHandover.sendStream(payload.ownerIp, payload.port, payload.token, input, payload.size, onProgress = { cur, total ->
                         runOnUiThread { status = "送信中... ${formatSize(cur)} / ${formatSize(total)}" }
-                    })
-                    if (!success) error("送信に失敗しました")
+                    }, cancelFlag = transferCancel)
+                    if (!success) error("転送データを検証できませんでした")
                 }
                 runOnUiThread {
                     busy = false
+                    directTransferActive = false
                     status = "Wi-Fi Direct 転送完了: ${payload.name}"
                 }
-            }.onFailure { e ->
+            } catch (e: Exception) {
                 runOnUiThread {
                     busy = false
+                    directTransferActive = false
                     status = "Wi-Fi Direct 送信エラー: ${e.message}"
                 }
+            } finally {
+                mainHandler.postDelayed({ removeP2pGroup() }, 5000)
             }
         }, "beam-direct-sender").start()
     }
 
-    private fun startDirectReceive(payload: BeamHandover.HandoverPayload) {
+    private fun beginP2pReceive(payload: BeamHandover.HandoverPayload) {
+        if (!ensureP2p()) return
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        receivePayload = payload
+        p2pConnecting = false
+        p2pReceiveTransferStarted = false
+        directTransferActive = true
+        transferCancel.set(false)
         busy = true
-        status = "Wi-Fi Direct で接続・受信中..."
+        status = "Wi-Fi Direct の相手を探しています..."
+        manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() = discoverPeers(manager, channel)
+            override fun onFailure(reason: Int) = discoverPeers(manager, channel)
+        })
+        mainHandler.postDelayed({ if (!p2pConnecting && !p2pReceiveTransferStarted) tryConnectToOwner(direct = true) }, P2P_DIRECT_CONNECT_DELAY_MS)
+        mainHandler.postDelayed({
+            if (!p2pReceiveTransferStarted) {
+                busy = false
+                directTransferActive = false
+                p2pConnecting = false
+                status = "Wi-Fi Direct の接続がタイムアウトしました"
+                removeP2pGroup()
+            }
+        }, P2P_CONNECT_TIMEOUT_MS)
+    }
+
+    private fun discoverPeers(manager: WifiP2pManager, channel: WifiP2pManager.Channel) {
+        manager.discoverPeers(channel, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                status = "Wi-Fi Direct の相手を探しています..."
+            }
+            override fun onFailure(reason: Int) {
+                status = "Wi-Fi Direct の検索を開始できません ($reason)"
+            }
+        })
+    }
+
+    private fun tryConnectToOwner(direct: Boolean = false) {
+        val payload = receivePayload ?: return
+        if (p2pConnecting || p2pReceiveTransferStarted) return
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        manager.requestPeers(channel) { peers ->
+            if (p2pConnecting || p2pReceiveTransferStarted) return@requestPeers
+            val device = peers.deviceList.firstOrNull { it.deviceAddress.equals(payload.ownerAddress, ignoreCase = true) }
+            if (device != null) {
+                connectToOwner(device.deviceAddress)
+            } else if (direct) {
+                connectToOwner(payload.ownerAddress)
+            }
+        }
+    }
+
+    private fun connectToOwner(address: String) {
+        if (p2pConnecting) return
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        p2pConnecting = true
+        val config = WifiP2pConfig().apply {
+            deviceAddress = address
+            wps.setup = WpsInfo.PBC
+            groupOwnerIntent = 0
+        }
+        manager.connect(channel, config, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() {
+                status = "Wi-Fi Direct で接続しています..."
+            }
+            override fun onFailure(reason: Int) {
+                p2pConnecting = false
+                status = "Wi-Fi Direct に接続できません ($reason)"
+            }
+        })
+    }
+
+    private fun requestP2pConnectionInfo() {
+        val payload = receivePayload ?: return
+        if (p2pReceiveTransferStarted) return
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        manager.requestConnectionInfo(channel) { info: WifiP2pInfo ->
+            if (info.groupFormed && !p2pReceiveTransferStarted) {
+                p2pReceiveTransferStarted = true
+                p2pConnecting = false
+                startReceiveTransfer(payload, info.groupOwnerAddress?.hostAddress ?: payload.ownerIp)
+            }
+        }
+    }
+
+    private fun startReceiveTransfer(payload: BeamHandover.HandoverPayload, ownerIp: String) {
+        val safeName = BeamHandover.sanitizeFileName(payload.name)
+        val directory = File(filesDir, "beam").apply { mkdirs() }
+        val file = File(directory, "${System.currentTimeMillis()}_$safeName")
+        busy = true
+        status = "受信中... ${formatSize(payload.size)}"
         Thread({
-            runCatching {
-                val cacheFile = File(cacheDir, "beam_${System.currentTimeMillis()}_${payload.name}")
-                cacheFile.outputStream().use { out ->
-                    val success = BeamHandover.receiveStream("192.168.49.1", payload.port, payload.token, out, payload.size, onProgress = { cur, total ->
+            try {
+                file.outputStream().use { out ->
+                    val success = BeamHandover.receiveStream(ownerIp, payload.port, payload.token, out, payload.size, onProgress = { cur, total ->
                         runOnUiThread { status = "受信中... ${formatSize(cur)} / ${formatSize(total)}" }
-                    })
-                    if (!success) error("転送に失敗しました")
+                    }, cancelFlag = transferCancel)
+                    if (!success) error("転送データを検証できませんでした")
                 }
                 runOnUiThread {
                     busy = false
-                    status = "受信完了: ${payload.name} を保存しました。"
-                    if (payload.targetType == "dict" || payload.name.endsWith(".tsv") || payload.name.endsWith(".kdict")) {
-                        val text = cacheFile.readText()
-                        runCatching { me.zssu.ime.mozc.UserDictionary(this@MeetsBeamActivity).importTsv(text) }
-                            .onSuccess { status = "辞書パック（${it.size}語）をユーザー辞書に取り込みました！" }
+                    directTransferActive = false
+                    if (payload.targetType == "dict") {
+                        if (file.length() > MAX_DICTIONARY_BYTES) {
+                            file.delete()
+                            status = "辞書が 5 MB を超えているため取り込めません"
+                        } else {
+                            val text = file.readText()
+                            file.delete()
+                            receivedFile = null
+                            received = BeamMessage("dict", text, name = payload.name, mimeType = payload.mimeType, size = payload.size)
+                            status = "辞書を受信しました。取り込む前に内容を確認してください。"
+                        }
+                    } else {
+                        receivedFile = file
+                        received = BeamMessage("file", file.absolutePath, name = payload.name, mimeType = payload.mimeType, size = payload.size)
+                        status = "受信完了: ${payload.name} (${formatSize(payload.size)})"
                     }
                 }
-            }.onFailure { e ->
+            } catch (e: Exception) {
+                file.delete()
                 runOnUiThread {
                     busy = false
+                    directTransferActive = false
                     status = "Wi-Fi Direct 受信エラー: ${e.message}"
                 }
+            } finally {
+                mainHandler.postDelayed({ removeP2pGroup() }, 2000)
             }
         }, "beam-direct-receiver").start()
     }
 
+    private fun importDictionary(message: BeamMessage) {
+        val result = runCatching { me.zssu.ime.mozc.UserDictionary(this).importTsv(message.value) }
+        val entries = result.getOrNull()?.getOrNull()
+        status = if (entries != null) {
+            "ユーザー辞書を取り込みました（${entries.size}語）"
+        } else {
+            val detail = result.exceptionOrNull()?.message
+                ?: result.getOrNull()?.exceptionOrNull()?.message
+                ?: "TSV の形式を確認してください"
+            "辞書の取り込みに失敗しました: $detail"
+        }
+    }
+
+    private fun openReceivedFile(file: File, mimeType: String) {
+        val type = mimeType.ifBlank { "application/octet-stream" }
+        val uri = runCatching { FileProvider.getUriForFile(this, "$packageName.fileprovider", file) }.getOrNull()
+        if (uri == null) {
+            status = "ファイルを共有できません"
+            return
+        }
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, type).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { startActivity(view) }.onFailure {
+            val share = Intent(Intent.ACTION_SEND).setType(type)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            runCatching { startActivity(Intent.createChooser(share, "ファイルを共有")) }
+                .onFailure { error -> status = "開けるアプリがありません: ${error.message}" }
+        }
+    }
+
+    private fun removeP2pGroup() {
+        val manager = p2pManager ?: return
+        val channel = p2pChannel ?: return
+        runCatching {
+            manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() = Unit
+                override fun onFailure(reason: Int) = Unit
+            })
+        }
+    }
+
     private fun present(message: BeamMessage) {
         received = message
+        receivedFile = null
         when (message.type) {
             "text" -> {
                 (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Meets Beam", message.value))
@@ -452,12 +837,26 @@ class MeetsBeamActivity : ComponentActivity() {
         super.onResume()
         if (receivingSelected && enabled && adapter?.isEnabled == true) startReceiver()
     }
+
     override fun onPause() {
-        val wasSending = busy && !receivingSelected
-        receiver?.stop(); NfcMigrationSession.clear(); busy = false
+        val wasSending = busy && !receivingSelected && !directTransferActive
+        receiver?.stop(); NfcMigrationSession.clear()
+        if (!directTransferActive) busy = false
         if (wasSending) status = "画面を離れたため送信を停止しました。もう一度送信側を選んでください。"
         adapter?.let { runCatching { CardEmulation.getInstance(it).unsetPreferredService(this@MeetsBeamActivity) } }
         super.onPause()
     }
-    override fun onDestroy() { receivingSelected = false; receiver?.stop(); NfcMigrationSession.clear(); super.onDestroy() }
+
+    override fun onDestroy() {
+        transferCancel.set(true)
+        receivingSelected = false
+        receiver?.stop()
+        NfcMigrationSession.clear()
+        p2pReceiver?.let { runCatching { unregisterReceiver(it) } }
+        p2pReceiver = null
+        removeP2pGroup()
+        p2pManager = null
+        p2pChannel = null
+        super.onDestroy()
+    }
 }

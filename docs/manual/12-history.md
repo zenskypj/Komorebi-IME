@@ -1,6 +1,6 @@
 # 開発の歴史とタイムライン
 
-GitHub の全リリース（45件）・タグ・[リリースノート](/docs/releases) を突き合わせた、Komorebi IME の完全な履歴です。**欠番も隠さず書いています**。
+GitHub の全リリース（46件）・タグ・[リリースノート](/docs/releases) を突き合わせた、Komorebi IME の完全な履歴です。**欠番も隠さず書いています**。
 
 > [!NOTE]
 > 日付は GitHub の公開日時（JST 前後）です。2026年7月の短期間に多数の版が出ているのは、フォーク直後に集中的に改善を回したためです。
@@ -250,10 +250,10 @@ GitHub の全リリース（45件）・タグ・[リリースノート](/docs/re
 
 ### v0.3.0-rc.44-dev — 2026-11-06
 
-- Meets Beam の大容量ファイル・メディア対応。NFC での高速認証・接続情報（OOB）交換後、端末間 Wi-Fi Direct（P2P）へ自動ハンドオフして高速ストリーミング転送する基盤 `BeamHandover` を追加。
-- 画像・動画・音楽・ドキュメントの共有（`*/*`）に対応。
-- ユーザー辞書・辞書パックのワンタップ直接ビーム共有を追加。ユーザー辞書画面の「Beam」ボタンから送信し、受信側で即座に取り込み可能。
-- 外部サーバーやクラウドを一切介さず、完全ローカル・暗号化 P2P 通信で完結。
+- Meets Beam の大容量データ転送に Wi-Fi Direct（P2P）を追加。NFC で接続情報と一時トークンを交換し、グループオーナーの IP へだけ接続して端末間を直接ストリーミング転送する。
+- 画像・動画・音楽・ドキュメントの共有に対応。AES-GCM、宣言サイズ、SHA-256 を検証し、受信ファイル名をサニタイズする。
+- ユーザー辞書・TSV 辞書の共有を追加。ユーザー辞書画面の「Beam」から送信し、受信側は現在の辞書を置き換える前に確認する。
+- Wi-Fi Direct は実機2台での検証が未実施。Android 13 以降は近接端末、Android 12 以下は位置情報の権限を Wi-Fi Direct の検出だけに使う。
 
 ## この歴史の読み方
 
@@ -266,6 +266,6 @@ GitHub の全リリース（45件）・タグ・[リリースノート](/docs/re
 
 ## 出典
 
-- [GitHub Releases（全45件）](https://github.com/zenskypj/Komorebi-IME/releases)
+- [GitHub Releases（全46件）](https://github.com/zenskypj/Komorebi-IME/releases)
 - [docs/releases（リリースノート）](/docs/releases)
 - [Git タグ一覧](https://github.com/zenskypj/Komorebi-IME/tags)

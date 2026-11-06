@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Komorebi IME と、ほかのキーボード</title>
-<meta name="description" content="Komorebi IME と Gboard・Google 日本語入力・Simeji を、入力の送信・利用統計・AI・辞書・暗号化の14項目で比較。入力は端末の外へ送りません。">
+<meta name="description" content="Komorebi IME と Gboard・Google 日本語入力・Simeji を、入力の送信・利用統計・AI・辞書・暗号化・権限の15項目で比較。入力は端末の外へ送りません。">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111312" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Komorebi IME と、ほかのキーボード">
-<meta property="og:description" content="入力は端末の外へ送らない。14項目の比較で、何が違うかを見る。">
+<meta property="og:description" content="入力は端末の外へ送らない。15項目の比較で、何が違うかを見る。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 134'%3E%3Cpath d='M60 4 112 22v48c0 33-23 53-52 61C31 123 8 103 8 70V22Z' fill='%23006d3b'/%3E%3Ccircle cx='60' cy='55' r='15' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/compare.css">
 </head>
@@ -94,10 +94,12 @@
   <!-- metrics -->
   <section class="cmp-metrics" aria-label="要点">
     <div class="cmp-metric"><span class="n">0</span><span class="l">外へ送る入力データ</span></div>
-    <div class="cmp-metric"><span class="n">1</span><span class="l">要求する権限（INTERNET）</span></div>
+    <div class="cmp-metric"><span class="n">7</span><span class="l">要求する権限（NFC・Wi-Fi Direct含む）</span></div>
     <div class="cmp-metric"><span class="n">0</span><span class="l">広告SDK・解析SDK</span></div>
     <div class="cmp-metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
   </section>
+
+  <p class="cmp-sub">権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の任意取得、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
 
   <!-- highlights -->
   <section class="cmp-section" aria-labelledby="highlights-h">
@@ -111,7 +113,7 @@
         <article class="cmp-card" data-reveal>
           <span class="tag">送信</span>
           <h3>クラウドへ行く道が、ない。</h3>
-          <p>Mozc を端末に組み込み、変換はオフラインで実行します。AI も端末内。通信するのは、あなたがモデルを取得したときだけです。</p>
+          <p>Mozc を端末に組み込み、変換はオフラインで実行します。AI も端末内。外部通信は、あなたがモデルを取得したときだけです。Meets Beam の転送は NFC と Wi-Fi Direct の端末間だけで、クラウドを経由しません。</p>
           <div class="cmp-visual">
             <svg viewBox="0 0 260 120" role="img" aria-label="入力から端末内の変換、完了まで。クラウドへの矢印は打ち消されている">
               <rect x="6" y="42" width="58" height="36" rx="10" fill="var(--surface)" stroke="var(--outline-variant)" stroke-width="1.5"/>
@@ -197,7 +199,7 @@
   <section class="cmp-section" id="compare" aria-labelledby="compare-h">
     <div class="cmp-section-head" data-reveal>
       <p class="cmp-eyebrow">比較</p>
-      <h2 class="cmp-h2" id="compare-h">14項目で、並べました。</h2>
+      <h2 class="cmp-h2" id="compare-h">15項目で、並べました。</h2>
       <p class="cmp-sub">公開情報（2026年11月時点）にもとづきます。一番右の3列はソースコードが非公開なので、✓ も ✗ も会社の説明か報道で知るしかありません。</p>
     </div>
 
@@ -253,6 +255,13 @@
           </tr>
           <tr>
             <th scope="row">クラウドバックアップを無効にできる</th>
+            <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+            <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
+          </tr>
+          <tr>
+            <th scope="row">NFC / Wi-Fi Direct は端末間だけで使う</th>
             <td class="col-komorebi"><span class="m m-yes" aria-hidden="true">✓</span><span class="sr-only">はい</span></td>
             <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
             <td><span class="m m-unknown" aria-hidden="true">?</span><span class="sr-only">不明</span></td>
@@ -343,7 +352,7 @@
       <article class="cmp-reason" data-reveal>
         <span class="num">01</span>
         <h3>入力した文字を、外に出さない</h3>
-        <p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。通信するのは、あなたがモデルや追加辞書の「取得」を押したときだけです。入力・文脈・辞書・学習履歴は送りません。</p>
+        <p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。外部通信は、あなたがモデルや追加辞書の「取得」を押したときだけです。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力・文脈・辞書・学習履歴は外部へ送りません。</p>
       </article>
       <article class="cmp-reason" data-reveal>
         <span class="num">02</span>
@@ -407,7 +416,7 @@
       </details>
       <details>
         <summary>入力は本当に送られませんか？<span class="plus" aria-hidden="true"></span></summary>
-        <div class="answer"><p>送りません。要求する権限は <code>INTERNET</code> だけで、使うのはモデルや追加辞書をあなたが取得したときだけです。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p></div>
+        <div class="answer"><p>外部サーバーへ送りません。要求する権限は、任意取得用の <code>INTERNET</code>、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り Wi-Fi Direct 検出用の位置情報です。位置の記録・送信はしません。Meets Beam は端末間 P2P だけで、クラウドを経由しません。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p></div>
       </details>
       <details>
         <summary>オフラインで使えますか？<span class="plus" aria-hidden="true"></span></summary>
