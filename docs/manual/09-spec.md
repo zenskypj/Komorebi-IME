@@ -12,8 +12,20 @@
 | ネイティブ | Mozc（BSD 3-Clause）を組み込み。`libmozc.so`（4 ABI） |
 | 変換基盤 | Kotlin ラッパー（`MozcEngine` / `MozcSession`）経由で JNI を扱う |
 | 入力方式 | かな/英字フリック、かな/英字 QWERTY、混在、かなだけ QWERTY |
-| 権限 | `INTERNET`（任意取得時のみ） |
+| 権限 | `INTERNET`（任意取得）、`NFC`、Wi-Fi Direct、Android 12 以下の位置情報。詳細は下記「権限」参照 |
 | クラウドバックアップ | 無効 |
+
+### 権限
+
+| 権限 | 用途 | 条件 |
+| --- | --- | --- |
+| `INTERNET` | モデル・追加辞書の取得 | 利用者が設定画面で開始したときだけ |
+| `NFC` | Meets Beam、NFC による設定・学習の移行 | 利用者が有効化して送受信を選んだときだけ |
+| `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES` | Wi-Fi Direct のグループ作成・検出・接続 | Meets Beam の大容量転送時だけ |
+| `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | Wi-Fi Direct の端末検出（Android 12 以下） | `maxSdkVersion=32`。位置の記録・外部送信はしない |
+
+> [!NOTE]
+> AndroidX が非公開ブロードキャスト受信用の署名権限 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` を自動宣言します。ユーザーの許可は不要で、外部アプリには付与されません。
 
 ## ネイティブへの適用パッチ
 
@@ -109,6 +121,7 @@ rc.38は利用者指定により追加テスト・lint・実機確認を省略�
 | `files/mozc_profile_key.enc` | Mozc プロファイル鍵 | Keystore |
 | `noBackupFilesDir/system-dictionaries/*.data` | 追加システム辞書 | なし（バックアップ対象外領域） |
 | `noBackupFilesDir/...`（モデル） | AI モデル | なし（バックアップ対象外領域） |
+| `files/beam/<timestamp>_<name>` | Meets Beam の受信ファイル | なし（アプリ専用領域）。受信辞書は読み込み後に削除 |
 
 ## 既知の制約
 
@@ -120,6 +133,8 @@ rc.38は利用者指定により追加テスト・lint・実機確認を省略�
 | 視覚エディタ | フリック方向や特殊アクションの全項目編集には JSON エディタが必要 |
 | Mozc 暗号化ストレージ | 64 MB を超えるファイルは読み込めない |
 | 追加システム辞書 | 同時に有効化できるのは 1 データセット。統合データは内部に複数辞書を含む |
+| Meets Beam（Wi-Fi Direct） | 実機2台での接続・転送は未検証。ファイルは2 GB以下、共有元がサイズを返す必要がある。辞書TSVは5 MB以下 |
+| Meets Beamの受信ファイル | `files/beam/` に保存。辞書は読み込み後に削除。利用者が開く・共有するまで外部アプリへ渡さない |
 | テスト用 APK | すべて debug 署名の pre-release。正式版とは application ID が異なる |
 | RC 中 | 設定形式・内部ファイル形式が変更される可能性がある |
 

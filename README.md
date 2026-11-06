@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.43-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.44-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -73,10 +73,13 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 
 `rc.43-dev` は、変換キーを1回押して候補が開いた直後の確定を、選択中の文節ではなく文全体の確定に変更しました。変換キーをもう一度押す、文節を移動・タップする、候補を選ぶ、入力を編集する、のいずれかを行った後は従来どおり文節ごとに確定します。[変換と候補](docs/manual/02-henkan.md)を参照してください。
 
+`rc.44-dev` は、Meets Beam の大容量データ転送に Wi-Fi Direct（P2P）を追加しました。NFC で接続情報と一時トークンを交換し、端末同士を直接接続して画像・動画・音楽・文書・TSV辞書を転送します。転送は AES-GCM、宣言サイズ、SHA-256 で検証し、受信した辞書は内容を確認してからユーザー辞書へ取り込みます。Wi-Fi Direct の実機2台での検証は未実施です。[Meets Beam](docs/meets-beam.md)を参照してください。
+
 ## 特長
 
-- **入力内容は端末内** — Mozc変換は完全オフラインです。任意のKarukanモデル取得時だけ
-  ネットワークを使い、入力内容・周辺文脈は送信しません。
+- **入力内容は端末内** — Mozc変換は完全オフラインです。外部サーバーとの通信は任意の
+  モデル・辞書取得時だけ。Meets Beamのファイル・辞書転送はNFCとWi-Fi Directの端末間通信で、
+  外部サーバーを経由しません。入力内容・周辺文脈は送信しません。
 - **Mozc / Karukan切り替え** — 高速・省電力なMozcと、文脈を考慮する実験的な
   Karukanニューラル変換を設定から選べます。Karukanは約32 MBのモデルを明示操作で取得し、
   推論は端末内で行います。
@@ -331,9 +334,7 @@ ID には 1〜64 文字の英数字、ハイフン、アンダースコアを使
 
 ## プライバシーとセキュリティ
 
-`AndroidManifest.xml` は任意モデル取得用の `INTERNET` だけを要求します。通信先は
-Hugging Face上の公開モデルで、ユーザーが設定画面で開始したダウンロードに限ります。
-入力内容、周辺文脈、変換履歴、ユーザー辞書、背景画像は送信しません。
+`AndroidManifest.xml` が要求する権限は、任意取得用の `INTERNET`、Meets Beam・NFC移行用の `NFC`、Wi-Fi Direct 用の `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES`、Android 12 以下に限り Wi-Fi Direct 検出用の `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` です。位置情報は端末の検出だけに使い、位置の記録・送信はしません。外部通信の宛先は Hugging Face 上の公開モデルと GitHub Releases の追加辞書で、利用者が設定画面で開始した取得に限ります。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力内容、周辺文脈、変換履歴、ユーザー辞書、背景画像は外部へ送信しません。
 
 保存データは次のように扱います。
 
