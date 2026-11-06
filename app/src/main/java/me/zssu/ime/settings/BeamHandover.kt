@@ -52,7 +52,8 @@ object BeamHandover {
         val ownerAddress: String,
         val ownerIp: String,
         val port: Int = DEFAULT_PORT,
-        val token: String
+        val token: String,
+        val ownerName: String = ""
     ) {
         fun toJson(): String = JSONObject()
             .put("targetType", targetType)
@@ -63,6 +64,7 @@ object BeamHandover {
             .put("ownerIp", ownerIp)
             .put("port", port)
             .put("token", token)
+            .put("ownerName", ownerName)
             .toString()
 
         companion object {
@@ -73,20 +75,22 @@ object BeamHandover {
                 val name = obj.getString("name")
                 val size = obj.getLong("size")
                 val mimeType = obj.optString("mimeType", "application/octet-stream")
-                val ownerAddress = obj.getString("ownerAddress")
+                val ownerAddress = obj.optString("ownerAddress", "")
                 val ownerIp = obj.getString("ownerIp")
                 val port = obj.optInt("port", DEFAULT_PORT)
                 val token = obj.getString("token")
+                val ownerName = obj.optString("ownerName", "")
                 require(name.isNotBlank() && name.length <= 200)
                 require(size in 1..MAX_TRANSFER_BYTES)
                 require(mimeType.isNotBlank() && mimeType.length <= 120)
-                require(macPattern.matches(ownerAddress) && isUsableP2pAddress(ownerAddress)) {
+                require(ownerAddress.isEmpty() || isUsableP2pAddress(ownerAddress)) {
                     "送信側の Wi-Fi Direct アドレスが不正です"
                 }
+                require(ownerName.length <= 100)
                 require(isIPv4(ownerIp)) { "送信側の IP アドレスが不正です" }
                 require(port in 1..65535)
                 require(token.length in 16..128)
-                return HandoverPayload(targetType, name, size, mimeType, ownerAddress, ownerIp, port, token)
+                return HandoverPayload(targetType, name, size, mimeType, ownerAddress, ownerIp, port, token, ownerName)
             }
 
             private fun isIPv4(value: String): Boolean =

@@ -178,3 +178,14 @@ R8後DEXのJNI名を確認。PRIVACY／NOTICEの公開・アプリ内版は一�
 **Wi-Fi Directの実機2台接続・転送は修正後も未実施**。位置情報モード、バインド順、アドレス取得、
 接続リトライを修正したが、端末固有のP2P実装差は未確認。rc.44で失敗した端末での再確認が必要。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.46-dev の作成条件
+
+rc.45で「Wi-Fi Directの端末アドレスを取得できません」と表示される端末向けに、端末アドレスなしの
+ハンドオフを許可し、端末名と単一ピアによる接続フォールバックを追加。送信側はアドレス取得失敗で
+停止せず、`ownerName`をNFC情報へ載せる。受信側はアドレス→端末名→検出ピアが1台のみ、の順で照合する。
+AES-GCMトークン認証は維持。単体テスト290件（app 288、karukan 2）成功、debug／releaseのlintエラー0件。
+通常APK・AABとABI別APKを生成し、versionCode 70、16 KB配置、zipalign、Mozc 4 ABI・Karukan・辞書・
+法務文書・FileProvider、R8後JNI名、PRIVACY／NOTICE一致、署名を確認。権限の変更なし。
+**Wi-Fi Directの実機2台接続・転送は修正後も未実施**。rc.45で失敗した端末での再確認が必要。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
