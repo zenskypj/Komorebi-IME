@@ -20,6 +20,7 @@
         ["manual/03-ai", "AI 機能", "AI変換・AI文章校正・文体補正", "docs/manual/03-ai.md", "ai zenzai karukan 校正"],
         ["manual/04-jisho", "辞書", "単語の登録、追加辞書、意味辞書", "docs/manual/04-jisho.md", "dictionary 辞書"],
         ["manual/05-gaikan", "外観と配列", "色・背景・キーの並び・アプリごとの設定", "docs/manual/05-gaikan.md", "theme layout profile 外観"],
+        ["manual/13-settings-ui", "設定画面とLiquid Glass", "検索・5タブ・二層フッターバーとガラス表現", "docs/manual/13-settings-ui.md", "ui design liquid glass settings 設定 デザイン"],
         ["manual/06-privacy", "プライバシーとセキュリティ", "何が送られて、何が端末に残るか", "docs/manual/06-privacy.md", "privacy security 安全"],
         ["manual/07-iten", "データの移行", "機種変更のときの引っ越し", "docs/manual/07-iten.md", "backup nfc beam 移行"],
         ["manual/08-troubleshoot", "トラブルシューティング", "症状から引く対処", "docs/manual/08-troubleshoot.md", "trouble 不具合"],
@@ -30,7 +31,7 @@
     {
       group: "タイムライン",
       items: [
-        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全37件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
+        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全51件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
       ],
     },
     {
@@ -59,6 +60,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.49-dev", "rc.49-dev", "Liquid Glassの設定ホームと5タブ・検索・二層フッター", "docs/releases/v0.3.0-rc.49-dev.md", "release rc49 settings liquid glass ui"],
         ["releases/v0.3.0-rc.48-dev", "rc.48-dev", "変換キー2回目で候補を進めない", "docs/releases/v0.3.0-rc.48-dev.md", "release rc48 convert candidate"],
         ["releases/v0.3.0-rc.47-dev", "rc.47-dev", "Wi-Fi Directを標準のグループ交渉へ変更", "docs/releases/v0.3.0-rc.47-dev.md", "release rc47 beam wifi direct group"],
         ["releases/v0.3.0-rc.46-dev", "rc.46-dev", "端末アドレスが取れない場合のWi-Fi Direct接続", "docs/releases/v0.3.0-rc.46-dev.md", "release rc46 beam wifi direct address"],
@@ -393,6 +395,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-07", "v0.3.0-rc.49-dev", "Liquid Glassの設定ホーム、検索、5タブ、二層フッターバー"],
     ["2026-11-07", "v0.3.0-rc.48-dev", "変換キー2回目は候補選択に入るだけで候補を進めない"],
     ["2026-11-06", "v0.3.0-rc.47-dev", "Wi-Fi Directを標準のグループ交渉と対称サーバー構成へ変更"],
     ["2026-11-06", "v0.3.0-rc.46-dev", "端末アドレスが取れない場合のWi-Fi Direct接続を追加"],

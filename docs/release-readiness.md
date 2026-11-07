@@ -211,3 +211,15 @@ Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一
 versionCode 72、16 KB配置、zipalign、Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一致、
 署名を確認。権限の変更なし。実機でのキー操作は未確認。Wi-Fi Directの実機2台接続・転送も未確認。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.49-dev の作成条件
+
+設定ホームをLiquid Glassの考え方で再構成。ガラスは上部バー・クイック操作バー・タブバーに限定し、
+設定カードは不透明なコンテンツ面を維持。5タブ（ホーム・入力・変換・データ・情報）、全設定の横断検索、
+クイック操作バー、フローティングタブバー、キーボード状態表示、カテゴリショートカット、コントラスト切替、
+Edge-to-edge、設定専用の明暗パレットを追加。既存の詳細編集画面はそのまま開く。
+設定カタログの検索・タブ絞り込み・埋め込みバックアップ除外・featured・全タブ到達先を単体テスト。
+単体テスト297件（app 295、karukan 2）成功、debug／releaseのlintエラー0件。通常APK・AABとABI別APKを生成し、
+versionCode 73、16 KB配置、zipalign、Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一致、
+署名を確認。権限の変更なし。**実機・エミュレータでの見た目、Dark mode、インセット、タブ・検索操作は未確認**。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
