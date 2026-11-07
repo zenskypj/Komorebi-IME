@@ -1262,8 +1262,14 @@ class ZinnaImeService : InputMethodService() {
      */
     private suspend fun handleSpace() {
         val wasConverting = isConverting
+        val wasArmed = confirmCommitsWholeSentence
         conversionInteraction.convertPressed(isComposing, isConverting)
         confirmCommitsWholeSentence = WholeSentenceConfirm.arm(isComposing, wasConverting)
+        if (WholeSentenceConfirm.beginsCandidateSelection(wasConverting, wasArmed)) {
+            // The second Convert only opens candidate selection; sending another conversion
+            // command here would advance to the next candidate before the user chose anything.
+            return
+        }
         if (karukanConversionActive) {
             // The user is navigating Mozc's candidates; discard an outstanding neural result.
             cancelKarukanConversion(clearReading = true, revertMozc = false)
