@@ -23,4 +23,11 @@ class WholeSentenceConfirmTest {
         assertFalse(WholeSentenceConfirm.commitsAll(converting = true, armed = false, segmentCount = 3))
         assertFalse(WholeSentenceConfirm.commitsAll(converting = false, armed = true, segmentCount = 3))
     }
+
+    @Test
+    fun `the untouched second convert only starts candidate selection`() {
+        assertTrue(WholeSentenceConfirm.beginsCandidateSelection(converting = true, armed = true))
+        assertFalse(WholeSentenceConfirm.beginsCandidateSelection(converting = false, armed = true))
+        assertFalse(WholeSentenceConfirm.beginsCandidateSelection(converting = true, armed = false))
+    }
 }

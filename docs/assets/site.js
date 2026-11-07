@@ -59,6 +59,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.48-dev", "rc.48-dev", "変換キー2回目で候補を進めない", "docs/releases/v0.3.0-rc.48-dev.md", "release rc48 convert candidate"],
         ["releases/v0.3.0-rc.47-dev", "rc.47-dev", "Wi-Fi Directを標準のグループ交渉へ変更", "docs/releases/v0.3.0-rc.47-dev.md", "release rc47 beam wifi direct group"],
         ["releases/v0.3.0-rc.46-dev", "rc.46-dev", "端末アドレスが取れない場合のWi-Fi Direct接続", "docs/releases/v0.3.0-rc.46-dev.md", "release rc46 beam wifi direct address"],
         ["releases/v0.3.0-rc.45-dev", "rc.45-dev", "Wi-Fi Directの検出と接続を修正", "docs/releases/v0.3.0-rc.45-dev.md", "release rc45 beam wifi direct"],
@@ -392,6 +393,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-07", "v0.3.0-rc.48-dev", "変換キー2回目は候補選択に入るだけで候補を進めない"],
     ["2026-11-06", "v0.3.0-rc.47-dev", "Wi-Fi Directを標準のグループ交渉と対称サーバー構成へ変更"],
     ["2026-11-06", "v0.3.0-rc.46-dev", "端末アドレスが取れない場合のWi-Fi Direct接続を追加"],
     ["2026-11-06", "v0.3.0-rc.45-dev", "Wi-Fi Directの位置情報モード・接続確立・アドレス解決を修正"],

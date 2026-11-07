@@ -200,3 +200,14 @@ debug／releaseのlintエラー0件。通常APK・AABとABI別APKを生成し、
 Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一致、署名を確認。権限の変更なし。
 **Wi-Fi Directの実機2台接続・転送は変更後も未実施**。今回は接続方式自体を変えたため、実機での再確認が必須。
 公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
+
+## rc.48-dev の作成条件
+
+変換キー2回目で候補が1つ先へ進む動作を修正。1回目は文節分割と先頭候補の仮変換、2回目は候補選択段階へ
+移るだけで候補を進めず、3回目以降で候補を切り替える。1回目直後の確定は文全体、2回目以降の確定は
+選択中の文節を確定して次へ進む。未操作の1回目直後だけ2回目を候補選択開始として扱う判定を
+`WholeSentenceConfirm.beginsCandidateSelection` に分離。文節移動・候補選択・編集後は従来の候補移動へ戻る。
+単体テスト292件（app 290、karukan 2）成功、debug／releaseのlintエラー0件。通常APK・AABとABI別APKを生成し、
+versionCode 72、16 KB配置、zipalign、Mozc 4 ABI・Karukan・辞書・法務文書、R8後JNI名、PRIVACY／NOTICE一致、
+署名を確認。権限の変更なし。実機でのキー操作は未確認。Wi-Fi Directの実機2台接続・転送も未確認。
+公開対象は`.debug`のテスト用ユニバーサルAPKであり、未署名release成果物は公開しない。
