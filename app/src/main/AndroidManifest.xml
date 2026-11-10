@@ -138,6 +138,7 @@
 
         <activity
             android:name=".settings.ThemeEditorActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false"
             android:label="きせかえ"
             android:parentActivityName=".settings.SettingsActivity" />

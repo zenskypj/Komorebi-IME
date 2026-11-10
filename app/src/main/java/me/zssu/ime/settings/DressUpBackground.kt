@@ -42,6 +42,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import java.io.File
@@ -74,6 +76,7 @@ internal class DressUpBackground(
     val controls: @Composable () -> Unit,
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground {
     val context = LocalContext.current
@@ -126,8 +129,13 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
         Card(shape = RoundedCornerShape(14.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("キーボードの背景", style = MaterialTheme.typography.titleMedium)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(ImeSettings.BACKGROUND_PRESETS, key = { it.id }) { preset ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { pickImages.launch(arrayOf("image/*")) }, enabled = !importing,
+                        modifier = Modifier.weight(1f)) { Text("アルバムから選ぶ") }
+                    OutlinedButton(onClick = { pickVideo.launch(arrayOf("video/*")) }, enabled = !importing) { Text("動画") }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ImeSettings.BACKGROUND_PRESETS.forEach { preset ->
                         val thumb = remember(preset.id) {
                             context.assets.open(preset.assetPath).use {
                                 BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 4 })
@@ -143,12 +151,6 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
                             }
                         }
                     }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { pickImages.launch(arrayOf("image/*")) }, enabled = !importing,
-                        modifier = Modifier.weight(1f)) { Text("写真（1〜4枚）") }
-                    OutlinedButton(onClick = { pickVideo.launch(arrayOf("video/*")) }, enabled = !importing,
-                        modifier = Modifier.weight(1f)) { Text("動画") }
                 }
                 if (importing) Text("取り込み中…")
                 mediaMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }

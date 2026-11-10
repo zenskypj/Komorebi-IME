@@ -862,6 +862,34 @@ class ZinnaImeService : InputMethodService() {
             settings.backgroundVideoStart, settings.backgroundVideoEnd, settings.backgroundFilter)
     }
 
+    private var dressUpActive = false
+    private val dressUpListener: (me.zssu.ime.settings.DressUpLivePreview.Draft) -> Unit = { draft ->
+        if (dressUpActive) applyDressUpDraft(draft)
+    }
+
+    private fun applyDressUpDraft(draft: me.zssu.ime.settings.DressUpLivePreview.Draft) {
+        val selected = draft.theme.copy(
+            keyHeightDp = draft.theme.keyHeightDp * effectiveKeyHeightScale(),
+            hapticFeedback = settings.hapticFeedbackEnabled,
+        )
+        theme = selected
+        keyboardView?.let { keyboard ->
+            keyboard.theme = selected
+            val next = draft.layout
+            if (next != null && layout != next) {
+                layout = next
+                keyboard.layout = adaptLayoutForStyle(next)
+                enqueueInput { session.applyInputStyle(next.inputStyle) }
+            }
+        }
+        candidateView?.theme = selected
+        panelView?.apply {
+            setBackgroundColor(selected.backgroundColor)
+            setWallpaper(selected.wallpaper, selected.wallpaperOpacity, selected.wallpaperMotion)
+            draft.media?.render(this) ?: setMedia(null, emptyList(), null, 1f, 1f, 0f, .5f, .5f, 20)
+        }
+    }
+
     private fun resolveTheme(): KeyboardTheme {
         val selected = settings.activeThemeId
         val base = if (selected == MaterialYouTheme.ID) {
@@ -936,6 +964,14 @@ class ZinnaImeService : InputMethodService() {
             }
             InputViewRefreshPolicy.Target.NONE -> Unit
         }
+        dressUpActive = info?.packageName == packageName &&
+            info.privateImeOptions == me.zssu.ime.settings.DressUpLivePreview.EDITOR_MARKER
+        if (dressUpActive) {
+            me.zssu.ime.settings.DressUpLivePreview.listener = dressUpListener
+            me.zssu.ime.settings.DressUpLivePreview.current?.let(::applyDressUpDraft)
+        } else {
+            me.zssu.ime.settings.DressUpLivePreview.listener = null
+        }
         panelView?.setMediaActive(!nextPolicy.incognito)
         val nextCorrection = activeProfile?.typingCorrection ?: true
         val nextToggle = settings.flickInputMode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE
@@ -990,6 +1026,11 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        if (dressUpActive) {
+            dressUpActive = false
+            me.zssu.ime.settings.DressUpLivePreview.listener = null
+            builtStructureFingerprint = Int.MIN_VALUE
+        }
         keyboardView?.cancelGestures()
         panelView?.setMediaActive(false)
         closeHeightControl()
@@ -1144,6 +1185,9 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {
+            me.zssu.ime.settings.DressUpLivePreview.listener = null
+        }
         dictionaryPredictions.close()
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
         mainHandler.removeCallbacks(proofreadApplyRetry)

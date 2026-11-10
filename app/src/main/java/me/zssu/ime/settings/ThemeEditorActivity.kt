@@ -2,12 +2,17 @@ package me.zssu.ime.settings
 
 import android.os.Bundle
 import android.content.Intent
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
+import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
@@ -17,6 +22,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.FormatColorFill
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -50,7 +62,8 @@ internal val frameNames = mapOf(
 )
 
 private enum class EditorPage(val label: String) {
-    GALLERY("テーマ"), BACKGROUND("背景"), SHAPE("キー"), LAYOUT("配列"), COLORS("配色"), TEXT("文字と反応"), EFFECTS("入力エフェクト"),
+    BACKGROUND("背景"), GALLERY("テーマ"), SHAPE("ボタン"), TEXT("文字"), COLORS("配色"), EFFECTS("装飾"), LAYOUT("配列"),
+
 }
 
 private data class ColorProperty(
@@ -92,11 +105,17 @@ private fun ThemeEditorScreen() {
     )) { mutableStateOf(base) }
     var name by rememberSaveable { mutableStateOf("") }
     var appliedId by rememberSaveable { mutableStateOf(settings.activeThemeId) }
-    var page by rememberSaveable { mutableStateOf(EditorPage.GALLERY) }
+    var page by rememberSaveable { mutableStateOf(EditorPage.BACKGROUND) }
     var qwerty by rememberSaveable { mutableStateOf(
         settings.activeLayoutId?.let(repo::loadLayout)?.let(::isQwerty)
             ?: (settings.keyboardStyle == me.zssu.ime.keyboard.KeyboardStyle.QWERTY)
     ) }
+    var previewVisible by rememberSaveable { mutableStateOf(false) }
+    var inputView by remember { mutableStateOf<EditText?>(null) }
+    val imm = remember { context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager }
+    DisposableEffect(Unit) {
+        onDispose { DressUpLivePreview.clear() }
+    }
     var previewThemeBackground by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val background = rememberDressUpBackground(settings)
@@ -115,6 +134,13 @@ private fun ThemeEditorScreen() {
             appliedLayoutId = active
             selectedLayoutId = active
         }
+    }
+
+    SideEffect {
+        DressUpLivePreview.update(DressUpLivePreview.Draft(
+            if (settings.pureBlack) theme.asPureBlack() else theme, layout,
+            background.media.takeUnless { previewThemeBackground },
+        ))
     }
 
     fun selectLayout(id: String?) {
@@ -140,48 +166,78 @@ private fun ThemeEditorScreen() {
     }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Text("きせかえ") }, navigationIcon = {
+        CenterAlignedTopAppBar(title = { Text("編集") }, navigationIcon = {
             IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る")
             }
         }, actions = {
-            FilledTonalButton(onClick = ::apply, modifier = Modifier.padding(end = 12.dp),
-                enabled = edited || appliedId != baseId || appliedLayoutId != selectedLayoutId) { Text(if (edited) "保存して適用" else "適用") }
+            TextButton(onClick = ::apply, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
         })
     }) { insets ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(insets)) {
             val sideBySide = maxWidth >= 600.dp
-            val previewLimit = if (sideBySide) (maxHeight - 90.dp).coerceAtLeast(72.dp)
-                else (maxHeight * 0.39f).coerceIn(72.dp, 215.dp)
             val preview: @Composable (Modifier) -> Unit = { modifier ->
-                Surface(modifier.padding(12.dp), shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Column(Modifier.padding(10.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("ライブプレビュー", style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary)
-                                Text(theme.label, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                Column(modifier.padding(horizontal = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("実際のキーボードで試す", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                        TextButton(onClick = { qwerty = false }, enabled = qwerty) { Text("フリック") }
+                        TextButton(onClick = { qwerty = true }, enabled = !qwerty) { Text("QWERTY") }
+                        TextButton(onClick = {
+                            previewVisible = !previewVisible
+                            inputView?.let {
+                                if (previewVisible) {
+                                    it.requestFocus()
+                                    it.post { imm.showSoftInput(it, InputMethodManager.SHOW_IMPLICIT) }
+                                } else {
+                                    imm.hideSoftInputFromWindow(it.windowToken, 0)
+                                    it.clearFocus()
+                                }
                             }
-                            FilterChip(!qwerty, { qwerty = false }, label = { Text("フリック") })
-                            Spacer(Modifier.width(4.dp))
-                            FilterChip(qwerty, { qwerty = true }, label = { Text("QWERTY") })
-                        }
-                        if (layout != null) ThemeKeyboardPreview(
-                            if (settings.pureBlack) theme.asPureBlack() else theme, layout,
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
-                            background.media.takeUnless { previewThemeBackground }, previewLimit,
-                        )
+                        }) { Text(if (previewVisible) "閉じる" else "開く") }
                     }
+                    AndroidView(
+                        factory = { ctx ->
+                            EditText(ctx).apply {
+                                hint = "ここで入力を試す"
+                                setSingleLine(true)
+                                privateImeOptions = DressUpLivePreview.EDITOR_MARKER
+                                imeOptions = EditorInfo.IME_ACTION_DONE or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                                inputView = this
+                                setOnFocusChangeListener { _, focused -> if (focused) previewVisible = true }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("Komorebi IMEを選択して試してください", style = MaterialTheme.typography.labelSmall)
                 }
             }
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier) {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.SpaceEvenly) {
                         EditorPage.entries.forEach { option ->
-                            FilterChip(page == option, { page = option; message = null }, label = { Text(option.label) })
+                            val icon = when (option) {
+                                EditorPage.BACKGROUND -> Icons.Filled.Image
+                                EditorPage.GALLERY -> Icons.Filled.Palette
+                                EditorPage.SHAPE -> Icons.Filled.Keyboard
+                                EditorPage.TEXT -> Icons.Filled.TextFields
+                                EditorPage.COLORS -> Icons.Filled.FormatColorFill
+                                EditorPage.EFFECTS -> Icons.Filled.AutoAwesome
+                                EditorPage.LAYOUT -> Icons.Filled.GridView
+                            }
+                            Column(
+                                Modifier.widthIn(min = 68.dp).clickable { page = option; message = null }
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(icon, contentDescription = null,
+                                    tint = if (page == option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                Text(option.label, style = MaterialTheme.typography.labelMedium,
+                                    color = if (page == option) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                Spacer(Modifier.height(4.dp))
+                                HorizontalDivider(Modifier.width(20.dp), thickness = 2.dp,
+                                    color = if (page == option) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent)
+                            }
                         }
                     }
                     message?.let { Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error) }
@@ -378,8 +434,8 @@ private fun ThemeEditorScreen() {
                 }
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    preview(Modifier.fillMaxWidth())
                     controls(Modifier.weight(1f).fillMaxWidth())
+                    preview(Modifier.fillMaxWidth())
                 }
             }
         }

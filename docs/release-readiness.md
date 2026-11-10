@@ -256,3 +256,7 @@ R8後のJNI名、画像18点とテーマ9種を照合。公開APKの署名証明
 ## rc.53-dev の作成条件
 
 小・濁点キーを文字キーの見た目に変更。自動テスト・debug／release Lint・通常APK／AAB・ABI別APKを確認。実機確認は未実施。公開対象はdebug署名の `me.zssu.ime.debug`（versionCode 77）。
+
+## rc.54-dev の作成条件
+
+きせかえ画面を画像の配置に合わせて変更し、選択中の実際のIMEを開閉して試し入力できるようにした。Komorebi IME選択時は編集内容を一時反映。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでのIME連携、表示と操作は未確認。公開APKはdebug署名（versionCode 78）。
