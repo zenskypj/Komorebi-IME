@@ -29,15 +29,19 @@ import kotlin.math.abs
 class InputGuideActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ZinnaTheme { InputGuideScreen { finish() } } }
+        val initialPage = intent.getIntExtra(EXTRA_PAGE, 0).coerceIn(0, 3)
+        setContent { ZinnaTheme { InputGuideScreen(initialPage) { finish() } } }
+    }
+    companion object {
+        const val EXTRA_PAGE = "guide_page"
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InputGuideScreen(onBack: () -> Unit) {
+private fun InputGuideScreen(initialPage: Int, onBack: () -> Unit) {
     val context = LocalContext.current
-    var page by remember { mutableIntStateOf(0) }
+    var page by remember { mutableIntStateOf(initialPage) }
     val pages = listOf("入力", "変換・文節", "カーソル", "ツール")
     val scroll = rememberScrollState()
     LaunchedEffect(page) { scroll.scrollTo(0) }

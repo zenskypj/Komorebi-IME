@@ -264,3 +264,7 @@ R8後のJNI名、画像18点とテーマ9種を照合。公開APKの署名証明
 ## rc.55-dev の作成条件
 
 IME表示中にきせかえ画面が隠れる問題を修正。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでのIME表示と画面操作は未確認。公開APKはdebug署名（versionCode 79）。
+
+## rc.56-dev の作成条件
+
+初期設定、入力ガイド、変換ときせかえの案内を改善。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでの表示と操作は未確認。公開APKはdebug署名（versionCode 80）。

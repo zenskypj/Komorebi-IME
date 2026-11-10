@@ -2,6 +2,7 @@ package me.zssu.ime.settings
 
 import android.content.Context
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -94,8 +95,17 @@ private fun EngineDictScreen() {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ZenzaiControls()
-            SystemDictionaryControls()
+            Card(shape = RoundedCornerShape(14.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("自分に合った変換を選ぶ", style = MaterialTheme.typography.titleMedium)
+                    Text("標準の変換は追加ダウンロードなしで使えます。より多くの候補が必要な場合は、下のAI変換を試せます。")
+                    Text("文章の誤りを直す「AI文章校正」は別の機能です。モデルは端末内で処理し、取得には通信と保存容量が必要です。",
+                        style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = {
+                        context.startActivity(Intent(context, me.zssu.ime.ime.ProofreadModelActivity::class.java))
+                    }) { Text("文章校正のモデルを選ぶ") }
+                }
+            }
             // Engine selector and optional on-device model
             Card(shape = RoundedCornerShape(14.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -157,6 +167,9 @@ private fun EngineDictScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+
+            ZenzaiControls()
+            SystemDictionaryControls()
 
             // Dictionary toggles
             Card(shape = RoundedCornerShape(14.dp)) {

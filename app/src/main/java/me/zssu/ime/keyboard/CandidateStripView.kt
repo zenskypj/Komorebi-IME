@@ -36,7 +36,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, HEIGHT }
+    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, HEIGHT, INPUT_HELP }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -477,6 +477,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.EDIT -> "カーソル・範囲選択"
         ToolAction.RECONVERT -> "確定を戻す"
         ToolAction.PROOFREAD -> "AI 文章校正"
+        ToolAction.INPUT_HELP -> "入力の使い方"
     }
     private fun toolIcon(action: ToolAction): Int = when (action) {
         ToolAction.AI_STYLE -> R.drawable.ic_ai_style
@@ -490,6 +491,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.EDIT -> R.drawable.ic_ime_cursor_right
         ToolAction.RECONVERT -> R.drawable.ic_ime_undo
         ToolAction.PROOFREAD -> R.drawable.ic_ai_style
+        ToolAction.INPUT_HELP -> R.drawable.ic_material_settings
     }
     fun showTools() {
         paletteHeight(false)

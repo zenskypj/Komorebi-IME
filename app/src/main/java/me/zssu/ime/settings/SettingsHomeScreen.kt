@@ -75,7 +75,15 @@ internal fun SettingsHomeScreen() {
     var backupOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var focusSearch by remember { mutableStateOf(false) }
-    var needsSetup by remember { mutableStateOf(needsKeyboardSetup(context)) }
+    var keyboardEnabled by remember { mutableStateOf(keyboardEnabled(context)) }
+    var keyboardSelected by remember { mutableStateOf(keyboardSelected(context)) }
+    var setupDone by remember { mutableStateOf(setupDone(context)) }
+    fun refreshSetup() {
+        keyboardEnabled = keyboardEnabled(context)
+        keyboardSelected = keyboardSelected(context)
+        setupDone = setupDone(context)
+    }
+    val needsSetup = !keyboardEnabled || !keyboardSelected
     val homeList = rememberLazyListState()
     val searchList = rememberLazyListState()
 
@@ -105,11 +113,11 @@ internal fun SettingsHomeScreen() {
         val resolver = context.contentResolver
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
-                needsSetup = needsKeyboardSetup(context)
+                refreshSetup()
             }
         }
         val lifecycleObserver = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) needsSetup = needsKeyboardSetup(context)
+            if (event == Lifecycle.Event.ON_RESUME) refreshSetup()
         }
         resolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.DEFAULT_INPUT_METHOD), false, observer)
         resolver.registerContentObserver(Settings.Secure.getUriFor(Settings.Secure.ENABLED_INPUT_METHODS), false, observer)
@@ -212,12 +220,12 @@ internal fun SettingsHomeScreen() {
                     }
                 }
                 else -> LazyColumn(listModifier, state = homeList, contentPadding = PaddingValues(bottom = 24.dp)) {
-                    if (needsSetup) settingsSection("キーボードの初期設定", SettingsCatalog.keyboardSetup, openEntry)
+                    if (needsSetup || !setupDone) item {
+                        SetupGuide(keyboardEnabled, keyboardSelected)
+                    }
                     SettingsGroup.entries.forEach { group ->
                         val entries = SettingsCatalog.entries.filter { it.group == group }
-                        val rows = if (!needsSetup && group == SettingsGroup.INPUT) {
-                            entries + SettingsCatalog.keyboardSetup
-                        } else entries
+                        val rows = if (group == SettingsGroup.INPUT) entries + SettingsCatalog.keyboardSetup else entries
                         settingsSection(group.label, rows, openEntry)
                     }
                 }
@@ -270,8 +278,16 @@ private fun openDestination(context: Context, destination: SettingsDestination) 
     context.startActivity(intent)
 }
 
-private fun needsKeyboardSetup(context: Context): Boolean {
-    val imm = context.getSystemService(InputMethodManager::class.java) ?: return true
+private fun keyboardEnabled(context: Context): Boolean =
+    context.getSystemService(InputMethodManager::class.java)?.enabledInputMethodList
+        ?.any { it.packageName == context.packageName } == true
+
+private fun keyboardSelected(context: Context): Boolean {
     val selected = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-    return imm.enabledInputMethodList.none { it.packageName == context.packageName && it.id == selected }
+    return context.getSystemService(InputMethodManager::class.java)?.enabledInputMethodList
+        ?.any { it.packageName == context.packageName && it.id == selected } == true
 }
+
+private fun setupDone(context: Context): Boolean =
+    context.getSharedPreferences(ImeSettings.NAME, Context.MODE_PRIVATE)
+        .getBoolean("flick_onboarding_done", false)

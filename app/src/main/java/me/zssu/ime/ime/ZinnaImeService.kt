@@ -392,6 +392,11 @@ class ZinnaImeService : InputMethodService() {
             onSegmentEditRequested = {
                 confirmCommitsWholeSentence = false
                 segmentEditing = !segmentEditing
+                if (segmentEditing && !getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
+                        .getBoolean("segment_help_seen", false)) {
+                    Toast.makeText(this@ZinnaImeService, "文節を選び、縮める・広げるで区切りを調整できます", Toast.LENGTH_LONG).show()
+                    getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE).edit().putBoolean("segment_help_seen", true).apply()
+                }
                 candidateView?.segmentEditing = segmentEditing
                 segmentBar?.visibility = if (isConverting && segmentEditing) View.VISIBLE else View.GONE
             }
@@ -625,7 +630,13 @@ class ZinnaImeService : InputMethodService() {
                 )
                 styles.forEach { (style, label) ->
                     layouts.addView(android.widget.TextView(this).apply {
-                        text = label; textSize = 14f; gravity = Gravity.CENTER_VERTICAL
+                        val sketch = when (style) {
+                            me.zssu.ime.keyboard.KeyboardStyle.FLICK -> "あ か さ ／ ABCもフリック"
+                            me.zssu.ime.keyboard.KeyboardStyle.QWERTY -> "Q W E R T Y ／ かなもローマ字"
+                            me.zssu.ime.keyboard.KeyboardStyle.MIXED -> "あ か さ ／ A B CはQWERTY"
+                            me.zssu.ime.keyboard.KeyboardStyle.KANA_QWERTY -> "Q W E R T Y ／ 英字はフリック"
+                        }
+                        text = "$label\n$sketch"; textSize = 14f; gravity = Gravity.CENTER_VERTICAL
                         setTextColor(theme.candidateTextColor)
                         background = background(theme.keyColor)
                         setPadding(dp(12), dp(8), dp(12), dp(8))
@@ -700,6 +711,11 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         when (action) {
+            CandidateStripView.ToolAction.INPUT_HELP -> {
+                startActivity(Intent(this, me.zssu.ime.settings.InputGuideActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(me.zssu.ime.settings.InputGuideActivity.EXTRA_PAGE, if (isConverting) 1 else 0))
+            }
             CandidateStripView.ToolAction.MEETS_BEAM -> {
                 val pkg = currentInputEditorInfo?.packageName.orEmpty()
                 val url = me.zssu.ime.settings.BeamAccessibilityService.browserUrl(pkg)
@@ -1854,6 +1870,13 @@ class ZinnaImeService : InputMethodService() {
             )
         isComposing = state.hasComposition
         if (state.committedText.isNotEmpty()) conversionInteraction.committed(state.hasComposition)
+        if (state.isConverting && !isConverting && state.candidates.isNotEmpty()) {
+            val preferences = getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
+            if (!preferences.getBoolean("candidate_help_seen", false)) {
+                Toast.makeText(this, "候補をタップで確定、長押しで単語の登録や削除", Toast.LENGTH_LONG).show()
+                preferences.edit().putBoolean("candidate_help_seen", true).apply()
+            }
+        }
         isConverting = state.isConverting
         if (!isConverting) segmentEditing = false
         candidateView?.segmentEditing = segmentEditing

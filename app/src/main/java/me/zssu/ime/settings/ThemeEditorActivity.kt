@@ -252,6 +252,12 @@ private fun ThemeEditorScreen() {
                     key(page) {
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (edited) {
+                                OutlinedButton(onClick = { theme = base; name = "" }) {
+                                    Text("このテーマの変更を元に戻す")
+                                }
+                                Text("写真や動画は「背景」で選択時に反映されます。", style = MaterialTheme.typography.bodySmall)
+                            }
                             when (page) {
                                 EditorPage.GALLERY -> {
                                     Text("好きなテーマから始める", style = MaterialTheme.typography.titleLarge)
@@ -343,6 +349,9 @@ private fun ThemeEditorScreen() {
                                 }
                                 EditorPage.SHAPE -> {
                                     Text("キーの区切り", style = MaterialTheme.typography.titleMedium)
+                                    OutlinedButton(onClick = {
+                                        theme = theme.copy(keyFrame = KeyFrame.FILLED, keyOpacity = 1f, labelShadow = true)
+                                    }) { Text("キーを見やすくする") }
                                     ChoiceChips(frameNames, theme.frameFor(null)) { theme = theme.copy(keyFrame = it) }
                                     ThemeSlider("線の太さ", theme.lineWidthDp, 0.5f..4f, "dp") { theme = theme.copy(lineWidthDp = it) }
                                     ChoiceChips(mapOf(0f to "四角", 8f to "角丸", 32f to "大きな丸み"), theme.keyCornerRadiusDp) {
