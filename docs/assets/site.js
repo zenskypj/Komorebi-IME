@@ -20,7 +20,7 @@
         ["manual/03-ai", "AI 機能", "AI変換・AI文章校正・文体補正", "docs/manual/03-ai.md", "ai zenzai karukan 校正"],
         ["manual/04-jisho", "辞書", "単語の登録、追加辞書、意味辞書", "docs/manual/04-jisho.md", "dictionary 辞書"],
         ["manual/05-gaikan", "外観と配列", "色・背景・キーの並び・アプリごとの設定", "docs/manual/05-gaikan.md", "theme layout profile 外観"],
-        ["manual/13-settings-ui", "設定画面とLiquid Glass", "検索・5タブ・二層フッターバーとガラス表現", "docs/manual/13-settings-ui.md", "ui design liquid glass settings 設定 デザイン"],
+        ["manual/13-settings-ui", "設定画面", "カテゴリ一覧・検索・キーボードの初期設定", "docs/manual/13-settings-ui.md", "settings 設定 検索 キーボード"],
         ["manual/06-privacy", "プライバシーとセキュリティ", "何が送られて、何が端末に残るか", "docs/manual/06-privacy.md", "privacy security 安全"],
         ["manual/07-iten", "データの移行", "機種変更のときの引っ越し", "docs/manual/07-iten.md", "backup nfc beam 移行"],
         ["manual/08-troubleshoot", "トラブルシューティング", "症状から引く対処", "docs/manual/08-troubleshoot.md", "trouble 不具合"],
@@ -60,6 +60,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.50-dev", "rc.50-dev", "設定を4カテゴリの一覧に整理・検索とバックアップの導線を改善", "docs/releases/v0.3.0-rc.50-dev.md", "release rc50 settings search backup ui"],
         ["releases/v0.3.0-rc.49-dev", "rc.49-dev", "Liquid Glassの設定ホームと5タブ・検索・二層フッター", "docs/releases/v0.3.0-rc.49-dev.md", "release rc49 settings liquid glass ui"],
         ["releases/v0.3.0-rc.48-dev", "rc.48-dev", "変換キー2回目で候補を進めない", "docs/releases/v0.3.0-rc.48-dev.md", "release rc48 convert candidate"],
         ["releases/v0.3.0-rc.47-dev", "rc.47-dev", "Wi-Fi Directを標準のグループ交渉へ変更", "docs/releases/v0.3.0-rc.47-dev.md", "release rc47 beam wifi direct group"],
@@ -395,6 +396,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-10", "v0.3.0-rc.50-dev", "設定画面をカテゴリ別の一覧に整理し、横断検索を維持"],
     ["2026-11-07", "v0.3.0-rc.49-dev", "Liquid Glassの設定ホーム、検索、5タブ、二層フッターバー"],
     ["2026-11-07", "v0.3.0-rc.48-dev", "変換キー2回目は候補選択に入るだけで候補を進めない"],
     ["2026-11-06", "v0.3.0-rc.47-dev", "Wi-Fi Directを標準のグループ交渉と対称サーバー構成へ変更"],
@@ -419,15 +421,17 @@
   function recentTimeline() {
     const rail = el("div", { class: "timeline timeline-compact" });
     RECENT.forEach(([date, version, summary]) => {
+      const notes = BY_ID.get(`releases/${version}`);
+      const heading = notes ? el("h3", {}, [el("a", { href: hrefFor(notes), text: version })]) : el("h3", { text: version });
       rail.append(el("section", { class: "tl-entry" }, [
         el("span", { class: "tl-date", text: date }),
-        el("h3", { text: version }),
+        heading,
         el("p", { text: summary }),
       ]));
     });
     return el("section", { class: "section" }, [
       el("h2", { text: "最近のリリース" }),
-      el("p", { class: "sub", text: "最新6件。全37リリースの履歴は「タイムライン」にあります。" }),
+      el("p", { class: "sub", text: "過去の変更は「全バージョンのタイムライン」から確認できます。" }),
       rail,
       el("p", { class: "sub" }, [el("a", { href: "#/doc/manual/12-history", text: "全バージョンのタイムラインを見る" })]),
     ]);

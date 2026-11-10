@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import me.zssu.ime.theme.ZinnaTheme
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,7 +27,7 @@ class SettingsActivity : ComponentActivity() {
             },
         )
         setContent {
-            SettingsGlassTheme {
+            ZinnaTheme {
                 SettingsHomeScreen()
             }
         }

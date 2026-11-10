@@ -1,5 +1,6 @@
 package me.zssu.ime.settings
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,26 +23,18 @@ class SettingsCatalogTest {
     }
 
     @Test
-    fun `data tab excludes the backup shortcut because BackupCard is embedded`() {
-        val data = SettingsCatalog.forTab(SettingsTab.DATA)
-        assertTrue(data.any { it.id == "meets_beam" })
-        assertTrue(data.any { it.id == "app_profiles" })
-        assertFalse(data.any { it.id == "backup" })
+    fun `backup is a direct destination from the data section and search`() {
+        val backup = SettingsCatalog.search("バックアップ").single()
+        assertEquals(SettingsGroup.DATA, backup.group)
+        assertEquals(SettingsDestination.BACKUP, backup.destination)
+        assertEquals(backup, SettingsCatalog.entries.single { it.id == backup.id })
     }
 
     @Test
-    fun `every non-home tab has at least one destination`() {
-        SettingsTab.entries.filter { it != SettingsTab.HOME }.forEach { tab ->
-            assertTrue("$tab should have entries", SettingsCatalog.forTab(tab).isNotEmpty())
-        }
-        assertTrue(SettingsCatalog.forTab(SettingsTab.HOME).isEmpty())
-    }
-
-    @Test
-    fun `featured entries include the data shortcuts`() {
-        val featured = SettingsCatalog.featured().map { it.id }
-        assertTrue("backup" in featured)
-        assertTrue("meets_beam" in featured)
-        assertTrue("input_method" in featured)
+    fun `keyboard setup actions are searchable`() {
+        assertEquals(
+            setOf(SettingsDestination.ENABLE_KEYBOARD, SettingsDestination.PICK_KEYBOARD),
+            SettingsCatalog.search("初期設定").map { it.destination }.toSet(),
+        )
     }
 }
