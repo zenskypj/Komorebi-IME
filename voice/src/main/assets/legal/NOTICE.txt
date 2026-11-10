@@ -1,0 +1,12 @@
+Komorebi 音声入力モジュール - 第三者ソフトウェア
+
+Vosk API / Vosk Android 0.3.75
+Copyright Alpha Cephei Inc. and contributors. Apache License 2.0.
+https://github.com/alphacep/vosk-api
+
+Java Native Access (JNA) 5.18.1
+Copyright JNA contributors. LGPL 2.1 or later / Apache License 2.0; this distribution uses Apache License 2.0.
+https://github.com/java-native-access/jna
+
+Optional downloaded model: vosk-model-small-ja-0.22, Apache License 2.0.
+https://alphacephei.com/vosk/models

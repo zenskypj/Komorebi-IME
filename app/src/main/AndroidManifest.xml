@@ -4,6 +4,11 @@
     <!-- Used only when the user explicitly downloads the optional Karukan or zenz model. Conversion and
          typed text remain on-device; Mozc works without a network connection. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="${voicePermission}" />
+    <queries>
+        <package android:name="me.zssu.ime.voice" />
+        <package android:name="me.zssu.ime.voice.debug" />
+    </queries>
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />

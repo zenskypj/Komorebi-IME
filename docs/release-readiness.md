@@ -268,3 +268,9 @@ IME表示中にきせかえ画面が隠れる問題を修正。単体テスト30
 ## rc.56-dev の作成条件
 
 初期設定、入力ガイド、変換ときせかえの案内を改善。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでの表示と操作は未確認。公開APKはdebug署名（versionCode 80）。
+
+## rc.57-dev の作成条件
+
+別 APK の Vosk 音声入力、日本語モデルの明示取得・検証・削除、モジュールの用途・権限案内と文節ガイド修正。単体テスト304件（app 302、karukan 2）成功、app と voice の debug／release lint エラー0件。通常 APK・AAB、別呼び出しの ABI 別 APK を生成。全10 ABI 別 APK の ID・versionCode 81・versionName、release APK の 16 KB zipalign、Mozc・arm64 Karukan／C++・辞書・法務文書を確認。R8 mapping と DEX で MozcJNI／KarukanNative の native メソッド名を確認。公開版は同じ debug 証明書の本体と音声モジュールで、未署名 release 成果物は配布しない。
+
+音声モジュールに Google Play プロテクトの「危険」警告が出たことを利用者から報告された。理由・以前の検出名は不明で、用途・権限・取得元の表示と通信制限を追加したが、今回の再判定・実機での音声入力を含む API 24 / 29 / 34 / 35 / 36 マトリクスは未確認。誤判定や警告の解消は断定しない。

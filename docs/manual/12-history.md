@@ -12,7 +12,7 @@ GitHub のリリース・タグ・[リリースノート](/docs/releases) を突
 | `0.0.x` | リポジトリ初期 | タグのみ | フォーク元由来の名残（リリースなし） | — |
 | `0.1.0-komorebi.5`〜`.13` | 2026-07-27 | 9 | Open Alpha。初期の機能を一気に搭載 | — |
 | `0.2.0-komorebi.1`〜`.10` | 2026-07-27〜28 | 10 | Open Beta。安定性と入力互換を強化 | 〜23 |
-| `0.3.0-rc.1` / `rc.4` / `rc.21`〜`rc.56` | 2026-08-16〜11-11 | 38リリース | Release Candidate。AI・辞書・移行・外観を拡張 | 25〜80 |
+| `0.3.0-rc.1` / `rc.4` / `rc.21`〜`rc.57` | 2026-08-16〜11-11 | 39リリース | Release Candidate。AI・辞書・移行・外観を拡張 | 25〜81 |
 
 **欠番（重要）**
 
@@ -333,3 +333,7 @@ GitHub のリリース・タグ・[リリースノート](/docs/releases) を突
 - [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)
 - [docs/releases（リリースノート）](/docs/releases)
 - [Git タグ一覧](https://github.com/zenskypj/Komorebi-IME/tags)
+
+### v0.3.0-rc.57-dev — 2026-11-11
+
+任意の音声入力モジュールと端末内の日本語モデル取得・管理を追加。文節調整のガイドを見直した。実機動作と Play プロテクトの再判定は未確認。

@@ -711,6 +711,7 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         when (action) {
+            CandidateStripView.ToolAction.VOICE -> startVoiceInput()
             CandidateStripView.ToolAction.INPUT_HELP -> {
                 startActivity(Intent(this, me.zssu.ime.settings.InputGuideActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -756,6 +757,103 @@ class ZinnaImeService : InputMethodService() {
                 Intent(this, SettingsActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
+        }
+    }
+
+    private var voicePending: VoicePending? = null
+    private var voiceSequence = 0L
+    private var voiceApplyAttempts = 0
+    private val voiceApplyRetry = Runnable { tryApplyVoiceResult() }
+
+    private fun voiceAnchor(): VoiceEditorAnchor? {
+        val info = currentInputEditorInfo ?: return null
+        val connection = currentInputConnection ?: return null
+        val request = android.view.inputmethod.ExtractedTextRequest().apply {
+            hintMaxChars = 4096
+            hintMaxLines = 100
+        }
+        val text = runCatching { connection.getExtractedText(request, 0) }.getOrNull() ?: return null
+        val body = text.text?.toString() ?: return null
+        if (body.length > 64 * 1024) return null
+        return VoiceEditorAnchor(info.packageName ?: return null, info.fieldId, info.fieldName,
+            info.inputType, text.selectionStart, text.selectionEnd, text.startOffset, body)
+    }
+
+    private suspend fun startVoiceInput() {
+        if (fieldPolicy.incognito || currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) {
+            Toast.makeText(this, "この入力欄では音声入力を利用できません", Toast.LENGTH_LONG).show()
+            return
+        }
+        val module = if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0)
+            "me.zssu.ime.voice.debug" else "me.zssu.ime.voice"
+        if (packageManager.checkSignatures(packageName, module) != android.content.pm.PackageManager.SIGNATURE_MATCH) {
+            Toast.makeText(this, "対応する音声入力モジュールをインストールしてください", Toast.LENGTH_LONG).show()
+            return
+        }
+        // Resolve the unfinished conversion before recording. Never silently replace composing text.
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) {
+            Toast.makeText(this, "入力中の文字を確定してからお試しください", Toast.LENGTH_LONG).show()
+            return
+        }
+        val anchor = voiceAnchor()
+        if (anchor == null) {
+            Toast.makeText(this, "この入力欄では音声入力を安全に開始できません", Toast.LENGTH_LONG).show()
+            return
+        }
+        // The first use may include a model download before recording starts.
+        val pending = VoicePending(++voiceSequence, anchor, android.os.SystemClock.elapsedRealtime() + 30 * 60_000L)
+        voicePending = pending
+        val receiver = object : android.os.ResultReceiver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onReceiveResult(resultCode: Int, resultData: android.os.Bundle?) {
+                val active = voicePending ?: return
+                if (active.id != pending.id) return
+                val text = resultData?.getString("text")?.take(4000)
+                if (resultCode != android.app.Activity.RESULT_OK || text.isNullOrBlank()) {
+                    voicePending = null
+                    return
+                }
+                active.text = text
+                voiceApplyAttempts = 0
+                tryApplyVoiceResult()
+            }
+        }
+        try {
+            startActivity(Intent().setClassName(module, "me.zssu.ime.voice.VoiceActivity")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra("receiver", receiver))
+        } catch (e: Exception) {
+            voicePending = null
+            Toast.makeText(this, "音声入力を開けませんでした", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun tryApplyVoiceResult() {
+        val pending = voicePending ?: return
+        val text = pending.text ?: return
+        if (android.os.SystemClock.elapsedRealtime() > pending.expiresAt) {
+            voicePending = null
+            return
+        }
+        // While the module Activity has focus, wait until the original input view returns.
+        if (!isInputViewShown) {
+            if (voiceApplyAttempts++ < 30) {
+                mainHandler.removeCallbacks(voiceApplyRetry)
+                mainHandler.postDelayed(voiceApplyRetry, 200)
+            }
+            return
+        }
+        if (!pending.anchor.matches(voiceAnchor()) || fieldPolicy.incognito) {
+            voicePending = null
+            Toast.makeText(this, "入力欄が変わったため、音声の結果は入力しませんでした", Toast.LENGTH_LONG).show()
+            return
+        }
+        voicePending = null
+        enqueueInput {
+            if (pending.anchor.matches(voiceAnchor()) && !fieldPolicy.incognito &&
+                currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) == 0) {
+                currentInputConnection?.commitText(text, 1)
+            }
         }
     }
 
@@ -945,6 +1043,7 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        android.os.Handler(android.os.Looper.getMainLooper()).post { tryApplyVoiceResult() }
         enqueueInput { session.setInputActive(true) }
         tryApplyProofreadResult()
         editAnchor = null
@@ -1201,6 +1300,8 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        voicePending = null
+        mainHandler.removeCallbacks(voiceApplyRetry)
         if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {
             me.zssu.ime.settings.DressUpLivePreview.listener = null
         }

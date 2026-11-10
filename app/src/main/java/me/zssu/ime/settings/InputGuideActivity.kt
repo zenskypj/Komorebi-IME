@@ -50,7 +50,7 @@ private fun InputGuideScreen(initialPage: Int, onBack: () -> Unit) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "設定に戻る") }
         })
     }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pages.forEachIndexed { index, title ->
                     FilterChip(selected = page == index, onClick = { page = index }, label = { Text("${index + 1}  $title") })
@@ -71,18 +71,31 @@ private fun InputGuideScreen(initialPage: Int, onBack: () -> Unit) {
                         GuidePractice("あいうえお", "実際のキーボードで「あいうえお」を入力してみましょう。")
                     }
                     1 -> {
-                        Text("入力中の範囲も、変換後の文節も整える。", style = MaterialTheme.typography.headlineSmall)
-                        GuideCard("変換キーの順番") {
-                            Text("① 読みを入力 → ② 変換を1回押して先頭候補 → ③ 表示中の候補を変換キーで巡回。左右スワイプで別の候補へ進み、右端の下向きボタンで一覧を開きます。候補の1行／2行と文字サイズは外観設定を反映します。候補のタップか確定キーで決定します。")
-                            Text("入力中の左右キーで選んだ読みの先頭側の区切りは、変換時に引き継ぎます。変換1回目の直後は左右キーで前／次の文節へ移動し、もう一度変換して候補選択に入ると左右キーで文節を縮める／広げる操作になります。前の文節を確定して読みが残ったときは、次の文節の候補が自動で開きます。2文節目以降に変換キーを押し直す必要はありません。")
-                            Text("候補一覧の「文節を調整」で文節操作を開けます。候補の意味や優先登録は、候補を長押しすると開けます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("変換と区切りの直し方", style = MaterialTheme.typography.headlineSmall)
+                        Text("区切りとは、文章を変換するときの言葉のまとまりです。")
+                        GuideCard("まずは変換") {
+                            Text("1　「きょうはいいてんきです」と入力します。")
+                            Text("2　「変換」を1回押します。QWERTYではスペースを押します。")
+                            Text("3　表示が合っていれば、確定キーで文章全体を決められます。")
+                            Text("最初に表示される言葉は、まだ確定していません。", style = MaterialTheme.typography.bodySmall)
                         }
-                        GuideCard("固有名詞は読みの途中から") {
-                            Text("固有名詞・登録語は読みの途中から候補に入り、入力が進むほど順位に加点します。候補を選ぶまでは、先読みした語へ本文を置き換えません。")
-                            Text("カタカナ語→英語辞書は完全一致のみです。★の最優先指定は、読みが完全一致したときにAIより優先します。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        GuideCard("区切りが違うとき") {
+                            Text("例：「きょう｜はいいてんきです」を「きょうは｜いいてんきです」に直す")
+                            Text("1　変換候補の右端にある「∨」を押します。")
+                            Text("2　一覧の上にある「文節を調整」を押します。")
+                            Text("3　直したいまとまりを選び、「広げる」または「縮める」を押します。")
+                            Text("4　区切りが合ったら、候補を選びます。")
+                            Text("「前の文節」「次の文節」で、直す場所を移せます。", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        SegmentLesson()
-                        GuidePractice("きょうはいいてんきです", "読みを入力して変換し、左右キーで文節移動。もう一度変換を押してから、左右キーで区切りの変更を試してください。文節操作ボタンは候補一覧の「文節を調整」から開けます。")
+                        GuideCard("候補を選ぶ") {
+                            Text("1回目の後に文節や候補を操作せず「変換」をもう1回押すと、候補を選ぶ段階になります。このとき候補はまだ次に進みません。3回目から次の候補に進みます。")
+                            Text("候補をタップして選べます。長押しすると、意味や登録などの操作を開けます。")
+                            Text("前のまとまりを確定すると、続きの候補が自動で表示されます。", style = MaterialTheme.typography.bodySmall)
+                        }
+                        GuidePractice("きょうはいいてんきです",
+                            "下の練習欄に自分で「きょうはいいてんきです」と入力し、「変換」を押してから「∨」→「文節を調整」を試してください。",
+                            allowExample = false)
                     }
                     2 -> {
                         Text("消して打ち直す前に、移動。", style = MaterialTheme.typography.headlineSmall)
@@ -167,38 +180,13 @@ private fun FlickLesson() {
 }
 
 @Composable
-private fun SegmentLesson() {
-    var parts by remember { mutableStateOf(listOf("きょうは", "いい", "てんきです")) }
-    var selected by remember { mutableIntStateOf(0) }
-    GuideCard("区切りを試す（操作イメージ）") {
-        Text("文節をタップして対象を選びます。移動は対象を変更し、縮小・拡大は選んだ文節の右端を変更します。")
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            parts.forEachIndexed { i, text -> FilterChip(selected = selected == i, onClick = { selected = i }, label = { Text(text) }) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { selected-- }, enabled = selected > 0, modifier = Modifier.weight(1f)) { Text("前の文節") }
-            OutlinedButton(onClick = { selected++ }, enabled = selected < parts.lastIndex, modifier = Modifier.weight(1f)) { Text("次の文節") }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = {
-                parts = parts.toMutableList().also { p -> p[selected + 1] = p[selected].takeLast(1) + p[selected + 1]; p[selected] = p[selected].dropLast(1) }
-            }, enabled = selected < parts.lastIndex && parts[selected].length > 1, modifier = Modifier.weight(1f)) { Text("縮める") }
-            FilledTonalButton(onClick = {
-                parts = parts.toMutableList().also { p -> p[selected] += p[selected + 1].take(1); p[selected + 1] = p[selected + 1].drop(1) }
-            }, enabled = selected < parts.lastIndex && parts[selected + 1].length > 1, modifier = Modifier.weight(1f)) { Text("広げる") }
-        }
-        TextButton(onClick = { parts = listOf("きょうは", "いい", "てんきです"); selected = 0 }) { Text("最初の区切りに戻す") }
-    }
-}
-
-@Composable
-private fun GuidePractice(example: String, instruction: String) {
+private fun GuidePractice(example: String, instruction: String, allowExample: Boolean = true) {
     var value by remember { mutableStateOf("") }
     GuideCard("実際のキーボードで練習") {
         Text(instruction)
         OutlinedTextField(value = value, onValueChange = { value = it }, label = { Text("練習用の入力欄") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { value = example }) { Text("例文を入れる") }
+            if (allowExample) TextButton(onClick = { value = example }) { Text("例文を入れる") }
             TextButton(onClick = { value = "" }) { Text("消去") }
         }
         Text("練習内容はガイドに保存しません。入力時には現在のキーボードの学習設定が適用されます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

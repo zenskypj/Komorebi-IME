@@ -31,7 +31,7 @@
     {
       group: "タイムライン",
       items: [
-        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全51件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
+        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全52件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
       ],
     },
     {
@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.57-dev", "rc.57-dev", "任意の音声入力・日本語モデル管理", "docs/releases/v0.3.0-rc.57-dev.md", "release rc57 音声"],
         ["releases/v0.3.0-rc.56-dev", "rc.56-dev", "初期設定・入力ガイド・変換案内を改善", "docs/releases/v0.3.0-rc.56-dev.md", "release rc56 初期設定 ガイド"],
         ["releases/v0.3.0-rc.55-dev", "rc.55-dev", "きせかえ項目がIMEに隠れる問題を修正", "docs/releases/v0.3.0-rc.55-dev.md", "release rc55 ime insets"],
         ["releases/v0.3.0-rc.54-dev", "rc.54-dev", "きせかえ画面を刷新し実際のIMEで試し入力", "docs/releases/v0.3.0-rc.54-dev.md", "release rc54 theme preview"],
@@ -404,6 +405,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-11", "v0.3.0-rc.57-dev", "音声入力モジュール・日本語モデル管理"],
     ["2026-11-11", "v0.3.0-rc.56-dev", "初期設定・入力の練習・変換案内を分かりやすく"],
     ["2026-11-11", "v0.3.0-rc.55-dev", "IME表示中もきせかえ項目と開閉を表示"],
     ["2026-11-10", "v0.3.0-rc.54-dev", "きせかえをアイコンと背景一覧に変更、実際のIMEで試し入力"],

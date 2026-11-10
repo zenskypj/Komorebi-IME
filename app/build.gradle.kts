@@ -26,12 +26,13 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 80
-        versionName = "0.3.0-rc.56-dev"
+        versionCode = 81
+        versionName = "0.3.0-rc.57-dev"
     }
 
     buildTypes {
         release {
+            manifestPlaceholders["voicePermission"] = "me.zssu.ime.voice.ACCESS"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -40,6 +41,7 @@ android {
             )
         }
         debug {
+            manifestPlaceholders["voicePermission"] = "me.zssu.ime.voice.debug.ACCESS"
             applicationIdSuffix = ".debug"
         }
     }

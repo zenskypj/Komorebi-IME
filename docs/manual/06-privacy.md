@@ -20,6 +20,8 @@ Komorebi IME は「オフライン・最小権限」を方針にしています�
 > [!IMPORTANT]
 > 広告 SDK・解析 SDK・クラッシュレポート SDK は組み込んでいません。要求する権限は、任意取得用の `INTERNET`、Meets Beam・NFC 移行用の `NFC`、Wi-Fi Direct 用の `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES`、Android 12 以下に限り Wi-Fi Direct 検出用の `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` です。位置情報は端末の検出だけに使い、位置の記録・外部送信は行いません。Android 13 以降でも Wi-Fi Direct の検出には端末の位置情報モードをオンにする必要がありますが、アプリは位置情報を取得しません。
 
+別途導入する音声入力モジュールは `RECORD_AUDIO` を要求し、利用者の操作と許可後にマイクを使います。また `INTERNET` 権限を使い、利用者が明示したときだけ公開元から日本語モデルを取得します。音声や入力内容を送信せず、認識は取得済みモデルで端末内で行います。確認した結果だけを同一署名の IME に渡し、録音と結果をモジュール内のファイルには保存しません。
+
 ## 端末間の Wi-Fi Direct
 
 Meets Beam の大容量転送は、NFC で交換した接続情報を使って端末同士を Wi-Fi Direct で直接接続します。クラウド・外部サーバーは経由しません。転送は AES-GCM で暗号化し、宣言サイズと SHA-256 を検証します。受信したファイルはアプリ専用領域に保存し、利用者が開く・共有するまで外部アプリへ渡しません。辞書は内容を確認し、「置き換える」を選んだときだけユーザー辞書を置き換えます。
