@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.57-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.58-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -95,10 +95,12 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 
 `rc.57-dev` は別 APK の音声入力と日本語モデル管理を追加。音声は端末内で認識し、モジュールは用途・権限・モデル取得元を表示します。[使い方](docs/manual/01-nyuryoku.md)。Google Play プロテクトの警告は原因と判定結果が未確認で、解除を保証できません。
 
+`rc.58-dev` は GitHub の更新自動確認と通知に対応し、音声入力が起動直後に閉じる原因となり得る別 APK 間の受け渡しを修正しました。自動確認は設定で停止できます。実機での音声入力は未確認です。
+
 ## 特長
 
 - **入力内容は端末内** — Mozc変換は完全オフラインです。外部サーバーとの通信は任意の
-  モデル・辞書取得時だけ。Meets Beamのファイル・辞書転送はNFCとWi-Fi Directの端末間通信で、
+  モデル・辞書取得、絵文字データの更新確認、初期状態で有効な GitHub の更新確認です。Meets Beamのファイル・辞書転送はNFCとWi-Fi Directの端末間通信で、
   外部サーバーを経由しません。入力内容・周辺文脈は送信しません。
 - **Mozc / Karukan切り替え** — 高速・省電力なMozcと、文脈を考慮する実験的な
   Karukanニューラル変換を設定から選べます。Karukanは約32 MBのモデルを明示操作で取得し、
@@ -355,7 +357,7 @@ ID には 1〜64 文字の英数字、ハイフン、アンダースコアを使
 
 ## プライバシーとセキュリティ
 
-`AndroidManifest.xml` が要求する権限は、任意取得用の `INTERNET`、Meets Beam・NFC移行用の `NFC`、Wi-Fi Direct 用の `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES`、Android 12 以下に限り Wi-Fi Direct 検出用の `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` です。位置情報は端末の検出だけに使い、位置の記録・送信はしません。外部通信の宛先は Hugging Face 上の公開モデルと GitHub Releases の追加辞書で、利用者が設定画面で開始した取得に限ります。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力内容、周辺文脈、変換履歴、ユーザー辞書、背景画像は外部へ送信しません。
+`AndroidManifest.xml` が要求する権限は、任意取得と更新確認用の `INTERNET`、ネットワーク状態確認用 `ACCESS_NETWORK_STATE`、再起動後の更新確認用 `RECEIVE_BOOT_COMPLETED`、通知用 `POST_NOTIFICATIONS`、Meets Beam・NFC移行用の `NFC`、Wi-Fi Direct 用の `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES`、Android 12 以下に限り Wi-Fi Direct 検出用の `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` です。位置情報は端末の検出だけに使い、位置の記録・送信はしません。外部通信には、利用者による公開モデル・追加辞書の取得、絵文字データの更新確認、初期状態で有効な GitHub Releases の更新確認があります。自動確認は設定で停止できます。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力内容、周辺文脈、変換履歴、ユーザー辞書、背景画像は外部へ送信しません。
 
 保存データは次のように扱います。
 

@@ -12,14 +12,17 @@
 | ネイティブ | Mozc（BSD 3-Clause）を組み込み。`libmozc.so`（4 ABI） |
 | 変換基盤 | Kotlin ラッパー（`MozcEngine` / `MozcSession`）経由で JNI を扱う |
 | 入力方式 | かな/英字フリック、かな/英字 QWERTY、混在、かなだけ QWERTY |
-| 権限 | `INTERNET`（任意取得）、`NFC`、Wi-Fi Direct、Android 12 以下の位置情報。詳細は下記「権限」参照 |
+| 権限 | `INTERNET`（任意取得・更新確認）、`ACCESS_NETWORK_STATE`、`RECEIVE_BOOT_COMPLETED`、`POST_NOTIFICATIONS`、`NFC`、Wi-Fi Direct、Android 12 以下の位置情報。詳細は下記「権限」参照 |
 | クラウドバックアップ | 無効 |
 
 ### 権限
 
 | 権限 | 用途 | 条件 |
 | --- | --- | --- |
-| `INTERNET` | モデル・追加辞書の取得 | 利用者が設定画面で開始したときだけ |
+| `INTERNET` | モデル・辞書取得、絵文字・アプリ更新確認 | アプリ更新の自動確認は初期状態でオン。設定から停止可能 |
+| `ACCESS_NETWORK_STATE` | 自動確認時のネットワーク接続条件 | 更新の定期確認 |
+| `RECEIVE_BOOT_COMPLETED` | 更新確認ジョブを再起動後も維持 | 自動確認がオンのとき |
+| `POST_NOTIFICATIONS` | 新しいリリースの通知 | Android 13 以降は利用者が許可したとき |
 | `NFC` | Meets Beam、NFC による設定・学習の移行 | 利用者が有効化して送受信を選んだときだけ |
 | `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES` | Wi-Fi Direct のグループ作成・検出・接続 | Meets Beam の大容量転送時だけ |
 | `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | Wi-Fi Direct の端末検出（Android 12 以下） | `maxSdkVersion=32`。位置の記録・外部送信はしない |
@@ -211,3 +214,7 @@ third_party/      上流 checkout（Mozc は Git 管理対象外）
 入力イベントと候補はメモリ内のみで処理します。任意の入力性能記録は、キー受付から待ち行列・Native処理・UI更新処理完了までの集計値です。実際のフレーム表示時刻やCPU時間ではありません。入力先アプリへのテキスト問い合わせや画面の計測・描画はUI側に残るため、あらゆる遅延がなくなる保証はありません。
 
 長押しの自動リピート（削除・カーソル移動など）は、待機／実行中を合わせて1イベントまでに抑えます。指を離すと未実行分を取り消し、最初の通常押下は保持し、自動反復は既に受け付けて実行中の1回だけ完了します。Native処理が遅いときに削除や移動が大量に溜まって後から続くことを防ぎます。通常の物理打鍵や指の移動量に対応する操作は間引きません。
+
+## アプリ更新の確認
+
+`JobScheduler` がネットワーク接続を条件におおむね24時間ごとに GitHub Releases の直近100件を取得します。再起動後もジョブを維持しますが、省電力制限・通信状況により実行時刻は保証しません。設定から停止でき、手動確認も可能です。候補は公開済みで解析可能なタグに限り、RC の番号を数値として比較します。正式版と RC はそれぞれ保持し、`0.3.0-rc.57-dev` より `0.3.0` を新しい版として扱います。GitHub の prerelease フラグが過去の RC 表記と一致しない場合もタグに基づいて判断します。ページを開いて利用者がインストールする方式で、APKの自動取得・自動インストールはしません。

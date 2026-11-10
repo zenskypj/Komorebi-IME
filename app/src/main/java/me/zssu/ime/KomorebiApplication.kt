@@ -16,6 +16,7 @@ class KomorebiApplication : Application() {
         super.onCreate()
         // Restore before Activities/services construct repositories that cache settings or files.
         ProfileBackup.applyPendingRestore(this)
+        me.zssu.ime.update.UpdateManager.schedule(this)
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             private var reader: BeamReceiver? = null
             override fun onActivityResumed(activity: Activity) {

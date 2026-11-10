@@ -9,7 +9,7 @@
 <div class="metric"><span class="n">100%</span><span class="l">オフラインで変換</span></div>
 </div>
 
-<p>権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の任意取得、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。Android 13 以降でも Wi-Fi Direct の検出には端末の位置情報モードをオンにする必要があります。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
+<p>権限は用途別です。<code>INTERNET</code> はモデル・追加辞書の取得と更新確認、<code>NFC</code> は Meets Beam と NFC 移行、Wi-Fi Direct は <code>ACCESS_WIFI_STATE</code> / <code>CHANGE_WIFI_STATE</code> / <code>NEARBY_WIFI_DEVICES</code>、Android 12 以下では位置情報（Wi-Fi Direct の端末検出のみ）を使います。Android 13 以降でも Wi-Fi Direct の検出には端末の位置情報モードをオンにする必要があります。位置の記録・外部送信は行いません。広告・解析用の権限はありません。</p>
 
 ## 一目でわかる比較
 
@@ -48,7 +48,7 @@
 <div class="hl">
 <span class="hl-num">01</span>
 <h3>入力した文字を、外に出さない</h3>
-<p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。外部通信は、あなたがモデルや追加辞書の「取得」を押したときだけです。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力・文脈・辞書・学習履歴は外部へ送りません。</p>
+<p>変換は Mozc を端末に組み込んで実行します。AI 変換も AI 文章校正も端末内。外部通信には、モデルや追加辞書の取得、絵文字データの更新確認、初期状態でオンの GitHub 更新確認があります。更新自動確認は設定で停止できます。Meets Beam のファイル・辞書転送は NFC と Wi-Fi Direct の端末間通信だけで、クラウドを経由しません。入力・文脈・辞書・学習履歴は外部へ送りません。</p>
 </div>
 
 <div class="hl">
@@ -89,7 +89,7 @@
 
 <details class="faq-item">
 <summary>入力は本当に送られませんか？</summary>
-<p>外部サーバーへ送りません。要求する権限は、任意取得用の <code>INTERNET</code>、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り Wi-Fi Direct 検出用の位置情報です。位置の記録・送信はしません。Meets Beam は端末間 P2P だけで、クラウドを経由しません。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p>
+<p>外部サーバーへ送りません。要求する権限は、任意取得・更新確認用の <code>INTERNET</code>、接続状態確認用 <code>ACCESS_NETWORK_STATE</code>、再起動後の更新確認用 <code>RECEIVE_BOOT_COMPLETED</code>、通知用 <code>POST_NOTIFICATIONS</code>、Meets Beam・NFC移行用の <code>NFC</code>、Wi-Fi Direct 用の Wi-Fi/近接端末権限、Android 12 以下に限り Wi-Fi Direct 検出用の位置情報です。位置の記録・送信はしません。Meets Beam は端末間 P2P だけで、クラウドを経由しません。疑うなら、コードを読むか通信を自分で観測してください。それができるのが、ソース公開の意味です。</p>
 </details>
 
 <details class="faq-item">

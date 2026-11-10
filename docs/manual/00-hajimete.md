@@ -29,7 +29,7 @@ Komorebi IME は、Android 向けのオープンソース日本語入力（IME�
 | CPU | `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` |
 | AI 変換（zenzai-plus / Karukan） | 現在 `arm64-v8a` のみ |
 | AI 文章校正 | `arm64-v8a` のみ |
-| 権限 | `INTERNET`（任意取得）、`NFC`（Meets Beam/移行）、Wi-Fi Direct、Android 12 以下の位置情報（検出のみ） |
+| 権限 | `INTERNET`（任意取得・更新確認）、`ACCESS_NETWORK_STATE`（接続状態）、`RECEIVE_BOOT_COMPLETED`（更新確認の維持）、`POST_NOTIFICATIONS`（通知）、`NFC`（Meets Beam/移行）、Wi-Fi Direct、Android 12 以下の位置情報（検出のみ） |
 | クラウドバックアップ | 無効（`allowBackup=false`） |
 
 > [!NOTE]

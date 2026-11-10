@@ -274,3 +274,11 @@ IME表示中にきせかえ画面が隠れる問題を修正。単体テスト30
 別 APK の Vosk 音声入力、日本語モデルの明示取得・検証・削除、モジュールの用途・権限案内と文節ガイド修正。単体テスト304件（app 302、karukan 2）成功、app と voice の debug／release lint エラー0件。通常 APK・AAB、別呼び出しの ABI 別 APK を生成。全10 ABI 別 APK の ID・versionCode 81・versionName、release APK の 16 KB zipalign、Mozc・arm64 Karukan／C++・辞書・法務文書を確認。R8 mapping と DEX で MozcJNI／KarukanNative の native メソッド名を確認。公開版は同じ debug 証明書の本体と音声モジュールで、未署名 release 成果物は配布しない。
 
 音声モジュールに Google Play プロテクトの「危険」警告が出たことを利用者から報告された。理由・以前の検出名は不明で、用途・権限・取得元の表示と通信制限を追加したが、今回の再判定・実機での音声入力を含む API 24 / 29 / 34 / 35 / 36 マトリクスは未確認。誤判定や警告の解消は断定しない。
+
+## rc.58-dev の作成条件
+
+GitHub Releases の直近100件をおおむね24時間ごとに確認する JobScheduler と設定画面を追加。`RECEIVE_BOOT_COMPLETED`、`ACCESS_NETWORK_STATE`、`POST_NOTIFICATIONS` を宣言し、通知は Android の許可に従う。自動確認は初期状態でオン・設定で停止可能。RC と正式版の比較、後続 RC と正式版の併存を単体テストする。音声入力時の返却先を Android 標準 `ResultReceiver` として別 APK に渡す修正を含む。
+
+API 24 / 29 / 34 / 35 / 36 の端末・エミュレータが利用できず、JobScheduler の周期・省電力制限・再起動後の動作、通知許可、音声入力の画面遷移と認識は実機未検証。前版で報告された Play プロテクトの警告は Google の再判定を受けておらず、解消を断定しない。配布する本体と音声モジュールは debug 署名のテスト APK。
+
+自動テスト307件（app 305、karukan 2）成功、app と voice の debug／release lint 成功。通常 APK・AAB と別呼び出しの ABI 別 APK を生成。全10 ABI 別 APK の ID・versionCode 82・versionName、release APK の 16 KB zipalign、Mozc・arm64 Karukan／C++・辞書・法務文書、R8 後 DEX の JNI 名、本体と音声モジュールの debug 署名一致を確認。公開・アプリ内プライバシー文書も一致。

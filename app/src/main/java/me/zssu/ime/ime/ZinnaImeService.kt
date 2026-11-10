@@ -818,10 +818,18 @@ class ZinnaImeService : InputMethodService() {
                 tryApplyVoiceResult()
             }
         }
+        // A subclass Parcelable is encoded using its concrete class name. The companion APK
+        // cannot load this IME's anonymous class, so pass a framework ResultReceiver proxy.
+        val parcel = android.os.Parcel.obtain()
+        val remoteReceiver = try {
+            receiver.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+            android.os.ResultReceiver.CREATOR.createFromParcel(parcel)
+        } finally { parcel.recycle() }
         try {
             startActivity(Intent().setClassName(module, "me.zssu.ime.voice.VoiceActivity")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra("receiver", receiver))
+                .putExtra("receiver", remoteReceiver))
         } catch (e: Exception) {
             voicePending = null
             Toast.makeText(this, "音声入力を開けませんでした", Toast.LENGTH_LONG).show()
