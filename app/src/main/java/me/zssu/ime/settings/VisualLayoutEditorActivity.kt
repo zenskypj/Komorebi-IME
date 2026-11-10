@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +73,7 @@ import me.zssu.ime.keyboard.KeyStyle
 import me.zssu.ime.keyboard.KeyboardLayout
 import me.zssu.ime.keyboard.LayoutRepository
 import me.zssu.ime.theme.ZinnaTheme
+import me.zssu.ime.theme.MaterialYouTheme
 
 private data class ActionChoice(val type: String, val label: String)
 private val ACTION_CHOICES = listOf(
@@ -86,22 +88,29 @@ private val ACTION_CHOICES = listOf(
 class VisualLayoutEditorActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ZinnaTheme { LayoutEditorScreen() } }
+        val id = intent.getStringExtra(EXTRA_LAYOUT_ID)
+        setContent { ZinnaTheme { LayoutEditorScreen(id) } }
+    }
+
+    companion object {
+        const val EXTRA_LAYOUT_ID = "layout_id"
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun LayoutEditorScreen() {
+private fun LayoutEditorScreen(initialId: String?) {
     val context = LocalContext.current
     val repository = remember { LayoutRepository(context) }
     val settings = remember { ImeSettings(context) }
     var refresh by remember { mutableIntStateOf(0) }
-    var layout by remember { mutableStateOf<KeyboardLayout?>(null) }
+    var layout by remember(initialId) { mutableStateOf(initialId?.let(repository::loadLayout)) }
     var rowIndex by remember { mutableIntStateOf(-1) }
     var keyIndex by remember { mutableIntStateOf(-1) }
-    var message by remember { mutableStateOf("配列を選択してください") }
+    var message by remember { mutableStateOf(if (layout == null) "配列を選択してください" else "キーを選択してください") }
     val ids = remember(refresh) { repository.availableLayoutIds() }
+    val previewTheme = remember { repository.loadTheme(settings.activeThemeId) ?: MaterialYouTheme.create(context) }
+    var showPreview by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -148,6 +157,9 @@ private fun LayoutEditorScreen() {
             layout?.let { current ->
                 Text(current.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
 
+                ThemeToggle("キーボードのプレビュー", showPreview) { showPreview = it }
+                if (showPreview) ThemeKeyboardPreview(previewTheme, current)
+
                 // Key grid
                 Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
                     Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -183,6 +195,16 @@ private fun LayoutEditorScreen() {
                                 val icon = OperationKeyIcons.resource(selected.center.action, selected.faceLabel)
                                 if (icon != null) Icon(painterResource(icon), contentDescription = OperationKeyIcons.description(selected.center.action, selected.faceLabel), modifier = Modifier.size(18.dp))
                                 else Text(selected.faceLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            }
+
+                            key(current.id, rowIndex, keyIndex) {
+                                var editAppearance by remember { mutableStateOf(false) }
+                                OutlinedButton(onClick = { editAppearance = !editAppearance }) {
+                                    Text(if (editAppearance) "外観の編集を閉じる" else "このキーの外観を編集")
+                                }
+                                if (editAppearance) KeyLookEditor(selected.appearance) { look ->
+                                    layout = updateSelected(current, rowIndex, keyIndex) { it.copy(appearance = look) }
+                                }
                             }
 
                             // Action type
@@ -366,8 +388,13 @@ private fun LayoutEditorScreen() {
                 }
 
                 Button(onClick = {
-                    repository.saveLayout(current); settings.activeLayoutId = current.id
-                    message = "${current.id} を保存して使用します"; refresh++
+                    runCatching { repository.saveLayout(current) }
+                        .onSuccess {
+                            settings.markCustomizationChanged()
+                            settings.activeLayoutId = current.id
+                            message = "${current.id} を保存して使用します"
+                            refresh++
+                        }.onFailure { message = it.message ?: "保存できませんでした" }
                 }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Save, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))

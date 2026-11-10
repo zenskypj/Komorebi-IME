@@ -29,14 +29,32 @@ data class KeyboardTheme(
     val keyCornerRadiusDp: Float = 8f,
     val labelSizeSp: Float = 17f,
     val hapticFeedback: Boolean = true,
-    /**
-     * Draw keys as bare labels with no filled shape behind them.
-     *
-     * The label already says where the key is; an outline around each one is decoration that costs
-     * contrast and gets in the way of a background image. Set false for the older filled look,
-     * which then uses [keyColor] and [modifierKeyColor].
-     */
+    // Older theme files use this to select between outlined and filled keys.
     val flatKeys: Boolean = true,
+    val keyFrame: KeyFrame? = null,
+    val useCandidateBackground: Boolean = false,
+    @Serializable(with = ColorAsStringSerializer::class) val lineColor: Int = Color.TRANSPARENT,
+    @Serializable(with = ColorAsStringSerializer::class) val toolbarBackgroundColor: Int = Color.TRANSPARENT,
+    @Serializable(with = ColorAsStringSerializer::class) val toolbarIconColor: Int = Color.TRANSPARENT,
+    val lineWidthDp: Float = 1f,
+    val keyOpacity: Float = 1f,
+    val wallpaper: ThemeWallpaper? = null,
+    val wallpaperOpacity: Float = 0.8f,
+    val keyTexture: KeyTexture = KeyTexture.NONE,
+    val modifierTexture: KeyTexture = KeyTexture.NONE,
+    val labelFont: KeyFont = KeyFont.SYSTEM,
+    val labelBold: Boolean = false,
+    val labelShadow: Boolean = false,
+    val showLongPressHints: Boolean = true,
+    val showFlickGuides: Boolean = true,
+    val pressFeedback: PressFeedback = PressFeedback.FILL,
+    val keyClickSound: Boolean = false,
+    val keySound: KeySound = KeySound.SYSTEM,
+    val keySoundVolume: Float = 0.6f,
+    val wallpaperMotion: WallpaperMotion = WallpaperMotion.NONE,
+    val flickGuideMode: ThemeFlickGuide = ThemeFlickGuide.INHERIT,
+    val tapEffect: TapEffect = TapEffect.NONE,
+    val keywordEffects: List<KeywordEffect> = emptyList(),
 ) {
     /**
      * True-black variant for OLED panels, where a black pixel is an unlit pixel.
@@ -55,31 +73,31 @@ data class KeyboardTheme(
         val Default = KeyboardTheme(
             id = "default-dark",
             label = "Default Dark",
-            backgroundColor = Color.parseColor("#1B1C1E"),
-            keyColor = Color.parseColor("#2E3033"),
-            keyPressedColor = Color.parseColor("#4A4D52"),
-            modifierKeyColor = Color.parseColor("#232528"),
-            labelColor = Color.parseColor("#ECEDEE"),
-            flickGuideColor = Color.parseColor("#3D6BD6"),
-            flickGuideLabelColor = Color.parseColor("#D6DEF0"),
-            flickGuideSelectedLabelColor = Color.parseColor("#FFFFFF"),
-            candidateBackgroundColor = Color.parseColor("#1B1C1E"),
-            candidateTextColor = Color.parseColor("#ECEDEE"),
+            backgroundColor = 0xFF1B1C1E.toInt(),
+            keyColor = 0xFF2E3033.toInt(),
+            keyPressedColor = 0xFF4A4D52.toInt(),
+            modifierKeyColor = 0xFF232528.toInt(),
+            labelColor = 0xFFECEDEE.toInt(),
+            flickGuideColor = 0xFF3D6BD6.toInt(),
+            flickGuideLabelColor = 0xFFD6DEF0.toInt(),
+            flickGuideSelectedLabelColor = 0xFFFFFFFF.toInt(),
+            candidateBackgroundColor = 0xFF1B1C1E.toInt(),
+            candidateTextColor = 0xFFECEDEE.toInt(),
         )
 
         val Light = Default.copy(
             id = "default-light",
             label = "Default Light",
-            backgroundColor = Color.parseColor("#E7E9EC"),
-            keyColor = Color.parseColor("#FDFDFD"),
-            keyPressedColor = Color.parseColor("#C9CDD3"),
-            modifierKeyColor = Color.parseColor("#D3D7DD"),
-            labelColor = Color.parseColor("#1B1C1E"),
-            flickGuideColor = Color.parseColor("#4C7DF0"),
-            flickGuideLabelColor = Color.parseColor("#EDF1FB"),
-            flickGuideSelectedLabelColor = Color.parseColor("#FFFFFF"),
-            candidateBackgroundColor = Color.parseColor("#E7E9EC"),
-            candidateTextColor = Color.parseColor("#1B1C1E"),
+            backgroundColor = 0xFFE7E9EC.toInt(),
+            keyColor = 0xFFFDFDFD.toInt(),
+            keyPressedColor = 0xFFC9CDD3.toInt(),
+            modifierKeyColor = 0xFFD3D7DD.toInt(),
+            labelColor = 0xFF1B1C1E.toInt(),
+            flickGuideColor = 0xFF4C7DF0.toInt(),
+            flickGuideLabelColor = 0xFFEDF1FB.toInt(),
+            flickGuideSelectedLabelColor = 0xFFFFFFFF.toInt(),
+            candidateBackgroundColor = 0xFFE7E9EC.toInt(),
+            candidateTextColor = 0xFF1B1C1E.toInt(),
         )
     }
 }

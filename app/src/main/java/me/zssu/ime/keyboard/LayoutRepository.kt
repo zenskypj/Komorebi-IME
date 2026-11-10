@@ -48,12 +48,16 @@ class LayoutRepository(private val context: Context) {
         (listOf(MaterialYouTheme.ID) + availableIds(THEMES_DIR, themesDir)).distinct()
 
     fun saveLayout(layout: KeyboardLayout) {
+        require(ID_PATTERN.matches(layout.id)) { "配列IDは英数字・ハイフン・下線で1〜64文字です" }
+        validate(layout)
         layoutsDir.mkdirs()
         File(layoutsDir, "${layout.id}.json")
             .writeText(json.encodeToString(KeyboardLayout.serializer(), layout))
     }
 
     fun saveTheme(theme: KeyboardTheme) {
+        require(ID_PATTERN.matches(theme.id)) { "テーマIDは英数字・ハイフン・下線で1〜64文字です" }
+        validate(theme)
         themesDir.mkdirs()
         File(themesDir, "${theme.id}.json")
             .writeText(json.encodeToString(KeyboardTheme.serializer(), theme))
@@ -78,12 +82,10 @@ class LayoutRepository(private val context: Context) {
         }
         if ("rows" in root) {
             val value = json.decodeFromString<KeyboardLayout>(text)
-            validate(value)
             saveLayout(value)
             ImportedResource.Layout(value.id)
         } else {
             val value = json.decodeFromString<KeyboardTheme>(text)
-            validate(value)
             saveTheme(value)
             ImportedResource.Theme(value.id)
         }
@@ -106,6 +108,15 @@ class LayoutRepository(private val context: Context) {
         require(layout.rows.all { it.keys.isNotEmpty() && it.keys.size <= 20 }) {
             "各行のキー数は 1〜20 個にしてください"
         }
+        require(layout.rows.all { it.weight in 0.1f..10f && it.padStart in 0f..20f && it.padEnd in 0f..20f }) {
+            "行の高さ・余白が範囲外です"
+        }
+        require(layout.rows.all { row -> row.keys.all { key ->
+            key.appearance?.let { look ->
+                (look.labelSizeSp == null || look.labelSizeSp in 10f..32f) &&
+                    (look.imageId == null || me.zssu.ime.theme.LocalArt.validId(look.imageId))
+            } ?: true
+        } }) { "キーの文字サイズまたは画像IDが範囲外です" }
         require(layout.rows.flatMap { it.keys }.all { it.weight > 0f && it.weight <= 10f }) {
             "キー幅は 0 より大きく 10 以下にしてください"
         }
@@ -116,6 +127,13 @@ class LayoutRepository(private val context: Context) {
         require(theme.keyGapDp in 0f..16f && theme.keyCornerRadiusDp in 0f..32f) {
             "キー間隔または角丸が範囲外です"
         }
+        require(theme.lineWidthDp in 0.5f..4f && theme.keyOpacity in 0f..1f && theme.wallpaperOpacity in 0f..1f && theme.keySoundVolume in 0f..1f) {
+            "線幅または濃さが範囲外です"
+        }
+        require(theme.keywordEffects.size <= 8 && theme.keywordEffects.all {
+            it.keyword.isNotBlank() && it.keyword.length <= 32 && (it.texture != me.zssu.ime.theme.KeyTexture.NONE || it.imageId != null) &&
+                (it.imageId == null || me.zssu.ime.theme.LocalArt.validId(it.imageId))
+        }) { "入力エフェクトは8件、キーワードは32文字までです" }
         require(theme.labelSizeSp in 10f..32f) { "文字サイズは 10〜32sp にしてください" }
     }
 

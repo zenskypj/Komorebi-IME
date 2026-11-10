@@ -233,3 +233,12 @@ versionCode 73、16 KB配置、zipalign、Mozc 4 ABI・Karukan・辞書・法務
 公開対象は `me.zssu.ime.debug`（versionCode 74）のテスト用ユニバーサルAPK。
 通常APK・AABとABI別APKを作成し、版情報、16 KBのzipalign、ABI・辞書・法務文書、
 R8後のJNI名を確認。公開APKの署名証明書はrc.49と一致。権限の変更なし。
+
+## rc.51-dev の作成条件
+
+背景プリセット13種、追加の完成テーマ9種、キーごとの枠・画像・文字、写真のスライドショーと
+無音動画、フリックガイド、キー音・入力エフェクトを追加。単体テスト301件（app 299、karukan 2）成功、
+debug／releaseのlintエラー0件。Android実機・エミュレータは利用できず、表示・動画再生・キー音・
+端末別の入力は未確認。公開対象は `me.zssu.ime.debug`（versionCode 75）のテスト用ユニバーサルAPK。
+通常APK・AABとABI別APKを作成し、版情報、16 KBのzipalign、ABI・辞書・法務文書、
+R8後のJNI名、素材18点とテーマ9種を照合。公開APKの署名証明書と権限はrc.50と同じ。

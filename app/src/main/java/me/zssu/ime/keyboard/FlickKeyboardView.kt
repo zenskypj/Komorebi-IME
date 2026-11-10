@@ -4,17 +4,34 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import android.graphics.drawable.Drawable
 import me.zssu.ime.R
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.DashPathEffect
+import android.graphics.LinearGradient
+import android.graphics.Matrix
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import me.zssu.ime.theme.KeyboardTheme
+import me.zssu.ime.theme.KeyFont
+import me.zssu.ime.theme.KeyFrame
+import me.zssu.ime.theme.PressFeedback
+import me.zssu.ime.theme.ThemeArt
+import me.zssu.ime.theme.TapEffect
+import me.zssu.ime.theme.ThemeFlickGuide
+import me.zssu.ime.theme.frameFor
+import me.zssu.ime.theme.textureFor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -54,8 +71,14 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     var theme: KeyboardTheme = KeyboardTheme.Default
         set(value) {
+            if (field == value) return
+            val sizeChanged = field.keyHeightDp != value.keyHeightDp
+            val placementChanged = field.keyGapDp != value.keyGapDp ||
+                field.keyTexture != value.keyTexture || field.modifierTexture != value.modifierTexture
             field = value
             applyTheme()
+            if (placementChanged) refreshPlacement()
+            if (sizeChanged) requestLayout()
             invalidate()
         }
 
@@ -106,7 +129,14 @@ class FlickKeyboardView @JvmOverloads constructor(
     /** Reused so the preview costs no allocation on a path that redraws as the finger moves. */
     private val previewRect = RectF()
 
-    private data class PlacedKey(val spec: KeySpec, val bounds: RectF)
+    private data class PlacedKey(
+        val spec: KeySpec,
+        val bounds: RectF,
+        val cell: RectF,
+        val rightDivider: Boolean,
+        val bottomDivider: Boolean,
+        val texture: BitmapShader?,
+    )
 
     /** State for one finger currently on the keyboard. */
     private class Touch(
@@ -133,8 +163,25 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val keyPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val gradientPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val gradientMatrix = Matrix()
+    private val surfaceGradient = LinearGradient(0f, 0f, 0f, 1f,
+        intArrayOf(0x42ffffff, Color.TRANSPARENT, 0x32000000), floatArrayOf(0f, 0.48f, 1f), Shader.TileMode.CLAMP)
     private val boundaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val modifierPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var keywordImage: Bitmap? = null
+    private var keywordEffectStarted = -1L
+    private val keywordBounds = RectF()
+    private val keywordPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val effectPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = resources.displayMetrics.density * 2f }
+    private var tapEffectStarted = -1L
+    private var tapEffectX = 0f
+    private var tapEffectY = 0f
+    private var tapEffectSize = 0f
+    private var dashEffect: DashPathEffect? = null
+    private val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val pressOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private var labelTypeface: Typeface = Typeface.DEFAULT
+    private var boldTypeface: Typeface = Typeface.DEFAULT_BOLD
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val longPressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.RIGHT
@@ -146,6 +193,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         style = Paint.Style.STROKE
     }
 
+    private val sounds = KeyboardSounds(context)
     private val handler = Handler(Looper.getMainLooper())
     private var repeatRunnable: Runnable? = null
     private var longPressRunnable: Runnable? = null
@@ -162,15 +210,37 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun applyTheme() {
         keyPaint.color = theme.keyColor
         keyPressedPaint.color = theme.keyPressedColor
-        boundaryPaint.color = theme.labelColor
-        boundaryPaint.alpha = 95
-        boundaryPaint.strokeWidth = resources.displayMetrics.density
-        modifierPaint.color = theme.modifierKeyColor
+        boundaryPaint.color = if (theme.lineColor == Color.TRANSPARENT) {
+            (theme.labelColor and 0x00ffffff) or (95 shl 24)
+        } else theme.lineColor
+        val density = resources.displayMetrics.density
+        boundaryPaint.strokeWidth = theme.lineWidthDp.coerceIn(0.5f, 4f) * density
+        dashEffect = DashPathEffect(floatArrayOf(density * 4f, density * 3f), 0f)
+        pressOutlinePaint.color = theme.keyPressedColor
+        pressOutlinePaint.strokeWidth = max(density * 2f, boundaryPaint.strokeWidth)
+        val family = when (theme.labelFont) {
+            KeyFont.SYSTEM -> "sans-serif"
+            KeyFont.ROUNDED -> "sans-serif-rounded"
+            KeyFont.SERIF -> "serif"
+            KeyFont.MONOSPACE -> "monospace"
+        }
+        labelTypeface = Typeface.create(family, Typeface.NORMAL)
+        boldTypeface = Typeface.create(family, Typeface.BOLD)
+        labelPaint.typeface = if (theme.labelBold) boldTypeface else labelTypeface
+        longPressPaint.typeface = labelTypeface
+        guideLabelPaint.typeface = labelPaint.typeface
+        if (theme.labelShadow) {
+            labelPaint.setShadowLayer(density * 1.6f, 0f, density, Color.BLACK)
+        } else labelPaint.clearShadowLayer()
         labelPaint.color = theme.labelColor
         longPressPaint.color = theme.labelColor
+        labelPaint.textSize = spToPx(theme.labelSizeSp)
+        longPressPaint.textSize = spToPx(theme.labelSizeSp * 0.55f)
+        guideLabelPaint.textSize = spToPx(theme.labelSizeSp)
         guideBackgroundPaint.color = theme.flickGuideColor
         guideLabelPaint.color = theme.flickGuideLabelColor
         guideHitAreaPaint.color = theme.flickGuideSelectedLabelColor
+        if (isAttachedToWindow) sounds.configure(theme.keyClickSound, theme.keySound)
         // The parent paints the panel — a colour, or the user's background image. Painting it here
         // too would cover that image with an opaque rectangle.
     }
@@ -184,9 +254,6 @@ class FlickKeyboardView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        labelPaint.textSize = spToPx(theme.labelSizeSp)
-        longPressPaint.textSize = spToPx(theme.labelSizeSp * 0.55f)
-        guideLabelPaint.textSize = spToPx(theme.labelSizeSp)
         refreshPlacement()
     }
 
@@ -211,16 +278,30 @@ class FlickKeyboardView @JvmOverloads constructor(
         val gap = theme.keyGapDp * resources.displayMetrics.density
         val placed = mutableListOf<PlacedKey>()
         var y = 0f
-        for (row in current.rows) {
+        for ((rowIndex, row) in current.rows.withIndex()) {
             val rowHeight = height * (row.weight / totalRowWeight)
             val rowWeight = row.totalWeight
             var x = width * (row.padStart / rowWeight)
-            for (key in row.keys) {
+            for ((keyIndex, key) in row.keys.withIndex()) {
                 val keyWidth = width * (key.weight / rowWeight)
-                placed += PlacedKey(
-                    key,
-                    RectF(x + gap, y + gap, x + keyWidth - gap, y + rowHeight - gap),
-                )
+                val dx = gap.coerceIn(0f, keyWidth * 0.28f)
+                val dy = gap.coerceIn(0f, rowHeight * 0.28f)
+                val bounds = RectF(x + dx, y + dy, x + keyWidth - dx, y + rowHeight - dy)
+                val image = key.appearance?.imageId?.let { ThemeArt.loadLocal(context, it) }
+                    ?: theme.textureFor(key.appearance, key.style == KeyStyle.CHARACTER).asset
+                        ?.let { ThemeArt.load(context, it) }
+                val texture = image?.let { image ->
+                        BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply {
+                            val scale = max(bounds.width() / image.width, bounds.height() / image.height)
+                            setLocalMatrix(Matrix().apply {
+                                setScale(scale, scale)
+                                postTranslate(bounds.centerX() - image.width * scale / 2,
+                                    bounds.centerY() - image.height * scale / 2)
+                            })
+                        }
+                    }
+                placed += PlacedKey(key, bounds, RectF(x, y, x + keyWidth, y + rowHeight),
+                    keyIndex < row.keys.lastIndex, rowIndex < current.rows.lastIndex, texture)
                 x += keyWidth
             }
             y += rowHeight
@@ -252,19 +333,73 @@ class FlickKeyboardView @JvmOverloads constructor(
         super.onDraw(canvas)
         val radius = theme.keyCornerRadiusDp * resources.displayMetrics.density
         for (placed in placedKeys) {
-            // With flat keys only the pressed one gets a shape: the resting keys are their labels
-            // and nothing else, so the panel (or the user's background image) shows through.
-            val paint = when {
-                activeTouches.values.any { it.key === placed } -> keyPressedPaint
-                theme.flatKeys -> null
-                placed.spec.style == KeyStyle.CHARACTER -> keyPaint
-                else -> modifierPaint
+            val spec = placed.spec
+            val look = spec.appearance
+            val bounds = placed.bounds
+            val touch = activeTouches.values.firstOrNull { it.key === placed }
+            val frame = theme.frameFor(look)
+            val corner = min(radius, min(bounds.width(), bounds.height()) / 2)
+            val fill = look?.fillColor ?: if (spec.style == KeyStyle.CHARACTER) theme.keyColor else theme.modifierKeyColor
+            val opacity = theme.keyOpacity.coerceIn(0f, 1f)
+            val texture = placed.texture
+            if (frame == KeyFrame.FILLED || frame == KeyFrame.GRADIENT || look?.fillColor != null) {
+                keyPaint.color = fill
+                keyPaint.alpha = (Color.alpha(fill) * opacity).toInt()
+                canvas.drawRoundRect(bounds, corner, corner, keyPaint)
             }
-            if (paint != null) canvas.drawRoundRect(placed.bounds, radius, radius, paint)
-            canvas.drawRoundRect(placed.bounds, radius, radius, boundaryPaint)
-            if (activeTouches.values.any { it.key === placed && it.trackpad }) drawCursorLabel(canvas, placed.bounds)
-            else drawOutput(canvas, placed.spec.center.action, faceLabel(placed.spec), placed.bounds.centerX(), placed.bounds.centerY(), labelPaint)
-            placed.spec.longPress?.let { output ->
+            if (texture != null) {
+                texturePaint.shader = texture
+                texturePaint.alpha = (255 * opacity).toInt()
+                canvas.drawRoundRect(bounds, corner, corner, texturePaint)
+            }
+            if (frame == KeyFrame.GRADIENT) {
+                gradientMatrix.setScale(1f, bounds.height().coerceAtLeast(1f))
+                gradientMatrix.postTranslate(0f, bounds.top)
+                surfaceGradient.setLocalMatrix(gradientMatrix)
+                gradientPaint.shader = surfaceGradient
+                gradientPaint.alpha = (255 * opacity).toInt()
+                canvas.drawRoundRect(bounds, corner, corner, gradientPaint)
+            }
+            if (touch != null && theme.pressFeedback == PressFeedback.FILL) {
+                val alpha = Color.alpha(theme.keyPressedColor)
+                keyPressedPaint.alpha = if (texture != null) min(alpha, 120) else alpha
+                canvas.drawRoundRect(bounds, corner, corner, keyPressedPaint)
+            }
+            when (frame) {
+                KeyFrame.FILLED, KeyFrame.OUTLINE, KeyFrame.GRADIENT -> canvas.drawRoundRect(bounds, corner, corner, boundaryPaint)
+                KeyFrame.DASHED -> {
+                    boundaryPaint.pathEffect = dashEffect
+                    canvas.drawRoundRect(bounds, corner, corner, boundaryPaint)
+                    boundaryPaint.pathEffect = null
+                }
+                KeyFrame.DIVIDERS -> {
+                    val cell = placed.cell
+                    if (placed.rightDivider) canvas.drawLine(cell.right, cell.top, cell.right, cell.bottom, boundaryPaint)
+                    if (placed.bottomDivider) canvas.drawLine(cell.left, cell.bottom, cell.right, cell.bottom, boundaryPaint)
+                }
+                KeyFrame.NONE -> Unit
+            }
+            if (touch != null && theme.pressFeedback == PressFeedback.OUTLINE) {
+                canvas.drawRoundRect(bounds, corner, corner, pressOutlinePaint)
+            }
+            val labelColor = look?.labelColor ?: theme.labelColor
+            val labelSize = spToPx(look?.labelSizeSp ?: theme.labelSizeSp)
+            labelPaint.color = labelColor
+            labelPaint.typeface = if (look?.labelBold ?: theme.labelBold) boldTypeface else labelTypeface
+            labelPaint.textSize = labelSize
+            if (touch?.trackpad == true) drawCursorLabel(canvas, bounds)
+            else if (look?.showLabel != false) {
+                val label = faceLabel(spec)
+                val maxWidth = bounds.width() * 0.92f
+                val textWidth = labelPaint.measureText(label)
+                if (textWidth > maxWidth && maxWidth > 0f) labelPaint.textSize = labelSize * maxWidth / textWidth
+                drawOutput(canvas, spec.center.action, label, bounds.centerX(), bounds.centerY(), labelPaint)
+            }
+            val hint = spec.longPress.takeIf { look?.showLongPressHint ?: theme.showLongPressHints }
+            hint?.let { output ->
+                longPressPaint.color = labelColor
+                longPressPaint.alpha = min(Color.alpha(labelColor), 180)
+                longPressPaint.textSize = min(spToPx((look?.labelSizeSp ?: theme.labelSizeSp) * 0.55f), bounds.width() / 2)
                 val inset = 5f * resources.displayMetrics.density
                 if (OperationKeyIcons.resource(output.action, output.label) != null) {
                     val size = longPressPaint.textSize
@@ -281,18 +416,82 @@ class FlickKeyboardView @JvmOverloads constructor(
             }
         }
 
+        texturePaint.shader = null
+        drawTapEffect(canvas)
+        drawKeywordEffect(canvas)
         // Guides go on top of every key so a guide near the edge is never clipped by a neighbour.
         for (touch in activeTouches.values) {
             if (touch.deleteGesture) {
                 if (touch.direction != FlickDirection.CENTER) drawFlickPreview(canvas, touch, radius)
                 continue
             }
-            if (touch.trackpad || !touch.key.spec.hasFlicks) continue
-            when (guideStyle) {
+            if (!theme.showFlickGuides || touch.trackpad || !touch.key.spec.hasFlicks) continue
+            val mode = when (theme.flickGuideMode) {
+                ThemeFlickGuide.INHERIT -> guideStyle
+                ThemeFlickGuide.PREVIEW -> FlickGuideStyle.PREVIEW
+                ThemeFlickGuide.DIRECTIONS -> FlickGuideStyle.DIRECTIONS
+            }
+            when (mode) {
                 FlickGuideStyle.PREVIEW -> drawFlickPreview(canvas, touch, radius)
                 FlickGuideStyle.DIRECTIONS -> drawFlickGuide(canvas, touch, radius)
             }
         }
+    }
+
+    fun showKeywordEffect(text: String) {
+        val effect = theme.keywordEffects.firstOrNull { it.keyword.isNotBlank() && text.contains(it.keyword) } ?: return
+        keywordImage = effect.imageId?.let { ThemeArt.loadLocal(context, it) }
+            ?: effect.texture.asset?.let { ThemeArt.load(context, it) }
+        if (keywordImage != null) {
+            keywordEffectStarted = SystemClock.uptimeMillis()
+            postInvalidateOnAnimation()
+        }
+    }
+
+    private fun drawKeywordEffect(canvas: Canvas) {
+        val image = keywordImage ?: return
+        val progress = (SystemClock.uptimeMillis() - keywordEffectStarted) / 1000f
+        if (progress >= 1f) {
+            keywordImage = null
+            return
+        }
+        val scale = min(width * 0.26f / image.width, height * 0.45f / image.height)
+        val halfW = image.width * scale / 2
+        val halfH = image.height * scale / 2
+        val x = width / 2f
+        val y = height * 0.36f - progress * height * 0.08f
+        keywordBounds.set(x - halfW, y - halfH, x + halfW, y + halfH)
+        keywordPaint.alpha = (255 * min(1f, (1f - progress) * 3f)).toInt()
+        canvas.drawBitmap(image, null, keywordBounds, keywordPaint)
+        postInvalidateOnAnimation()
+    }
+
+    private fun drawTapEffect(canvas: Canvas) {
+        if (tapEffectStarted < 0 || theme.tapEffect == TapEffect.NONE) return
+        val progress = (SystemClock.uptimeMillis() - tapEffectStarted) / 230f
+        if (progress >= 1f) {
+            tapEffectStarted = -1
+            return
+        }
+        effectPaint.color = theme.labelColor
+        effectPaint.alpha = (160 * (1f - progress)).toInt()
+        val radius = tapEffectSize * (0.2f + progress * 0.66f)
+        when (theme.tapEffect) {
+            TapEffect.RING -> {
+                effectPaint.style = Paint.Style.STROKE
+                canvas.drawCircle(tapEffectX, tapEffectY, radius, effectPaint)
+            }
+            TapEffect.SPARKLE -> {
+                effectPaint.style = Paint.Style.FILL
+                for (i in 0 until 6) {
+                    val angle = i * Math.PI / 3
+                    canvas.drawCircle(tapEffectX + radius * kotlin.math.cos(angle).toFloat(),
+                        tapEffectY + radius * kotlin.math.sin(angle).toFloat(), tapEffectSize * 0.06f, effectPaint)
+                }
+            }
+            TapEffect.NONE -> Unit
+        }
+        postInvalidateOnAnimation()
     }
 
     /**
@@ -482,6 +681,13 @@ class FlickKeyboardView @JvmOverloads constructor(
             layout?.inputStyle?.name?.contains("FLICK") == true && layout?.id?.startsWith("qwerty") != true
         activeTouches[pointerId] = touch
         if (theme.hapticFeedback) performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        if (theme.keyClickSound) sounds.play(this, theme.keySound, theme.keySoundVolume.coerceIn(0f, 1f))
+        if (theme.tapEffect != TapEffect.NONE) {
+            tapEffectStarted = SystemClock.uptimeMillis()
+            tapEffectX = key.bounds.centerX()
+            tapEffectY = key.bounds.centerY()
+            tapEffectSize = min(key.bounds.width(), key.bounds.height())
+        }
 
         if (touch.deleteGesture) {
             // A flick must not first delete a character on DOWN. Tap resolves on release;
@@ -754,12 +960,20 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     fun cancelGestures() {
+        keywordImage = null
+        tapEffectStarted = -1L
         cancelTimers()
         activeTouches.clear()
         invalidate()
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        sounds.configure(theme.keyClickSound, theme.keySound)
+    }
+
     override fun onDetachedFromWindow() {
+        sounds.release()
         cancelGestures()
         super.onDetachedFromWindow()
     }

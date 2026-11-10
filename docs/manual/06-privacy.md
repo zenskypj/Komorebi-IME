@@ -15,7 +15,7 @@ Komorebi IME は「オフライン・最小権限」を方針にしています�
 | 入力内容・変換候補 | 一切送信しません |
 | 周辺文脈 | 推論は端末内で行われます |
 | 変換学習履歴・ユーザー辞書 | 端末内のみ |
-| 背景画像・設定 | 端末内のみ |
+| 背景の写真・動画、キー画像、着せ替え設定 | 端末内のみ。明示したバックアップ・移行でのみ持ち出し |
 
 > [!IMPORTANT]
 > 広告 SDK・解析 SDK・クラッシュレポート SDK は組み込んでいません。要求する権限は、任意取得用の `INTERNET`、Meets Beam・NFC 移行用の `NFC`、Wi-Fi Direct 用の `ACCESS_WIFI_STATE` / `CHANGE_WIFI_STATE` / `NEARBY_WIFI_DEVICES`、Android 12 以下に限り Wi-Fi Direct 検出用の `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` です。位置情報は端末の検出だけに使い、位置の記録・外部送信は行いません。Android 13 以降でも Wi-Fi Direct の検出には端末の位置情報モードをオンにする必要がありますが、アプリは位置情報を取得しません。

@@ -2,6 +2,11 @@ package me.zssu.ime.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.MediaMetadataRetriever
+import android.net.Uri
+import me.zssu.ime.theme.LocalArt
+import me.zssu.ime.theme.BackgroundFilter
+import me.zssu.ime.theme.ThemeWallpaper
 import androidx.core.content.edit
 import me.zssu.ime.keyboard.FlickGuideStyle
 import me.zssu.ime.keyboard.KeyboardStyle
@@ -53,6 +58,34 @@ class ImeSettings(context: Context) {
             bumpRevision()
         }
 
+    internal var backgroundFilter: BackgroundFilter
+        get() = BackgroundFilter.entries.firstOrNull { it.name == prefs.getString("background_filter", null) }
+            ?: BackgroundFilter.NATURAL
+        set(value) { prefs.edit { putString("background_filter", value.name) }; bumpRevision() }
+
+    var backgroundBrightness: Float
+        get() = prefs.getFloat("background_brightness", 1f).coerceIn(0.25f, 1.5f)
+        set(value) { prefs.edit { putFloat("background_brightness", value.coerceIn(0.25f, 1.5f)) }; bumpRevision() }
+    var backgroundBlur: Float
+        get() = prefs.getFloat("background_blur", 0f).coerceIn(0f, 20f)
+        set(value) { prefs.edit { putFloat("background_blur", value.coerceIn(0f, 20f)) }; bumpRevision() }
+    var backgroundHorizontal: Float
+        get() = prefs.getFloat("background_x", 0.5f).coerceIn(0f, 1f)
+        set(value) { prefs.edit { putFloat("background_x", value.coerceIn(0f, 1f)) }; bumpRevision() }
+    var backgroundVertical: Float
+        get() = prefs.getFloat("background_y", 0.5f).coerceIn(0f, 1f)
+        set(value) { prefs.edit { putFloat("background_y", value.coerceIn(0f, 1f)) }; bumpRevision() }
+    var backgroundSlideSeconds: Int
+        get() = prefs.getInt("background_slide_seconds", 20).coerceIn(5, 120)
+        set(value) { prefs.edit { putInt("background_slide_seconds", value.coerceIn(5, 120)) }; bumpRevision() }
+
+    var backgroundVideoStart: Float
+        get() = prefs.getFloat("background_video_start", 0f).coerceIn(0f, 1f)
+        set(value) { prefs.edit { putFloat("background_video_start", value.coerceIn(0f, 1f)) }; bumpRevision() }
+    var backgroundVideoEnd: Float
+        get() = prefs.getFloat("background_video_end", 1f).coerceIn(0f, 1f)
+        set(value) { prefs.edit { putFloat("background_video_end", value.coerceIn(0f, 1f)) }; bumpRevision() }
+
     /**
      * Multiplier on the theme's key height.
      *
@@ -101,6 +134,14 @@ class ImeSettings(context: Context) {
             prefs.edit().putString(KEY_FLICK_INPUT_MODE, value.name).apply()
             bumpRevision()
         }
+
+    /** Changes to a file can keep its ID; the active input view still needs to reload it. */
+    val customizationRevision: Int get() = prefs.getInt("customization_revision", 0)
+
+    fun markCustomizationChanged() {
+        prefs.edit().putInt("customization_revision", customizationRevision + 1).apply()
+        bumpRevision()
+    }
 
     /** Theme selected in the in-app studio. `material_you` remains the safe dynamic default. */
     var activeThemeId: String
@@ -182,34 +223,98 @@ class ImeSettings(context: Context) {
     val backgroundPresetId: String?
         get() = prefs.getString(KEY_BACKGROUND_PRESET, null)
 
-    /** Replaces the background image with [bytes]. Returns false on write failure. */
-    fun setBackgroundImage(bytes: ByteArray): Boolean {
-        backgroundDir.mkdirs()
-        return runCatching {
-            File(backgroundDir, BACKGROUND_FILE).writeBytes(bytes)
-            prefs.edit().remove(KEY_BACKGROUND_PRESET).apply()
+    val backgroundVideo: File?
+        get() = File(backgroundDir, VIDEO_FILE).takeIf { it.isFile }
+
+    val backgroundAlbum: List<File>
+        get() = (0 until prefs.getInt("background_album_count", 0).coerceIn(0, 4))
+            .mapNotNull { File(backgroundDir, "album_$it.webp").takeIf(File::isFile) }
+
+    fun setBackgroundPhotos(uris: List<Uri>) {
+        require(uris.size in 1..4) { "背景に使える写真は1〜4枚です" }
+        val images = uris.map { LocalArt.photo(appContext, it, 1280) }
+        if (images.size == 1) {
+            check(setBackgroundImage(images.single())) { "写真を保存できません" }
+        } else {
+            backgroundDir.mkdirs()
+            images.forEachIndexed { i, bytes -> LocalArt.write(File(backgroundDir, "album_$i.webp"), bytes) }
+            (images.size until 4).forEach { File(backgroundDir, "album_$it.webp").delete() }
+            File(backgroundDir, VIDEO_FILE).delete()
+            File(backgroundDir, BACKGROUND_FILE).delete()
+            prefs.edit().remove(KEY_BACKGROUND_PRESET).putInt("background_album_count", images.size).apply()
             bumpRevision()
-            true
-        }.getOrDefault(false)
+        }
     }
+
+    fun setBackgroundVideo(uri: Uri) {
+        backgroundDir.mkdirs()
+        val temp = File.createTempFile("video", ".tmp", backgroundDir)
+        try {
+            val input = appContext.contentResolver.openInputStream(uri) ?: error("動画を開けません")
+            input.use { source ->
+                temp.outputStream().use { output ->
+                    val bytes = ByteArray(64 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val read = source.read(bytes)
+                        if (read < 0) break
+                        total += read
+                        require(total <= 24 * 1024 * 1024) { "動画は24 MiB以下にしてください" }
+                        output.write(bytes, 0, read)
+                    }
+                }
+            }
+            val info = MediaMetadataRetriever()
+            try {
+                info.setDataSource(temp.absolutePath)
+                val duration = info.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                val width = info.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()
+                val height = info.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()
+                require(duration != null && duration in 1..120000 && width != null && height != null &&
+                    width in 1..1920 && height in 1..1920) { "120秒・最大辺1920px以内の動画を選んでください" }
+            } finally {
+                info.release()
+            }
+            check(temp.renameTo(File(backgroundDir, VIDEO_FILE))) { "動画を保存できません" }
+            clearAlbumFiles()
+            File(backgroundDir, BACKGROUND_FILE).delete()
+            prefs.edit().remove(KEY_BACKGROUND_PRESET).remove("background_album_count")
+                .remove("background_video_start").remove("background_video_end").apply()
+            markCustomizationChanged()
+        } finally {
+            temp.delete()
+        }
+    }
+
+    /** Replaces the selected backdrop without changing the bundled theme. */
+    fun setBackgroundImage(bytes: ByteArray): Boolean = writeBackground(bytes, null)
 
     fun setBackgroundPreset(id: String): Boolean {
         val preset = BACKGROUND_PRESETS.firstOrNull { it.id == id } ?: return false
-        val bytes = runCatching {
-            appContext.assets.open(preset.assetPath).use { it.readBytes() }
-        }.getOrNull() ?: return false
+        val bytes = runCatching { appContext.assets.open(preset.assetPath).use { it.readBytes() } }
+            .getOrNull() ?: return false
+        return writeBackground(bytes, id)
+    }
+
+    private fun writeBackground(bytes: ByteArray, preset: String?): Boolean = runCatching {
         backgroundDir.mkdirs()
-        return runCatching {
-            File(backgroundDir, BACKGROUND_FILE).writeBytes(bytes)
-            prefs.edit().putString(KEY_BACKGROUND_PRESET, id).apply()
-            bumpRevision()
-            true
-        }.getOrDefault(false)
+        LocalArt.write(File(backgroundDir, BACKGROUND_FILE), bytes)
+        File(backgroundDir, VIDEO_FILE).delete()
+        clearAlbumFiles()
+        prefs.edit().putString(KEY_BACKGROUND_PRESET, preset).remove("background_album_count").apply()
+        bumpRevision()
+        true
+    }.getOrDefault(false)
+
+    private fun clearAlbumFiles() {
+        (0..3).forEach { File(backgroundDir, "album_$it.webp").delete() }
     }
 
     fun clearBackgroundImage() {
         File(backgroundDir, BACKGROUND_FILE).delete()
-        prefs.edit().remove(KEY_BACKGROUND_PRESET).apply()
+        File(backgroundDir, VIDEO_FILE).delete()
+        clearAlbumFiles()
+        prefs.edit().remove(KEY_BACKGROUND_PRESET).remove("background_album_count").apply()
         bumpRevision()
     }
 
@@ -270,6 +375,7 @@ class ImeSettings(context: Context) {
         private const val KEY_REVISION = "revision"
         const val BACKGROUND_DIR = "backgrounds"
         private const val BACKGROUND_FILE = "keyboard_background"
+        private const val VIDEO_FILE = "keyboard_video"
         private const val KEY_HEIGHT_SCALE = "key_height_scale"
         private const val KEY_KEYBOARD_STYLE = "keyboard_style"
         private const val KEY_FLICK_INPUT_MODE = "flick_input_mode"
@@ -301,7 +407,7 @@ class ImeSettings(context: Context) {
                 "月夜のこもれび",
                 "backgrounds/moonlit_forest.webp",
             ),
-        )
+        ) + ThemeWallpaper.entries.map { BackgroundPreset(it.asset, it.label, "theme-art/${it.asset}.webp") }
     }
 }
 

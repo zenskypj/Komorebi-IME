@@ -92,6 +92,19 @@ private fun CustomizationScreen() {
     var exportText by remember { mutableStateOf<String?>(null) }
     var jsonExpanded by remember { mutableStateOf(false) }
 
+    fun selectResource(id: String) {
+        selectedId = id
+        editor = if (kind == ResourceKind.LAYOUT) repository.exportLayout(id).orEmpty()
+            else repository.exportTheme(id).orEmpty()
+        message = if (id == MaterialYouTheme.ID) "Material You を元に別のテーマを作成できます" else null
+    }
+
+    val openEditor = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        refresh++
+        val current = if (kind == ResourceKind.THEME) settings.activeThemeId else settings.activeLayoutId
+        current?.let(::selectResource)
+    }
+
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val text = runCatching {
@@ -101,6 +114,7 @@ private fun CustomizationScreen() {
         text.onSuccess {
             editor = it
             repository.importJson(it).onSuccess { imported ->
+                settings.markCustomizationChanged()
                 kind = if (imported is LayoutRepository.ImportedResource.Layout) ResourceKind.LAYOUT else ResourceKind.THEME
                 selectedId = imported.id
                 message = "${imported.id} を取り込みました"
@@ -123,6 +137,12 @@ private fun CustomizationScreen() {
     val ids = remember(kind, refresh) {
         if (kind == ResourceKind.LAYOUT) repository.availableLayoutIds()
         else repository.availableThemeIds()
+    }
+
+    val gallery = remember(kind, refresh) {
+        if (kind == ResourceKind.THEME) ids.filter { it.startsWith("art_") }
+            .mapNotNull { id -> repository.loadTheme(id)?.let { id to it } }.toMap()
+        else emptyMap()
     }
 
     Scaffold(
@@ -180,22 +200,28 @@ private fun CustomizationScreen() {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("プリセット / 作成済み", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    if (gallery.isNotEmpty()) {
+                        val galleryIds: List<String?> = gallery.keys.toList()
+                        ArtPicker(galleryIds, selectedId,
+                            { id ->
+                                (id?.let(gallery::get)?.label ?: id.orEmpty()) +
+                                    if (id == settings.activeThemeId) "（使用中）" else ""
+                            }, { it?.let(gallery::get)?.wallpaper?.asset }, { it?.let(::selectResource) })
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ids.forEach { id ->
+                        ids.filterNot(gallery::containsKey).forEach { id ->
                             val active = if (kind == ResourceKind.LAYOUT) settings.activeLayoutId == id
                                 else settings.activeThemeId == id
                             FilterChip(
                                 selected = selectedId == id,
-                                onClick = {
-                                    selectedId = id
-                                    editor = if (kind == ResourceKind.LAYOUT) repository.exportLayout(id).orEmpty()
-                                        else repository.exportTheme(id).orEmpty()
-                                    message = if (id == MaterialYouTheme.ID) "Material You は動的生成のため編集不可" else "$id を読み込みました"
-                                },
+                                onClick = { selectResource(id) },
                                 label = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         if (active) Icon(Icons.Filled.Check, contentDescription = "使用中", modifier = Modifier.size(16.dp))
-                                        Text(id, style = MaterialTheme.typography.labelSmall)
+                                        val label = remember(kind, id, refresh) {
+                                            if (kind == ResourceKind.THEME) repository.loadTheme(id)?.label ?: id else id
+                                        }
+                                        Text(label, style = MaterialTheme.typography.labelSmall)
                                     }
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
@@ -237,7 +263,8 @@ private fun CustomizationScreen() {
             // Editor launchers
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    onClick = { context.startActivity(Intent(context, VisualLayoutEditorActivity::class.java)) },
+                    onClick = { openEditor.launch(Intent(context, VisualLayoutEditorActivity::class.java)
+                        .putExtra(VisualLayoutEditorActivity.EXTRA_LAYOUT_ID, selectedId)) },
                     enabled = kind == ResourceKind.LAYOUT && selectedId != null,
                     modifier = Modifier.weight(1f),
                 ) {
@@ -250,9 +277,9 @@ private fun CustomizationScreen() {
                         val intent = Intent(context, ThemeEditorActivity::class.java).apply {
                             putExtra(ThemeEditorActivity.EXTRA_THEME_ID, selectedId)
                         }
-                        context.startActivity(intent)
+                        openEditor.launch(intent)
                     },
-                    enabled = kind == ResourceKind.THEME && selectedId != null && selectedId != MaterialYouTheme.ID,
+                    enabled = kind == ResourceKind.THEME,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null, Modifier.size(16.dp))
@@ -286,6 +313,7 @@ private fun CustomizationScreen() {
                         Button(
                             onClick = {
                                 repository.importJson(editor).onSuccess {
+                                    settings.markCustomizationChanged()
                                     kind = if (it is LayoutRepository.ImportedResource.Layout) ResourceKind.LAYOUT else ResourceKind.THEME
                                     selectedId = it.id
                                     message = "${it.id} を保存しました"
@@ -324,6 +352,7 @@ private fun CustomizationScreen() {
                     val id = selectedId ?: return@OutlinedButton
                     val dir = if (kind == ResourceKind.LAYOUT) LayoutRepository.LAYOUTS_DIR else LayoutRepository.THEMES_DIR
                     if (repository.deleteOverride(dir, id)) {
+                        settings.markCustomizationChanged()
                         if (kind == ResourceKind.LAYOUT && settings.activeLayoutId == id) settings.activeLayoutId = null
                         if (kind == ResourceKind.THEME && settings.activeThemeId == id) settings.activeThemeId = ImeSettings.DEFAULT_THEME_ID
                         selectedId = null; editor = ""

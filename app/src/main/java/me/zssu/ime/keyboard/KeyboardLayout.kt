@@ -2,6 +2,7 @@ package me.zssu.ime.keyboard
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import me.zssu.ime.theme.KeyAppearance
 
 /**
  * Declarative keyboard description.
@@ -61,6 +62,7 @@ data class KeySpec(
     val repeatable: Boolean = false,
     /** Visual role, so themes can style modifiers differently from character keys. */
     val style: KeyStyle = KeyStyle.CHARACTER,
+    val appearance: KeyAppearance? = null,
 ) {
     fun output(direction: FlickDirection): KeyOutput? = when (direction) {
         FlickDirection.CENTER -> center

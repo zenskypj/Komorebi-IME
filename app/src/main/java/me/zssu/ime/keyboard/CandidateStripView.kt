@@ -506,6 +506,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         lastCandidateTexts = emptyList()
         container.removeAllViews()
         setContainerFillWidth(true)
+        applyStripBackdrop(theme.toolbarBackgroundColor)
         scrollTo(0, 0)
         for (action in visibleTools) {
             val button = if (action == ToolAction.ONE_HAND_CYCLE) oneHandButton(expand = true) { onToolAction?.invoke(action) }
@@ -847,6 +848,22 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onCandidateDetailsClosed: (() -> Unit)? = null
     var onStyleSelected: ((TextStyle) -> Unit)? = null
 
+    private val toolbarTint: Int
+        get() = theme.toolbarIconColor.takeUnless { it == android.graphics.Color.TRANSPARENT }
+            ?: theme.candidateTextColor
+
+    private var stripBackdrop = android.graphics.Color.TRANSPARENT
+
+    private fun applyStripBackdrop(color: Int) {
+        if (stripBackdrop == color) return
+        stripBackdrop = color
+        setBackgroundColor(color)
+    }
+
+    private fun applyCandidateBackdrop() {
+        applyStripBackdrop(if (theme.useCandidateBackground) theme.candidateBackgroundColor else android.graphics.Color.TRANSPARENT)
+    }
+
     private fun iconButton(
         @DrawableRes icon: Int,
         description: String,
@@ -854,7 +871,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         action: () -> Unit,
     ): ImageButton = ImageButton(context).apply {
         setImageDrawable(ContextCompat.getDrawable(context, icon))
-        imageTintList = ColorStateList.valueOf(theme.candidateTextColor)
+        imageTintList = ColorStateList.valueOf(if (expand) toolbarTint else theme.candidateTextColor)
         contentDescription = description
         background = null
         val padding = (12 * resources.displayMetrics.density).toInt()
@@ -874,7 +891,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         setImageDrawable(
             OneHandModeDrawable(
                 oneHandMode,
-                theme.candidateTextColor,
+                toolbarTint,
                 resources.displayMetrics.density,
             )
         )
@@ -912,7 +929,10 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     private var toolbarState: ToolbarState? = null
 
     private fun setContainerFillWidth(fill: Boolean) {
-        if (!fill) toolbarState = null
+        if (!fill) {
+            toolbarState = null
+            applyCandidateBackdrop()
+        }
         val width = if (fill) LayoutParams.MATCH_PARENT else LayoutParams.WRAP_CONTENT
         if (container.layoutParams.width != width) {
             container.layoutParams = LayoutParams(width, LayoutParams.MATCH_PARENT)

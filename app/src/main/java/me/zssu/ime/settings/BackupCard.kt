@@ -235,6 +235,7 @@ internal val BACKUP_EXTRAS = ProfileBackup.Extras(
     encryptedFiles = listOf("priority_candidates.enc"),
     directories = listOf(
         ImeSettings.BACKGROUND_DIR,
+        me.zssu.ime.theme.LocalArt.KEY_ART_DIR,
         LayoutRepository.LAYOUTS_DIR,
         LayoutRepository.THEMES_DIR,
         "meaning_dictionaries",

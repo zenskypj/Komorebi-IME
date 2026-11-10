@@ -1,333 +1,331 @@
 package me.zssu.ime.settings
 
 import android.os.Bundle
+import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.core.content.ContextCompat
-import me.zssu.ime.R
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import me.zssu.ime.keyboard.FlickKeyboardView
+import me.zssu.ime.keyboard.KeyboardLayout
+import me.zssu.ime.keyboard.KeyboardPanelView
 import me.zssu.ime.keyboard.LayoutRepository
-import me.zssu.ime.theme.KeyboardTheme
-import me.zssu.ime.theme.ZinnaTheme
+import me.zssu.ime.theme.*
 
 class ThemeEditorActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val themeId = intent.getStringExtra(EXTRA_THEME_ID)
-        setContent { ZinnaTheme { ThemeEditorScreen(initialThemeId = themeId) } }
+        setContent { ZinnaTheme { ThemeEditorScreen(themeId) } }
     }
+
     companion object {
         const val EXTRA_THEME_ID = "theme_id"
     }
 }
 
-private fun Color.toArgbInt(): Int = this.toArgb()
-private fun Int.toComposeColor(): Color = Color(this)
-
-private data class ColorProp(val key: String, val get: (KeyboardTheme) -> Int, val set: (KeyboardTheme, Int) -> KeyboardTheme)
-private data class DimProp(val key: String, val get: (KeyboardTheme) -> Float, val set: (KeyboardTheme, Float) -> KeyboardTheme, val range: ClosedFloatingPointRange<Float>)
-
-private val COLOR_PROPS = listOf(
-    ColorProp("背景", { it.backgroundColor }, { t, v -> t.copy(backgroundColor = v) }),
-    ColorProp("キー", { it.keyColor }, { t, v -> t.copy(keyColor = v) }),
-    ColorProp("押下キー", { it.keyPressedColor }, { t, v -> t.copy(keyPressedColor = v) }),
-    ColorProp("修飾キー", { it.modifierKeyColor }, { t, v -> t.copy(modifierKeyColor = v) }),
-    ColorProp("ラベル", { it.labelColor }, { t, v -> t.copy(labelColor = v) }),
-    ColorProp("ガイド背景", { it.flickGuideColor }, { t, v -> t.copy(flickGuideColor = v) }),
-    ColorProp("ガイド文字", { it.flickGuideLabelColor }, { t, v -> t.copy(flickGuideLabelColor = v) }),
-    ColorProp("ガイド選択", { it.flickGuideSelectedLabelColor }, { t, v -> t.copy(flickGuideSelectedLabelColor = v) }),
-    ColorProp("候補背景", { it.candidateBackgroundColor }, { t, v -> t.copy(candidateBackgroundColor = v) }),
-    ColorProp("候補文字", { it.candidateTextColor }, { t, v -> t.copy(candidateTextColor = v) }),
+internal val frameNames = mapOf(
+    KeyFrame.FILLED to "塗りつぶし", KeyFrame.OUTLINE to "個別の枠",
+    KeyFrame.DIVIDERS to "仕切り線", KeyFrame.NONE to "枠なし",
+    KeyFrame.DASHED to "破線の枠", KeyFrame.GRADIENT to "グラデーション",
 )
 
-private val DIM_PROPS = listOf(
-    DimProp("キー高さ (dp)", { it.keyHeightDp }, { t, v -> t.copy(keyHeightDp = v) }, 32f..96f),
-    DimProp("キー間隔 (dp)", { it.keyGapDp }, { t, v -> t.copy(keyGapDp = v) }, 0f..16f),
-    DimProp("角丸 (dp)", { it.keyCornerRadiusDp }, { t, v -> t.copy(keyCornerRadiusDp = v) }, 0f..32f),
-    DimProp("文字サイズ (sp)", { it.labelSizeSp }, { t, v -> t.copy(labelSizeSp = v) }, 10f..32f),
+private enum class EditorPage(val label: String) {
+    SHAPE("枠と画像"), COLORS("配色"), TEXT("文字と反応"), EFFECTS("入力エフェクト"),
+}
+
+private data class ColorProperty(
+    val title: String, val get: (KeyboardTheme) -> Int, val set: (KeyboardTheme, Int) -> KeyboardTheme,
 )
 
-private val SWATCH_COLORS = listOf(
-    Color(0xFF1B1C1E), Color(0xFF2E3033), Color(0xFF4A4D52), Color(0xFFECEDEE),
-    Color(0xFFFFFFFF), Color(0xFF3D6BD6), Color(0xFFD6DEF0), Color(0xFFE7E9EC),
-    Color(0xFF1A2E1A), Color(0xFF1A2332), Color(0xFF2D1F24), Color(0xFF2D2218),
-    Color(0xFF1F1A2E), Color(0xFF1A1A1A), Color(0xFF1A2E25), Color(0xFF2E1A1A),
-    Color(0xFF8FCB78), Color(0xFF4C7DF0), Color(0xFFF08C7D), Color(0xFFF0A64C),
-    Color(0xFFB87DF0), Color(0xFF888888), Color(0xFF50D4C0), Color(0xFFE04C4C),
+private val colors = listOf(
+    ColorProperty("背景", { it.backgroundColor }, { t, v -> t.copy(backgroundColor = v) }),
+    ColorProperty("文字キー", { it.keyColor }, { t, v -> t.copy(keyColor = v) }),
+    ColorProperty("操作キー", { it.modifierKeyColor }, { t, v -> t.copy(modifierKeyColor = v) }),
+    ColorProperty("枠・仕切り線", { it.lineColor }, { t, v -> t.copy(lineColor = v) }),
+    ColorProperty("押したキー", { it.keyPressedColor }, { t, v -> t.copy(keyPressedColor = v) }),
+    ColorProperty("キー文字", { it.labelColor }, { t, v -> t.copy(labelColor = v) }),
+    ColorProperty("フリックガイド背景", { it.flickGuideColor }, { t, v -> t.copy(flickGuideColor = v) }),
+    ColorProperty("フリックガイド文字", { it.flickGuideLabelColor }, { t, v -> t.copy(flickGuideLabelColor = v) }),
+    ColorProperty("フリックガイド選択色", { it.flickGuideSelectedLabelColor }, { t, v -> t.copy(flickGuideSelectedLabelColor = v) }),
+    ColorProperty("候補の背景", { it.candidateBackgroundColor }, { t, v -> t.copy(candidateBackgroundColor = v, useCandidateBackground = true) }),
+    ColorProperty("候補の文字", { it.candidateTextColor }, { t, v -> t.copy(candidateTextColor = v) }),
+    ColorProperty("ツールバー背景", { it.toolbarBackgroundColor }, { t, v -> t.copy(toolbarBackgroundColor = v) }),
+    ColorProperty("ツールバーアイコン", { it.toolbarIconColor }, { t, v -> t.copy(toolbarIconColor = v) }),
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ThemeEditorScreen(initialThemeId: String?) {
+private fun ThemeEditorScreen(initialId: String?) {
     val context = LocalContext.current
-    val repository = remember { LayoutRepository(context) }
+    val repo = remember { LayoutRepository(context) }
     val settings = remember { ImeSettings(context) }
-
-    var theme by remember { mutableStateOf(initialThemeId?.let { repository.loadTheme(it) } ?: KeyboardTheme.Default) }
-    var themeId by remember { mutableStateOf(initialThemeId ?: "new_theme") }
-    var themeLabel by remember { mutableStateOf(theme.label) }
+    val initial = remember(initialId) {
+        val id = initialId ?: settings.activeThemeId
+        repo.loadTheme(id) ?: if (id == MaterialYouTheme.ID) MaterialYouTheme.create(context) else KeyboardTheme.Default
+    }
+    var theme by remember(initial) { mutableStateOf(initial) }
+    val isNew = initialId == null || initialId == MaterialYouTheme.ID
+    var id by remember(initialId) {
+        val used = repo.availableThemeIds().toSet()
+        val newId = generateSequence(1) { it + 1 }.map { if (it == 1) "my_theme" else "my_theme_$it" }
+            .first { it !in used }
+        mutableStateOf(if (isNew) newId else requireNotNull(initialId))
+    }
+    var name by remember(initial) { mutableStateOf(if (isNew) "マイテーマ" else initial.label) }
+    var page by remember { mutableStateOf(EditorPage.SHAPE) }
+    var qwerty by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var editingColorProp by remember { mutableStateOf(COLOR_PROPS.first()) }
-    var hue by remember { mutableFloatStateOf(0f) }
-    var saturation by remember { mutableFloatStateOf(1f) }
-    var lightness by remember { mutableFloatStateOf(0.5f) }
-
-    val currentColor = editingColorProp.get(theme)
-    LaunchedEffect(editingColorProp, currentColor) {
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(currentColor, hsv)
-        hue = hsv[0]; saturation = hsv[1]; lightness = 1f - hsv[2]
+    val layout = remember(qwerty) {
+        repo.loadLayout(if (qwerty) "qwerty_ascii" else LayoutRepository.DEFAULT_LAYOUT_ID)
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("テーマエディタ") },
-                navigationIcon = {
-                    IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Spacer(Modifier.height(4.dp))
-
-            // Preview
-            Card(shape = RoundedCornerShape(16.dp)) {
-                ThemePreview(theme, Modifier.fillMaxWidth().height(180.dp))
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("テーマを編集") }, navigationIcon = {
+            IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る")
             }
-
-            // ID / Label
-            OutlinedTextField(value = themeId, onValueChange = { themeId = it },
-                label = { Text("テーマID（ファイル名）") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = themeLabel, onValueChange = { themeLabel = it },
-                label = { Text("表示名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-
+        }, actions = {
+            TextButton(onClick = {
+                runCatching {
+                    require(id != MaterialYouTheme.ID) { "別のテーマIDを指定してください" }
+                    require(name.isNotBlank()) { "表示名を入力してください" }
+                    repo.saveTheme(theme.copy(id = id, label = name))
+                    settings.markCustomizationChanged()
+                    settings.activeThemeId = id
+                }.onSuccess { message = "「$name」を適用しました" }
+                    .onFailure { message = it.message ?: "保存できませんでした" }
+            }) { Text("保存して適用") }
+        })
+    }) { insets ->
+        Column(Modifier.fillMaxSize().padding(insets)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(!qwerty, { qwerty = false }, label = { Text("フリック") })
+                    FilterChip(qwerty, { qwerty = true }, label = { Text("QWERTY") })
+                }
+                if (layout != null) ThemeKeyboardPreview(theme, layout)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EditorPage.entries.forEach { option ->
+                        FilterChip(page == option, { page = option }, label = { Text(option.label) })
+                    }
+                }
+                message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
             HorizontalDivider()
-
-            // Color editor
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("色の編集", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        COLOR_PROPS.forEach { prop ->
-                            FilterChip(
-                                selected = editingColorProp.key == prop.key,
-                                onClick = { editingColorProp = prop },
-                                label = { Text(prop.key, style = MaterialTheme.typography.labelSmall) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                ),
-                            )
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when (page) {
+                    EditorPage.SHAPE -> {
+                        Text("キーの区切り", style = MaterialTheme.typography.titleMedium)
+                        ChoiceChips(frameNames, theme.frameFor(null)) { theme = theme.copy(keyFrame = it) }
+                        ThemeSlider("線の太さ", theme.lineWidthDp, 0.5f..4f, "dp") { theme = theme.copy(lineWidthDp = it) }
+                        ThemeSlider("角の丸み", theme.keyCornerRadiusDp, 0f..32f, "dp") { theme = theme.copy(keyCornerRadiusDp = it) }
+                        ThemeSlider("キーの間隔", theme.keyGapDp, 0f..16f, "dp") { theme = theme.copy(keyGapDp = it) }
+                        ThemeSlider("キーの高さ", theme.keyHeightDp, 32f..96f, "dp") { theme = theme.copy(keyHeightDp = it) }
+                        ThemeSlider("キー面の濃さ", theme.keyOpacity * 100f, 0f..100f, "%") { theme = theme.copy(keyOpacity = it / 100f) }
+                        Text("背景イラスト", style = MaterialTheme.typography.titleMedium)
+                        ArtPicker(listOf(null) + ThemeWallpaper.entries, theme.wallpaper,
+                            { it?.label ?: "なし" }, { it?.asset }, { theme = theme.copy(wallpaper = it) })
+                        if (theme.wallpaper != null) {
+                            ThemeSlider("背景の濃さ", theme.wallpaperOpacity * 100f, 0f..100f, "%") {
+                                theme = theme.copy(wallpaperOpacity = it / 100f)
+                            }
+                        }
+                        Text("背景の演出", style = MaterialTheme.typography.titleMedium)
+                        ChoiceChips(mapOf(WallpaperMotion.NONE to "なし", WallpaperMotion.LIGHTS to "光の粒",
+                            WallpaperMotion.SNOW to "雪"), theme.wallpaperMotion) { theme = theme.copy(wallpaperMotion = it) }
+                        Text("文字キーの画像", style = MaterialTheme.typography.titleMedium)
+                        TexturePicker(theme.keyTexture) { theme = theme.copy(keyTexture = it ?: KeyTexture.NONE) }
+                        Text("操作キーの画像", style = MaterialTheme.typography.titleMedium)
+                        TexturePicker(theme.modifierTexture) { theme = theme.copy(modifierTexture = it ?: KeyTexture.NONE) }
+                        Text("外観で写真や動画を選んでいる場合は、その背景が優先されます。",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    EditorPage.COLORS -> {
+                        ThemeToggle("候補に背景色を付ける", theme.useCandidateBackground) { theme = theme.copy(useCandidateBackground = it) }
+                        var prop by remember { mutableStateOf(colors.first()) }
+                        ChoiceChips(colors.associateWith { it.title }, prop) { prop = it }
+                        key(prop) {
+                            var hex by remember { mutableStateOf("#%08X".format(prop.get(theme))) }
+                            val parsed = parseThemeColor(hex)
+                            OutlinedTextField(hex, {
+                                hex = it.take(9)
+                                parseThemeColor(hex)?.let { color -> theme = prop.set(theme, color) }
+                            }, label = { Text(prop.title) }, singleLine = true, isError = parsed == null,
+                                supportingText = { Text("#RRGGBB または #AARRGGBB") }, modifier = Modifier.fillMaxWidth())
+                            if (parsed != null) {
+                                val hsv = FloatArray(3)
+                                android.graphics.Color.colorToHSV(parsed, hsv)
+                                ThemeSlider("色相", hsv[0], 0f..360f, "°") {
+                                    hsv[0] = it
+                                    hex = "#%08X".format(android.graphics.Color.HSVToColor(android.graphics.Color.alpha(parsed), hsv))
+                                    theme = prop.set(theme, requireNotNull(parseThemeColor(hex)))
+                                }
+                                ThemeSlider("鮮やかさ", hsv[1] * 100, 0f..100f, "%") {
+                                    hsv[1] = it / 100
+                                    val color = android.graphics.Color.HSVToColor(android.graphics.Color.alpha(parsed), hsv)
+                                    hex = "#%08X".format(color); theme = prop.set(theme, color)
+                                }
+                                ThemeSlider("明るさ", hsv[2] * 100, 0f..100f, "%") {
+                                    hsv[2] = it / 100
+                                    val color = android.graphics.Color.HSVToColor(android.graphics.Color.alpha(parsed), hsv)
+                                    hex = "#%08X".format(color); theme = prop.set(theme, color)
+                                }
+                                ThemeSlider("色の不透明度", android.graphics.Color.alpha(parsed) * 100f / 255, 0f..100f, "%") {
+                                    val color = (parsed and 0xffffff) or ((it * 255 / 100).toInt() shl 24)
+                                    hex = "#%08X".format(color); theme = prop.set(theme, color)
+                                }
+                            }
                         }
                     }
-
-                    val cur = editingColorProp.get(theme).toComposeColor()
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.size(40.dp).clip(CircleShape).background(cur).border(2.dp, Color.Gray.copy(alpha = 0.3f), CircleShape))
-                        Column(Modifier.weight(1f)) {
-                            Text("色相", style = MaterialTheme.typography.labelSmall)
-                            Slider(value = hue, onValueChange = {
-                                hue = it; theme = editingColorProp.set(theme, Color.hsl(hue, saturation, 1f - lightness).toArgbInt())
-                            }, valueRange = 0f..360f)
-                            Text("鮮やかさ", style = MaterialTheme.typography.labelSmall)
-                            Slider(value = saturation, onValueChange = {
-                                saturation = it; theme = editingColorProp.set(theme, Color.hsl(hue, saturation, 1f - lightness).toArgbInt())
-                            }, valueRange = 0f..1f)
-                            Text("明るさ", style = MaterialTheme.typography.labelSmall)
-                            Slider(value = lightness, onValueChange = {
-                                lightness = it; theme = editingColorProp.set(theme, Color.hsl(hue, saturation, 1f - lightness).toArgbInt())
-                            }, valueRange = 0f..1f)
+                    EditorPage.EFFECTS -> KeywordEffectsEditor(theme.keywordEffects) {
+                        theme = theme.copy(keywordEffects = it)
+                    }
+                    EditorPage.TEXT -> {
+                        Text("キートップの書体", style = MaterialTheme.typography.titleMedium)
+                        ChoiceChips(mapOf(KeyFont.SYSTEM to "標準", KeyFont.ROUNDED to "丸ゴシック系",
+                            KeyFont.SERIF to "明朝系", KeyFont.MONOSPACE to "等幅"), theme.labelFont) { theme = theme.copy(labelFont = it) }
+                        ThemeSlider("キー文字の大きさ", theme.labelSizeSp, 10f..32f, "sp") { theme = theme.copy(labelSizeSp = it) }
+                        ThemeToggle("太字", theme.labelBold) { theme = theme.copy(labelBold = it) }
+                        ThemeToggle("文字の影", theme.labelShadow) { theme = theme.copy(labelShadow = it) }
+                        ThemeToggle("長押しのヒント", theme.showLongPressHints) { theme = theme.copy(showLongPressHints = it) }
+                        ThemeToggle("フリックガイド", theme.showFlickGuides) { theme = theme.copy(showFlickGuides = it) }
+                        if (theme.showFlickGuides) {
+                            ChoiceChips(mapOf(ThemeFlickGuide.INHERIT to "入力設定に従う", ThemeFlickGuide.PREVIEW to "選択中の文字",
+                                ThemeFlickGuide.DIRECTIONS to "全方向"), theme.flickGuideMode) { theme = theme.copy(flickGuideMode = it) }
                         }
-                    }
-
-                    Text("プリセット色", style = MaterialTheme.typography.labelSmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        SWATCH_COLORS.forEach { swatch ->
-                            Box(Modifier.size(28.dp).clip(CircleShape).background(swatch).border(1.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
-                                .clickable { editingColorProp?.let { prop -> theme = prop.set(theme, swatch.toArgbInt()) } })
+                        ThemeToggle("キー音", theme.keyClickSound) { theme = theme.copy(keyClickSound = it) }
+                        if (theme.keyClickSound) {
+                            ChoiceChips(mapOf(KeySound.SYSTEM to "端末標準", KeySound.WOOD to "木", KeySound.GLASS to "ガラス",
+                                KeySound.SOFT to "ソフト"), theme.keySound) { theme = theme.copy(keySound = it) }
+                            if (theme.keySound != KeySound.SYSTEM) ThemeSlider("キー音の音量", theme.keySoundVolume * 100, 0f..100f, "%") {
+                                theme = theme.copy(keySoundVolume = it / 100)
+                            }
                         }
+                        Text("タップの演出", style = MaterialTheme.typography.titleMedium)
+                        ChoiceChips(mapOf(TapEffect.NONE to "なし", TapEffect.RING to "波紋",
+                            TapEffect.SPARKLE to "きらめき"), theme.tapEffect) { theme = theme.copy(tapEffect = it) }
+                        Text("押したときの強調", style = MaterialTheme.typography.titleMedium)
+                        ChoiceChips(mapOf(PressFeedback.FILL to "面の色", PressFeedback.OUTLINE to "枠線",
+                            PressFeedback.NONE to "なし"), theme.pressFeedback) { theme = theme.copy(pressFeedback = it) }
                     }
                 }
-            }
-
-            // Dimensions
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("寸法", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    DIM_PROPS.forEach { prop ->
-                        Text("${prop.key}  ${"%.0f".format(prop.get(theme))}", style = MaterialTheme.typography.labelSmall)
-                        Slider(value = prop.get(theme), onValueChange = { theme = prop.set(theme, it) }, valueRange = prop.range)
-                    }
-                }
-            }
-
-            // Toggles
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("フラットキー", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Switch(checked = theme.flatKeys, onCheckedChange = { theme = theme.copy(flatKeys = it) })
-                    }
-                }
-            }
-
-            // Save
-            Button(onClick = {
-                if (themeId.isBlank()) { message = "IDを入力してください"; return@Button }
-                val saved = theme.copy(id = themeId, label = themeLabel)
-                repository.saveTheme(saved)
-                settings.activeThemeId = themeId
-                message = "$themeId を保存して使用します"
-            }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Save, contentDescription = null, Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("保存して使用")
-            }
-
-            message?.let {
-                Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                    Text(it, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer)
-                }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                OutlinedTextField(name, { name = it.take(80) }, label = { Text("表示名") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(id, { id = it.take(64) }, label = { Text("テーマID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         }
     }
 }
 
 @Composable
-private fun ThemePreview(theme: KeyboardTheme, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val operationIcons = remember(context) {
-        mapOf("↶" to R.drawable.ic_ime_undo, "⌫" to R.drawable.ic_ime_backspace,
-            "◀" to R.drawable.ic_ime_cursor_left, "▶" to R.drawable.ic_ime_cursor_right,
-            "↵" to R.drawable.ic_ime_enter).mapValues { ContextCompat.getDrawable(context, it.value)?.mutate() }
-    }
-    val measurer = rememberTextMeasurer()
-    val labelStyle = remember { TextStyle(fontSize = 11.sp) }
-    Canvas(modifier.clip(RoundedCornerShape(8.dp))) {
-        val w = size.width; val h = size.height
-        val bgColor = Color(theme.backgroundColor)
-        val keyColor = Color(theme.keyColor)
-        val modColor = Color(theme.modifierKeyColor)
-        val pressedColor = Color(theme.keyPressedColor)
-        val labelColor = Color(theme.labelColor)
-        val candBg = Color(theme.candidateBackgroundColor)
-        val candText = Color(theme.candidateTextColor)
-        val guideBg = Color(theme.flickGuideColor)
-
-        drawRect(bgColor, Offset.Zero, Size(w, h))
-        val stripH = h * 0.14f
-        drawRect(candBg, Offset(0f, 0f), Size(w, stripH))
-        val candResult = measurer.measure("変換  候補1  候補2  候補3", labelStyle, maxLines = 1)
-        drawText(candResult, topLeft = Offset(w * 0.04f, stripH / 2f - candResult.size.height / 2f), color = candText)
-
-        val keyTop = stripH + 4f; val keyH = (h - keyTop) / 4f; val gap = 2f; val keyW = (w - gap * 5f) / 4f
-        val keys = listOf(
-            listOf("↶" to true, "あ" to false, "か" to false, "⌫" to true),
-            listOf("◀" to true, "た" to false, "な" to false, "▶" to true),
-            listOf("数字" to true, "ま" to false, "や" to false, "空白" to true),
-            listOf("英数" to true, "゛" to true, "わ" to false, "↵" to true),
-        )
-        for (ri in 0 until 4) for (ci in 0 until 4) {
-            val x = gap + ci * (keyW + gap); val y = keyTop + ri * keyH
-            val fillColor = if (keys[ri][ci].second) modColor else if (ri == 3 && ci == 0) pressedColor else keyColor
-            drawRoundRect(fillColor, Offset(x, y), Size(keyW, keyH - gap), CornerRadius(theme.keyCornerRadiusDp * 4f))
-            val icon = operationIcons[keys[ri][ci].first]
-            if (icon != null) {
-                val iconSize = minOf(keyW, keyH - gap) * 0.42f
-                val centerX = x + keyW / 2f
-                val centerY = y + (keyH - gap) / 2f
-                icon.setTint(theme.labelColor)
-                icon.setBounds((centerX - iconSize / 2).toInt(), (centerY - iconSize / 2).toInt(),
-                    (centerX + iconSize / 2).toInt(), (centerY + iconSize / 2).toInt())
-                drawIntoCanvas { icon.draw(it.nativeCanvas) }
-            } else {
-                val tr = measurer.measure(keys[ri][ci].first, labelStyle, maxLines = 1)
-                drawText(tr, topLeft = Offset(x + keyW / 2f - tr.size.width / 2f, y + (keyH - gap) / 2f - tr.size.height / 2f), color = labelColor)
+internal fun ThemeKeyboardPreview(theme: KeyboardTheme, layout: KeyboardLayout) {
+    AndroidView(
+        factory = { context ->
+            KeyboardPanelView(context).apply {
+                val strip = LinearLayout(context)
+                for (sample in listOf("候補", "変換", "設定")) {
+                    strip.addView(android.widget.TextView(context).apply {
+                        text = sample
+                        gravity = android.view.Gravity.CENTER
+                        textSize = 13f
+                    }, LinearLayout.LayoutParams(0, (28 * resources.displayMetrics.density).toInt(), 1f))
+                }
+                addView(strip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+                addView(FlickKeyboardView(context), LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
+                ))
             }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        update = { panel ->
+            panel.setBackgroundColor(theme.backgroundColor)
+            panel.setWallpaper(theme.wallpaper, theme.wallpaperOpacity, theme.wallpaperMotion)
+            val strip = panel.getChildAt(0) as LinearLayout
+            for (i in 0 until strip.childCount) {
+                (strip.getChildAt(i) as android.widget.TextView).apply {
+                    val isTool = i == strip.childCount - 1
+                    val toolbarTint = theme.toolbarIconColor.takeUnless { it == android.graphics.Color.TRANSPARENT }
+                    setTextColor(if (isTool) toolbarTint ?: theme.candidateTextColor else theme.candidateTextColor)
+                    setBackgroundColor(if (isTool) theme.toolbarBackgroundColor else
+                        if (theme.useCandidateBackground) theme.candidateBackgroundColor else android.graphics.Color.TRANSPARENT)
+                }
+            }
+            (panel.getChildAt(1) as FlickKeyboardView).apply {
+                this.theme = theme.copy(keyHeightDp = (theme.keyHeightDp * 0.62f).coerceAtMost(46f))
+                if (this.layout != layout) this.layout = layout
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun <T> ChoiceChips(options: Map<T, String>, value: T, onChange: (T) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        options.forEach { (option, name) ->
+            FilterChip(value == option, { onChange(option) }, label = { Text(name) })
         }
-        val gx = gap + keyW + gap; val gy = keyTop
-        drawRoundRect(guideBg.copy(alpha = 0.4f), Offset(gx, gy - keyH), Size(keyW, keyH * 2), CornerRadius(theme.keyCornerRadiusDp * 4f))
     }
 }
+
+@Composable
+internal fun <T> ArtPicker(options: List<T>, value: T, label: (T) -> String, asset: (T) -> String?, select: (T) -> Unit) {
+    val context = LocalContext.current
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(options) { item ->
+            val name = asset(item)
+            val bitmap = remember(name) { name?.let { ThemeArt.load(context, it)?.asImageBitmap() } }
+            OutlinedCard(onClick = { select(item) }, modifier = Modifier.width(100.dp)) {
+                bitmap?.let {
+                    Image(it, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(56.dp))
+                }
+                Text((if (item == value) "✓ " else "") + label(item), Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun TexturePicker(value: KeyTexture?, includeInherit: Boolean = false, select: (KeyTexture?) -> Unit) {
+    ArtPicker((if (includeInherit) listOf(null) else emptyList()) + KeyTexture.entries, value,
+        { it?.label ?: "テーマに従う" }, { it?.asset }, select)
+}
+
+@Composable
+internal fun ThemeSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, unit: String, onChange: (Float) -> Unit) {
+    Text("$label  ${"%.1f".format(value).removeSuffix(".0")}$unit", style = MaterialTheme.typography.bodyMedium)
+    Slider(value.coerceIn(range), onChange, valueRange = range)
+}
+
+@Composable
+internal fun ThemeToggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f))
+        Switch(value, onChange)
+    }
+}
+
+internal fun parseThemeColor(raw: String): Int? = raw.takeIf {
+    it.startsWith("#") && (it.length == 7 || it.length == 9)
+}?.let { runCatching { android.graphics.Color.parseColor(it) }.getOrNull() }

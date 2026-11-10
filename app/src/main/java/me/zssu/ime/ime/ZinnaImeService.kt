@@ -219,7 +219,9 @@ class ZinnaImeService : InputMethodService() {
 
         val panel = KeyboardPanelView(this).apply {
             setBackgroundColor(this@ZinnaImeService.theme.backgroundColor)
-            setBackgroundImage(settings.backgroundImage, settings.backgroundOpacity)
+            setWallpaper(this@ZinnaImeService.theme.wallpaper, this@ZinnaImeService.theme.wallpaperOpacity, this@ZinnaImeService.theme.wallpaperMotion)
+            applyBackgroundMedia()
+            setMediaActive(!fieldPolicy.incognito)
             // Seed all previously observed safe areas. A replacement view can draw before Android
             // dispatches fresh insets; starting at zero lets its first frame overlap OS controls.
             updatePadding(
@@ -452,9 +454,11 @@ class ZinnaImeService : InputMethodService() {
         // conversion candidate list is showing — the strip scrolls, this button never does.
         val menuButton = ImageButton(this).apply {
             setImageResource(R.drawable.ic_tool_menu)
-            imageTintList = ColorStateList.valueOf(this@ZinnaImeService.theme.candidateTextColor)
+            val colors = this@ZinnaImeService.theme
+            imageTintList = ColorStateList.valueOf(colors.toolbarIconColor.takeUnless { it == Color.TRANSPARENT }
+                ?: colors.candidateTextColor)
             contentDescription = "ツールメニュー"
-            background = null
+            setBackgroundColor(colors.toolbarBackgroundColor)
             val padding = (12 * resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
@@ -851,6 +855,13 @@ class ZinnaImeService : InputMethodService() {
      * A user override wins because they asked for it explicitly; otherwise we follow the system
      * palette, which also means the keyboard tracks light/dark without a setting.
      */
+    private fun KeyboardPanelView.applyBackgroundMedia() {
+        setMedia(settings.backgroundImage, settings.backgroundAlbum, settings.backgroundVideo,
+            settings.backgroundOpacity, settings.backgroundBrightness, settings.backgroundBlur,
+            settings.backgroundHorizontal, settings.backgroundVertical, settings.backgroundSlideSeconds,
+            settings.backgroundVideoStart, settings.backgroundVideoEnd, settings.backgroundFilter)
+    }
+
     private fun resolveTheme(): KeyboardTheme {
         val selected = settings.activeThemeId
         val base = if (selected == MaterialYouTheme.ID) {
@@ -920,14 +931,12 @@ class ZinnaImeService : InputMethodService() {
             InputViewRefreshPolicy.Target.UPDATE_PANEL -> {
                 // Background and opacity are paint-only settings. Keep the already inset, attached
                 // view in place so it cannot be transiently measured across the navigation bar.
-                panelView?.setBackgroundImage(
-                    settings.backgroundImage,
-                    settings.backgroundOpacity,
-                )
+                panelView?.applyBackgroundMedia()
                 builtFromRevision = combinedRevision()
             }
             InputViewRefreshPolicy.Target.NONE -> Unit
         }
+        panelView?.setMediaActive(!nextPolicy.incognito)
         val nextCorrection = activeProfile?.typingCorrection ?: true
         val nextToggle = settings.flickInputMode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE
         val nextStyle = layout?.inputStyle
@@ -982,6 +991,7 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         keyboardView?.cancelGestures()
+        panelView?.setMediaActive(false)
         closeHeightControl()
         super.onFinishInputView(finishingInput)
     }
@@ -1859,6 +1869,9 @@ class ZinnaImeService : InputMethodService() {
             }
             if (state.committedText.isNotEmpty()) {
                 val committed = ic.commitText(state.committedText, 1)
+                if (committed && !fieldPolicy.incognito && fieldPolicy.showCandidates) {
+                    keyboardView?.showKeywordEffect(state.committedText)
+                }
                 if (committed && !fieldPolicy.incognito &&
                     (currentInputEditorInfo?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) {
                     learningCandidate?.takeIf { it.text == state.committedText }?.let(session::learnDictionaryCompletion)
@@ -2341,6 +2354,7 @@ class ZinnaImeService : InputMethodService() {
         settings.flickInputMode,
         settings.activeThemeId,
         settings.activeLayoutId,
+        settings.customizationRevision,
         settings.oneHandMode,
         settings.oneHandWidth,
         settings.candidateRows,

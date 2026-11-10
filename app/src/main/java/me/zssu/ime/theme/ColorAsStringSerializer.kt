@@ -20,5 +20,13 @@ object ColorAsStringSerializer : KSerializer<Int> {
         encoder.encodeString(String.format("#%08X", value))
     }
 
-    override fun deserialize(decoder: Decoder): Int = Color.parseColor(decoder.decodeString())
+    override fun deserialize(decoder: Decoder): Int {
+        val text = decoder.decodeString()
+        val hex = text.takeIf { it.startsWith('#') }?.substring(1)
+        if (hex != null && hex.length in setOf(6, 8)) {
+            val value = hex.toLongOrNull(16)
+            if (value != null && value >= 0) return (if (hex.length == 6) value or 0xFF000000 else value).toInt()
+        }
+        return Color.parseColor(text)
+    }
 }

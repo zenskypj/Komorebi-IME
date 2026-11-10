@@ -19,7 +19,7 @@
         ["manual/02-henkan", "変換と候補", "変換のしかたと、候補が並ぶ順番", "docs/manual/02-henkan.md", "conversion 変換"],
         ["manual/03-ai", "AI 機能", "AI変換・AI文章校正・文体補正", "docs/manual/03-ai.md", "ai zenzai karukan 校正"],
         ["manual/04-jisho", "辞書", "単語の登録、追加辞書、意味辞書", "docs/manual/04-jisho.md", "dictionary 辞書"],
-        ["manual/05-gaikan", "外観と配列", "色・背景・キーの並び・アプリごとの設定", "docs/manual/05-gaikan.md", "theme layout profile 外観"],
+        ["manual/05-gaikan", "外観と配列", "背景・テーマ・キーごとの外観と配列", "docs/manual/05-gaikan.md", "theme layout profile 外観 着せ替え 枠 画像 動画"],
         ["manual/13-settings-ui", "設定画面", "カテゴリ一覧・検索・キーボードの初期設定", "docs/manual/13-settings-ui.md", "settings 設定 検索 キーボード"],
         ["manual/06-privacy", "プライバシーとセキュリティ", "何が送られて、何が端末に残るか", "docs/manual/06-privacy.md", "privacy security 安全"],
         ["manual/07-iten", "データの移行", "機種変更のときの引っ越し", "docs/manual/07-iten.md", "backup nfc beam 移行"],
@@ -45,6 +45,8 @@
       group: "設計・仕様",
       items: [
         ["conversion-ui", "変換とキーボードの動き", "候補と文節の動き", "docs/conversion-ui.md", "conversion ui"],
+        ["research/simeji-customization", "着せ替えの機能比較", "Simejiの公式情報とKomorebiの対応範囲", "docs/research/simeji-customization.md", "Simeji theme comparison 着せ替え"],
+        ["research/keyboard-theme-art", "着せ替え素材", "同梱画像の一覧と生成記録", "docs/research/keyboard-theme-art.md", "theme art AI 画像 背景 キー"],
         ["keyboard-strengthening", "キーボードの強化点", "文節操作・学習・編集パネル", "docs/keyboard-strengthening.md", "keyboard"],
         ["zenzai-plus", "AI変換の仕組み", "zenzai-plus が端末内で変換するまで", "docs/zenzai-plus.md", "zenzai ai"],
         ["proofreading", "AI文章校正の仕組み", "校正モデルと処理の流れ", "docs/proofreading.md", "proofread 校正"],
@@ -60,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.51-dev", "rc.51-dev", "背景13種・完成テーマ9種、キーの枠と画像、写真・動画の着せ替え", "docs/releases/v0.3.0-rc.51-dev.md", "release rc51 theme wallpaper customization 着せ替え"],
         ["releases/v0.3.0-rc.50-dev", "rc.50-dev", "設定を4カテゴリの一覧に整理・検索とバックアップの導線を改善", "docs/releases/v0.3.0-rc.50-dev.md", "release rc50 settings search backup ui"],
         ["releases/v0.3.0-rc.49-dev", "rc.49-dev", "Liquid Glassの設定ホームと5タブ・検索・二層フッター", "docs/releases/v0.3.0-rc.49-dev.md", "release rc49 settings liquid glass ui"],
         ["releases/v0.3.0-rc.48-dev", "rc.48-dev", "変換キー2回目で候補を進めない", "docs/releases/v0.3.0-rc.48-dev.md", "release rc48 convert candidate"],
@@ -396,6 +399,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-10", "v0.3.0-rc.51-dev", "着せ替えを拡張。背景13種、完成テーマ9種、キー単位の外観、写真・動画"],
     ["2026-11-10", "v0.3.0-rc.50-dev", "設定画面をカテゴリ別の一覧に整理し、横断検索を維持"],
     ["2026-11-07", "v0.3.0-rc.49-dev", "Liquid Glassの設定ホーム、検索、5タブ、二層フッターバー"],
     ["2026-11-07", "v0.3.0-rc.48-dev", "変換キー2回目は候補選択に入るだけで候補を進めない"],
