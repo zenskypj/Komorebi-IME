@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.53-dev", "rc.53-dev", "小・濁点キーを文字キーの見た目に統一", "docs/releases/v0.3.0-rc.53-dev.md", "release rc53 濁点 キー"],
         ["releases/v0.3.0-rc.52-dev", "rc.52-dev", "きせかえ専用画面・常時プレビュー・キーの形", "docs/releases/v0.3.0-rc.52-dev.md", "release rc52 theme live preview きせかえ キー"],
         ["releases/v0.3.0-rc.51-dev", "rc.51-dev", "背景13種・完成テーマ9種、キーの枠と画像、写真・動画の着せ替え", "docs/releases/v0.3.0-rc.51-dev.md", "release rc51 theme wallpaper customization 着せ替え"],
         ["releases/v0.3.0-rc.50-dev", "rc.50-dev", "設定を4カテゴリの一覧に整理・検索とバックアップの導線を改善", "docs/releases/v0.3.0-rc.50-dev.md", "release rc50 settings search backup ui"],
@@ -400,6 +401,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-10", "v0.3.0-rc.53-dev", "小・濁点キーに文字キーの色と画像を適用"],
     ["2026-11-10", "v0.3.0-rc.52-dev", "きせかえを独立。テーマ・背景・キーの形を固定プレビューで試せる"],
     ["2026-11-10", "v0.3.0-rc.51-dev", "着せ替えを拡張。背景13種、完成テーマ9種、キー単位の外観、写真・動画"],
     ["2026-11-10", "v0.3.0-rc.50-dev", "設定画面をカテゴリ別の一覧に整理し、横断検索を維持"],

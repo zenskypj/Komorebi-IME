@@ -252,3 +252,7 @@ R8後のJNI名、素材18点とテーマ9種を照合。公開APKの署名証明
 公開対象は `me.zssu.ime.debug`（versionCode 76）のテスト用ユニバーサルAPK。
 通常APK・AABとABI別APKを作成し、版情報、16 KBのzipalign、ABI・辞書・法務文書、
 R8後のJNI名、画像18点とテーマ9種を照合。公開APKの署名証明書と権限はrc.51と同じ。
+
+## rc.53-dev の作成条件
+
+小・濁点キーを文字キーの見た目に変更。自動テスト・debug／release Lint・通常APK／AAB・ABI別APKを確認。実機確認は未実施。公開対象はdebug署名の `me.zssu.ime.debug`（versionCode 77）。
