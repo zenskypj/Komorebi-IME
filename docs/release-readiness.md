@@ -242,3 +242,13 @@ debug／releaseのlintエラー0件。Android実機・エミュレータは利�
 端末別の入力は未確認。公開対象は `me.zssu.ime.debug`（versionCode 75）のテスト用ユニバーサルAPK。
 通常APK・AABとABI別APKを作成し、版情報、16 KBのzipalign、ABI・辞書・法務文書、
 R8後のJNI名、素材18点とテーマ9種を照合。公開APKの署名証明書と権限はrc.50と同じ。
+
+## rc.52-dev の作成条件
+
+設定の独立項目「きせかえ」に、テーマ・配列プリセット、背景、キーの形・色・演出を集約。
+プレビューを固定し、試し打ちやフリック／QWERTYの切り替えに対応。JSON入出力は詳細に移設。
+単体テスト302件（app 300、karukan 2）成功、debug／releaseのlintエラー0件。
+実機・エミュレータは利用できず、縦横の表示、試し打ち、動画再生、端末別の入力は未確認。
+公開対象は `me.zssu.ime.debug`（versionCode 76）のテスト用ユニバーサルAPK。
+通常APK・AABとABI別APKを作成し、版情報、16 KBのzipalign、ABI・辞書・法務文書、
+R8後のJNI名、画像18点とテーマ9種を照合。公開APKの署名証明書と権限はrc.51と同じ。

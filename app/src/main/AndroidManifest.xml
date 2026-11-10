@@ -101,12 +101,6 @@
         </service>
 
         <activity
-            android:name=".settings.CustomizationActivity"
-            android:exported="false"
-            android:label="配列・テーマスタジオ"
-            android:parentActivityName=".settings.SettingsActivity" />
-
-        <activity
             android:name=".settings.EngineDictActivity"
             android:exported="false"
             android:label="変換エンジン・辞書"
@@ -121,7 +115,7 @@
         <activity
             android:name=".settings.AppearanceActivity"
             android:exported="false"
-            android:label="外観"
+            android:label="表示とサイズ"
             android:parentActivityName=".settings.SettingsActivity" />
 
         <activity
@@ -140,13 +134,13 @@
             android:name=".settings.VisualLayoutEditorActivity"
             android:exported="false"
             android:label="視覚的な配列エディタ"
-            android:parentActivityName=".settings.CustomizationActivity" />
+            android:parentActivityName=".settings.ThemeEditorActivity" />
 
         <activity
             android:name=".settings.ThemeEditorActivity"
             android:exported="false"
-            android:label="テーマエディタ"
-            android:parentActivityName=".settings.CustomizationActivity" />
+            android:label="きせかえ"
+            android:parentActivityName=".settings.SettingsActivity" />
 
         <activity
             android:name=".settings.AppProfileActivity"

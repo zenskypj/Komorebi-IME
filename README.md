@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.51-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.52-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -86,6 +86,8 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.50-dev` では、設定ホームを4カテゴリの一覧に整理しました。右上から全設定を検索でき、「バックアップと移行」には一覧から直接進めます。[設定画面の使い方](docs/manual/13-settings-ui.md)を参照してください。
 
 `rc.51-dev` では、背景プリセットを13種に増やし、完成テーマ9種を追加しました。写真・動画の背景、仕切り線や枠なしのキー、キーごとの画像、配色・文字・入力演出を選べます。[着せ替えの使い方](docs/manual/05-gaikan.md)と[素材一覧](docs/research/keyboard-theme-art.md)を参照してください。
+
+`rc.52-dev` は設定に「きせかえ」を独立させました。テーマ・背景・キーの形・配色を切り替えながら、固定されたプレビューでフリックやQWERTYを試せます。[きせかえの使い方](docs/manual/05-gaikan.md)を参照してください。
 
 ## 特長
 

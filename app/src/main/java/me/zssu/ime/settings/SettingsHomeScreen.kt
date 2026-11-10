@@ -254,7 +254,7 @@ private fun openDestination(context: Context, destination: SettingsDestination) 
         SettingsDestination.BACKUP -> return // Kept in the settings activity to preserve the list position.
         SettingsDestination.INPUT_GUIDE -> Intent(context, InputGuideActivity::class.java)
         SettingsDestination.INPUT_METHOD -> Intent(context, InputSettingsActivity::class.java)
-        SettingsDestination.LAYOUT_THEME -> Intent(context, CustomizationActivity::class.java)
+        SettingsDestination.DRESS_UP -> Intent(context, ThemeEditorActivity::class.java)
         SettingsDestination.APPEARANCE -> Intent(context, AppearanceActivity::class.java)
         SettingsDestination.APP_PROFILES -> Intent(context, AppProfileActivity::class.java)
         SettingsDestination.SNIPPETS -> Intent(context, SnippetActivity::class.java)

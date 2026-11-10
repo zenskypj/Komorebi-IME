@@ -73,12 +73,15 @@ class LayoutRepository(private val context: Context) {
      * Validates before touching disk. IDs are deliberately filename-safe: imported JSON must never
      * be able to escape the app-owned resource directories.
      */
-    fun importJson(text: String): Result<ImportedResource> = runCatching {
+    fun importJson(text: String, expectTheme: Boolean? = null): Result<ImportedResource> = runCatching {
         require(text.toByteArray().size <= MAX_JSON_BYTES) { "JSON は 1 MB 以下にしてください" }
         val root = json.parseToJsonElement(text).jsonObject
         val id = root["id"]?.jsonPrimitive?.content.orEmpty()
         require(ID_PATTERN.matches(id)) {
             "id は英数字・ハイフン・アンダースコア（1〜64文字）で指定してください"
+        }
+        if (expectTheme != null) require(expectTheme == ("rows" !in root)) {
+            if (expectTheme) "テーマのJSONを選んでください" else "配列のJSONを選んでください"
         }
         if ("rows" in root) {
             val value = json.decodeFromString<KeyboardLayout>(text)

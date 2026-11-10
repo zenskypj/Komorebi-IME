@@ -37,4 +37,10 @@ class SettingsCatalogTest {
             SettingsCatalog.search("初期設定").map { it.destination }.toSet(),
         )
     }
+    @Test
+    fun `theme and layout presets lead to the dedicated dress-up screen`() {
+        for (term in listOf("きせかえ", "テーマ", "配列", "仕切り線")) {
+            assertEquals(listOf(SettingsDestination.DRESS_UP), SettingsCatalog.search(term).map { it.destination })
+        }
+    }
 }
