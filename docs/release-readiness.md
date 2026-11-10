@@ -260,3 +260,7 @@ R8後のJNI名、画像18点とテーマ9種を照合。公開APKの署名証明
 ## rc.54-dev の作成条件
 
 きせかえ画面を画像の配置に合わせて変更し、選択中の実際のIMEを開閉して試し入力できるようにした。Komorebi IME選択時は編集内容を一時反映。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでのIME連携、表示と操作は未確認。公開APKはdebug署名（versionCode 78）。
+
+## rc.55-dev の作成条件
+
+IME表示中にきせかえ画面が隠れる問題を修正。単体テスト303件、debug／release Lintエラー0件、APK・AAB・ABI別APKを確認。実機・エミュレータでのIME表示と画面操作は未確認。公開APKはdebug署名（versionCode 79）。

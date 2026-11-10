@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.55-dev", "rc.55-dev", "きせかえ項目がIMEに隠れる問題を修正", "docs/releases/v0.3.0-rc.55-dev.md", "release rc55 ime insets"],
         ["releases/v0.3.0-rc.54-dev", "rc.54-dev", "きせかえ画面を刷新し実際のIMEで試し入力", "docs/releases/v0.3.0-rc.54-dev.md", "release rc54 theme preview"],
         ["releases/v0.3.0-rc.53-dev", "rc.53-dev", "小・濁点キーを文字キーの見た目に統一", "docs/releases/v0.3.0-rc.53-dev.md", "release rc53 濁点 キー"],
         ["releases/v0.3.0-rc.52-dev", "rc.52-dev", "きせかえ専用画面・常時プレビュー・キーの形", "docs/releases/v0.3.0-rc.52-dev.md", "release rc52 theme live preview きせかえ キー"],
@@ -402,6 +403,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-11", "v0.3.0-rc.55-dev", "IME表示中もきせかえ項目と開閉を表示"],
     ["2026-11-10", "v0.3.0-rc.54-dev", "きせかえをアイコンと背景一覧に変更、実際のIMEで試し入力"],
     ["2026-11-10", "v0.3.0-rc.53-dev", "小・濁点キーに文字キーの色と画像を適用"],
     ["2026-11-10", "v0.3.0-rc.52-dev", "きせかえを独立。テーマ・背景・キーの形を固定プレビューで試せる"],

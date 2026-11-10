@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import me.zssu.ime.keyboard.FlickKeyboardView
@@ -111,6 +112,11 @@ private fun ThemeEditorScreen() {
             ?: (settings.keyboardStyle == me.zssu.ime.keyboard.KeyboardStyle.QWERTY)
     ) }
     var previewVisible by rememberSaveable { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    LaunchedEffect(imeInsets, density) {
+        snapshotFlow { imeInsets.getBottom(density) > 0 }.collect { previewVisible = it }
+    }
     var inputView by remember { mutableStateOf<EditText?>(null) }
     val imm = remember { context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager }
     DisposableEffect(Unit) {
@@ -174,12 +180,13 @@ private fun ThemeEditorScreen() {
             TextButton(onClick = ::apply, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
         })
     }) { insets ->
-        BoxWithConstraints(Modifier.fillMaxSize().padding(insets)) {
+        BoxWithConstraints(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) {
             val sideBySide = maxWidth >= 600.dp
             val preview: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier.padding(horizontal = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("実際のキーボードで試す", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                        if (!previewVisible) Text("実際のキーボードで試す", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                        else Spacer(Modifier.weight(1f))
                         TextButton(onClick = { qwerty = false }, enabled = qwerty) { Text("フリック") }
                         TextButton(onClick = { qwerty = true }, enabled = !qwerty) { Text("QWERTY") }
                         TextButton(onClick = {
@@ -208,7 +215,7 @@ private fun ThemeEditorScreen() {
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("Komorebi IMEを選択して試してください", style = MaterialTheme.typography.labelSmall)
+                    if (!previewVisible) Text("Komorebi IMEを選択して試してください", style = MaterialTheme.typography.labelSmall)
                 }
             }
             val controls: @Composable (Modifier) -> Unit = { modifier ->
