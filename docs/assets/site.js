@@ -31,7 +31,7 @@
     {
       group: "タイムライン",
       items: [
-        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全54件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
+        ["manual/12-history", "全バージョンのタイムライン", "どの版で何が変わったか（全55件）", "docs/manual/12-history.md", "history timeline リリース 歴史 全バージョン"],
       ],
     },
     {
@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.60-dev", "rc.60-dev", "変換候補の全件表示とページを越えた選択", "docs/releases/v0.3.0-rc.60-dev.md", "release rc60 変換 候補"],
         ["releases/v0.3.0-rc.59-dev", "rc.59-dev", "音声入力をキーボード内に統合", "docs/releases/v0.3.0-rc.59-dev.md", "release rc59 音声"],
         ["releases/v0.3.0-rc.58-dev", "rc.58-dev", "更新の自動確認・音声入力の起動修正", "docs/releases/v0.3.0-rc.58-dev.md", "release rc58 音声 更新"],
         ["releases/v0.3.0-rc.57-dev", "rc.57-dev", "任意の音声入力・日本語モデル管理", "docs/releases/v0.3.0-rc.57-dev.md", "release rc57 音声"],
@@ -407,6 +408,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-11", "v0.3.0-rc.60-dev", "変換候補の全件表示と連続選択"],
     ["2026-11-11", "v0.3.0-rc.59-dev", "音声入力をキーボード内に統合"],
     ["2026-11-11", "v0.3.0-rc.58-dev", "更新確認・音声入力の起動を修正"],
     ["2026-11-11", "v0.3.0-rc.57-dev", "音声入力モジュール・日本語モデル管理"],

@@ -418,7 +418,7 @@ class MozcSession(
         currentIsConverting = convertingOutput
         val reading = if (convertingOutput) lastInputReading else displayedPreedit
         val candidateMetadata = if (includeCandidates && hasAllCandidateWords()) {
-            allCandidateWords.candidatesList.take(if (convertingOutput) CandidatePaging.MAX_CANDIDATES else CandidateRanking.MAX_LIVE_POOL_SIZE)
+            ConversionOutput.candidateMetadata(this, convertingOutput)
         } else {
             emptyList()
         }
@@ -517,7 +517,10 @@ class MozcSession(
             Candidate(-40_000 - index, value, inputReading = reading, sourceReading = reading,
                 priorityMatch = priorityLookup(reading, value), directCommit = true)
         } else emptyList()
-        val combinedCandidates = EnglishCandidateOrder.order((candidates + supplementary).distinctBy { it.text })
+        val combinedCandidates = EnglishCandidateOrder.order(if (convertingOutput) {
+            val nativeTexts = candidates.mapTo(hashSetOf()) { it.text }
+            candidates + supplementary.filter { nativeTexts.add(it.text) }
+        } else (candidates + supplementary).distinctBy { it.text })
         val reorderedFocused =
             focusedId?.let { id -> combinedCandidates.indexOfFirst { it.id == id } } ?: -1
 

@@ -84,6 +84,11 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     private var conversionExpanded = false
     private var conversionBaseHeight = 0
     private var conversionPresentation = 0
+    private data class ConversionPageCache(
+        val texts: List<String>, val width: Int, val rows: Int, val textSize: Float,
+        val widths: List<Int>, val pages: List<me.zssu.ime.ime.CandidatePaging.Page>,
+    )
+    private var conversionPageCache: ConversionPageCache? = null
 
     /** Texts of the last rendered candidate list; scroll resets only when content changes. */
     private var lastCandidateTexts: List<String> = emptyList()
@@ -275,6 +280,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         if (conversionData == null && conversionNavigate == null && !conversionExpanded && conversionBaseHeight == 0) return
         conversionPresentation++
         conversionData = null
+        conversionPageCache = null
         conversionNavigate = null
         onConversionPageChanged?.invoke(emptyList())
         conversionExpanded = false
@@ -286,7 +292,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     private fun showConversionCandidates(all: List<MozcSession.Candidate>, focusedIndex: Int) {
         conversionData = all to focusedIndex
-        val native = all.filterNot { it.directCommit }
+        val native = all
         val focusedId = all.getOrNull(focusedIndex)?.id
         val focus = native.indexOfFirst { it.id == focusedId }.coerceAtLeast(0)
         val settings = me.zssu.ime.settings.ImeSettings(context)
@@ -295,11 +301,19 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         val rowHeight = maxOf(dp(48), (paint.fontMetrics.bottom - paint.fontMetrics.top).toInt() + dp(20))
         val viewportWidth = (width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels) - paddingLeft - paddingRight
         val availableWidth = (viewportWidth - dp(48)).coerceAtLeast(1)
-        val widths = native.map { maxOf(dp(48), kotlin.math.ceil(paint.measureText(it.text)).toInt() + dp(28)).coerceAtMost(availableWidth) }
-        val pages = me.zssu.ime.ime.CandidatePaging.pages(widths, availableWidth, settings.candidateRows)
+        val texts = native.map { if (it.directCommit) "全文  ${it.text}" else it.text }
+        val cached = conversionPageCache?.takeIf {
+            it.texts == texts && it.width == availableWidth && it.rows == settings.candidateRows && it.textSize == paint.textSize
+        } ?: run {
+            val widths = texts.map { maxOf(dp(48), kotlin.math.ceil(paint.measureText(it)).toInt() + dp(28)).coerceAtMost(availableWidth) }
+            ConversionPageCache(texts, availableWidth, settings.candidateRows, paint.textSize, widths,
+                me.zssu.ime.ime.CandidatePaging.pages(widths, availableWidth, settings.candidateRows)).also { conversionPageCache = it }
+        }
+        val widths = cached.widths
+        val pages = cached.pages
         val pageIndex = pages.indexOfFirst { focus in it.indices }.coerceAtLeast(0)
         val page = pages[pageIndex]
-        onConversionPageChanged?.invoke(if (conversionExpanded || width <= 0) emptyList() else page.indices.map { native[it].id })
+        onConversionPageChanged?.invoke(all.filterNot { it.directCommit }.map { it.id })
         conversionNavigate = if (conversionExpanded) null else { delta ->
             val next = pages.getOrNull(pageIndex + delta)?.indices?.firstOrNull()
             if (next == null) false else { onCandidateFocusRequested?.invoke(native[next]); true }
@@ -322,7 +336,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             contentDescription = if (conversionExpanded) "候補一覧を閉じる" else "候補一覧を開く"
             setOnClickListener { conversionExpanded = !conversionExpanded; setCandidates(all, focusedIndex, converting = true) }
         }
-        fun chip(candidate: MozcSession.Candidate, full: Boolean): TextView = newChip().apply {
+        fun bindConversionChip(view: TextView, candidate: MozcSession.Candidate, full: Boolean): TextView = view.apply {
             tag = candidate
             text = if (candidate.directCommit) "全文  ${candidate.text}" else candidate.text
             textSize = textSp
@@ -331,7 +345,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             else { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
             contentDescription = candidate.text + (if (candidate.directCommit) " 全文を確定" else "") + if (candidate.id == focusedId) " 選択中" else ""
             isSelected = candidate.id == focusedId
-            if (isSelected) setBackgroundColor(theme.keyPressedColor)
+            if (isSelected) setBackgroundColor(theme.keyPressedColor) else background = null
         }
         if (conversionExpanded) {
             val header = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -346,25 +360,25 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             }, LinearLayout.LayoutParams(0, rowHeight, 1f))
             header.addView(toggle(), LinearLayout.LayoutParams(dp(48), rowHeight))
             panel.addView(header)
-            val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            var selected: View? = null
-            all.forEach { candidate ->
-                val item = chip(candidate, full = true).apply { minimumHeight = rowHeight }
-                if (candidate.id == focusedId) selected = item
-                list.addView(item, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            val list = android.widget.ListView(context).apply {
+                divider = null
+                adapter = object : android.widget.BaseAdapter() {
+                    override fun getCount() = all.size
+                    override fun getItem(position: Int) = all[position]
+                    override fun getItemId(position: Int) = position.toLong()
+                    override fun getView(position: Int, recycled: View?, parent: android.view.ViewGroup): View =
+                        bindConversionChip((recycled as? TextView) ?: newChip(), all[position], full = true).apply { minimumHeight = rowHeight }
+                }
+                if (focusedIndex in all.indices) post { if (presentation == conversionPresentation) setSelection(focusedIndex) }
             }
-            val scroll = android.widget.ScrollView(context).apply { addView(list) }
-            panel.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-            selected?.let { chosen -> chosen.post {
-                if (presentation == conversionPresentation) chosen.requestRectangleOnScreen(android.graphics.Rect(0, 0, chosen.width, chosen.height))
-            } }
+            panel.addView(list, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         } else {
             val body = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
             val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             repeat(settings.candidateRows) { rowIndex ->
                 val row = LinearLayout(context)
                 page.rows.getOrNull(rowIndex).orEmpty().forEach { index ->
-                    row.addView(chip(native[index], full = false), LinearLayout.LayoutParams(widths[index], rowHeight))
+                    row.addView(bindConversionChip(newChip(), native[index], full = false), LinearLayout.LayoutParams(widths[index], rowHeight))
                 }
                 rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, rowHeight))
             }

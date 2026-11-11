@@ -1,8 +1,7 @@
 package me.zssu.ime.ime
 
-/** Pack measured candidate widths into the user's row count, then navigate only that page. */
+/** Pack measured candidate widths into pages while retaining every candidate. */
 internal object CandidatePaging {
-    const val MAX_CANDIDATES = 120
     data class Page(val rows: List<List<Int>>) {
         val indices: List<Int> get() = rows.flatten()
     }
@@ -28,11 +27,14 @@ internal object CandidatePaging {
         if (rows.isNotEmpty()) result.add(Page(rows.toList()))
         return result
     }
-    fun nextVisible(available: List<Int>, visible: List<Int>, focusedId: Int?): Int? {
-        val page = visible.distinct().filter { it in available }
-        if (page.isEmpty()) return null
-        val position = page.indexOf(focusedId)
-        return page[(position + 1) % page.size]
+    fun nextCandidate(available: List<Int>, ordered: List<Int>, focusedId: Int?): Int? {
+        val valid = available.toHashSet()
+        val order = ordered.distinct().filter { it in valid }.toMutableList()
+        val included = order.toHashSet()
+        available.forEach { if (included.add(it)) order.add(it) }
+        if (order.isEmpty()) return null
+        val position = order.indexOf(focusedId)
+        return order[(position + 1) % order.size]
     }
     fun focusedId(window: List<Pair<Int, Int>>, globalIndex: Int): Int? = window.firstOrNull { it.first == globalIndex }?.second
 }

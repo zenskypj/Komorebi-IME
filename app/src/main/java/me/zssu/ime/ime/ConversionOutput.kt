@@ -5,6 +5,11 @@ import org.mozc.android.inputmethod.japanese.protobuf.ProtoCandidateWindow.Categ
 
 /** Mozc hides CandidateWindow after Convert/Resize, while AllCandidateWords stays in conversion. */
 internal object ConversionOutput {
+    fun candidateMetadata(output: Output, converting: Boolean): List<org.mozc.android.inputmethod.japanese.protobuf.ProtoCandidateWindow.CandidateWord> {
+        if (!output.hasAllCandidateWords()) return emptyList()
+        val candidates = output.allCandidateWords.candidatesList
+        return if (converting) candidates else candidates.take(CandidateRanking.MAX_LIVE_POOL_SIZE)
+    }
     fun isConverting(output: Output): Boolean =
         (output.hasCandidateWindow() && output.candidateWindow.category == Category.CONVERSION && output.candidateWindow.hasFocusedIndex()) ||
             (output.hasAllCandidateWords() && output.allCandidateWords.hasCategory() &&

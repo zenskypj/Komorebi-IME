@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.59-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.60-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -98,6 +98,8 @@ AI 変換（zenzai-plus / Karukan）に押しのけられないようにし、NF
 `rc.58-dev` は GitHub の更新自動確認と通知に対応し、音声入力が起動直後に閉じる原因となり得る別 APK 間の受け渡しを修正しました。自動確認は設定で停止できます。実機での音声入力は未確認です。
 
 `rc.59-dev` は音声入力をキーボード内で操作できるようにし、初回のモデル取得・マイク許可画面を整理しました。音声モジュールは新しい APK への更新が必要です。実機での動作は未確認です。
+
+`rc.60-dev` は変換候補の120件上限を撤廃し、変換キーでページを越えて候補を選べるようにしました。音声のマイク権限は実際に録音するモジュールが持ちます。実機での音声・変換操作は未確認です。
 
 ## 特長
 

@@ -402,11 +402,7 @@ class ZinnaImeService : InputMethodService() {
             }
             onCandidateFocusRequested = { candidate -> enqueueInput {
                 confirmCommitsWholeSentence = false
-                if (isConverting && !candidate.directCommit && lastCandidates.any { it.id == candidate.id && it.text == candidate.text }) {
-                    conversionInteraction.chooseCandidates()
-                    cancelKarukanConversion(clearReading = true, revertMozc = false)
-                    render(session.highlightCandidate(candidate.id), requestNeural = false)
-                }
+                if (isConverting) focusConversionCandidate(candidate)
              } }
             onToolAction = ::handleToolAction
             onSnippetSelected = { text -> enqueueInput { if (!fieldPolicy.incognito) { handleSymbol(text); showTools() }  } }
@@ -1479,6 +1475,10 @@ class ZinnaImeService : InputMethodService() {
             // command here would advance to the next candidate before the user chose anything.
             return
         }
+        if (wasConverting && lastCandidates.isNotEmpty()) {
+            ConversionNavigation.nextCandidate(lastCandidates, lastFocusedCandidateIndex)?.let { focusConversionCandidate(it) }
+            return
+        }
         if (karukanConversionActive) {
             // The user is navigating Mozc's candidates; discard an outstanding neural result.
             cancelKarukanConversion(clearReading = true, revertMozc = false)
@@ -1499,6 +1499,25 @@ class ZinnaImeService : InputMethodService() {
             currentInputConnection?.commitText(if (fullWidth) FULL_WIDTH_SPACE else " ", 1)
         }
         if (state != null) render(state)
+    }
+
+    /** Move through the displayed order; native and whole-sentence candidates keep their own commit paths. */
+    private suspend fun focusConversionCandidate(candidate: MozcSession.Candidate) {
+        val index = lastCandidates.indexOfFirst { it.id == candidate.id && it.text == candidate.text }
+        if (!isConverting || index < 0) return
+        confirmCommitsWholeSentence = false
+        conversionInteraction.chooseCandidates()
+        cancelKarukanConversion(clearReading = true, revertMozc = false)
+        if (candidate.directCommit) {
+            lastFocusedCandidateIndex = index
+            candidateView?.setCandidates(lastCandidates, index, converting = true)
+            return
+        }
+        val previous = lastCandidates
+        val state = session.highlightCandidate(candidate.id) ?: return
+        val candidates = ConversionNavigation.preserveDirectCandidates(state.candidates, previous)
+        val focused = candidates.indexOfFirst { it.id == candidate.id && it.text == candidate.text }
+        render(state.copy(candidates = candidates, focusedCandidateIndex = focused), requestNeural = false)
     }
 
     private suspend fun handleBackspace() {
@@ -1643,6 +1662,10 @@ class ZinnaImeService : InputMethodService() {
         if (commitsWholeSentence) {
             submitCurrentComposition()
             return
+        }
+        if (isConverting) {
+            val focused = lastCandidates.getOrNull(lastFocusedCandidateIndex)
+            if (focused?.directCommit == true) { commitCandidate(focused); return }
         }
         val partial = ConversionNavigation.partialCandidate(
             isConverting, currentSegmentCount, lastCandidates, lastFocusedCandidateIndex,

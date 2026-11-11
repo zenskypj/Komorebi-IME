@@ -38,7 +38,7 @@ internal object ConvertKeySequence {
         if (!stopped?.committedText.isNullOrEmpty()) return stopped
         if (wasConverting) {
             if (stopped?.isConverting != true) return stopped
-            val next = CandidatePaging.nextVisible(stopped.candidates.map { it.id }, visibleCandidateIds,
+            val next = CandidatePaging.nextCandidate(stopped.candidates.filterNot { it.directCommit }.map { it.id }, visibleCandidateIds,
                 stopped.candidates.getOrNull(stopped.focusedCandidateIndex)?.id) ?: return stopped
             return highlight(next) ?: stopped
         }

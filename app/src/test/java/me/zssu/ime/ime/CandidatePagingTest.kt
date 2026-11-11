@@ -24,16 +24,15 @@ class CandidatePagingTest {
             }
         }
     }
-    @Test fun repeatedConversionStaysInsideTheActualVisibleIds() {
+    @Test fun repeatedConversionCrossesPagesAndWrapsOnlyAtTheEnd() {
         val available = (1..30).toList()
         var focus: Int? = 9
-        repeat(40) {
-            focus = CandidatePaging.nextVisible(available, listOf(9, 10, 11), focus)
-            assertTrue(focus in 9..11)
-        }
-        assertEquals(9, CandidatePaging.nextVisible(available, listOf(9, 10, 11), 30))
-        assertNull(CandidatePaging.nextVisible(available, emptyList(), 9))
-        assertEquals(10, CandidatePaging.nextVisible(available, listOf(999, 10), 999))
+        repeat(21) { focus = CandidatePaging.nextCandidate(available, available, focus) }
+        assertEquals(30, focus)
+        assertEquals(1, CandidatePaging.nextCandidate(available, available, focus))
+        assertEquals(10, CandidatePaging.nextCandidate(available, emptyList(), 9))
+        assertEquals(10, CandidatePaging.nextCandidate(available, listOf(999, 10), 999))
+        assertNull(CandidatePaging.nextCandidate(emptyList(), emptyList(), null))
     }
     @Test fun nativeGlobalIndexIsNotUsedAsAnIndexIntoTheVisiblePage() {
         val page = listOf(9 to 150, 10 to 200, 11 to 240)

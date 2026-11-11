@@ -90,15 +90,15 @@ class ConvertKeySequenceTest {
         assertEquals("abc", result?.committedText)
     }
 
-    @Test fun noVisibleOrStaleCandidatesCannotAdvanceIntoHiddenCandidates() {
+    @Test fun noVisibleOrStalePageStillAdvancesThroughAvailableCandidates() {
         for (visible in listOf(emptyList(), listOf(999))) {
             val result = ConvertKeySequence.convert(true, true,
                 stop = { converting(0) },
-                send = { error("must not advance native pages") },
-                highlight = { error("no visible candidate is available") },
+                send = { error("must not restart conversion") },
+                highlight = { assertEquals(81, it); converting(1) },
                 visibleCandidateIds = visible,
             )
-            assertEquals(0, result?.focusedCandidateIndex)
+            assertEquals(1, result?.focusedCandidateIndex)
         }
     }
 }

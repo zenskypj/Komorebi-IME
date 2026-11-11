@@ -89,7 +89,7 @@ private fun InputGuideScreen(initialPage: Int, onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         GuideCard("候補を選ぶ") {
-                            Text("1回目の後に文節や候補を操作せず「変換」をもう1回押すと、候補を選ぶ段階になります。このとき候補はまだ次に進みません。3回目から次の候補に進みます。")
+                            Text("1回目の後に文節や候補を操作せず「変換」をもう1回押すと、候補を選ぶ段階になります。このとき候補はまだ次に進みません。3回目から次の候補に進み、ページの先も続けて選べます。")
                             Text("候補をタップして選べます。長押しすると、意味や登録などの操作を開けます。")
                             Text("前のまとまりを確定すると、続きの候補が自動で表示されます。", style = MaterialTheme.typography.bodySmall)
                         }

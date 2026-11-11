@@ -9,6 +9,14 @@ import org.mozc.android.inputmethod.japanese.protobuf.ProtoCandidateWindow.Candi
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCandidateWindow.Category
 
 class ConversionOutputTest {
+    @Test fun conversionKeepsAllNativeCandidatesBeyondTheOldLimit() {
+        val words = CandidateList.newBuilder().setCategory(Category.CONVERSION).setFocusedIndex(0)
+        repeat(240) { words.addCandidates(CandidateWord.newBuilder().setId(it).setValue("候補$it")) }
+        val output = Output.newBuilder().setAllCandidateWords(words).build()
+        val candidates = ConversionOutput.candidateMetadata(output, converting = true)
+        assertEquals(240, candidates.size)
+        assertEquals(239, candidates.last().id)
+    }
     private fun hiddenWindow(category: Category = Category.CONVERSION): Output = Output.newBuilder()
         .setConsumed(true)
         .setPreedit(Preedit.newBuilder().setCursor(3)
