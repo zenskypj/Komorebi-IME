@@ -9,6 +9,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".VoiceRecognitionService" android:exported="true" android:permission="${applicationId}.ACCESS" />
         <activity android:name=".VoiceActivity" android:exported="true"
             android:permission="${applicationId}.ACCESS" android:excludeFromRecents="true" />
     </application>

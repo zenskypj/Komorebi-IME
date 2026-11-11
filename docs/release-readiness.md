@@ -282,3 +282,9 @@ GitHub Releases の直近100件をおおむね24時間ごとに確認する JobS
 API 24 / 29 / 34 / 35 / 36 の端末・エミュレータが利用できず、JobScheduler の周期・省電力制限・再起動後の動作、通知許可、音声入力の画面遷移と認識は実機未検証。前版で報告された Play プロテクトの警告は Google の再判定を受けておらず、解消を断定しない。配布する本体と音声モジュールは debug 署名のテスト APK。
 
 自動テスト307件（app 305、karukan 2）成功、app と voice の debug／release lint 成功。通常 APK・AAB と別呼び出しの ABI 別 APK を生成。全10 ABI 別 APK の ID・versionCode 82・versionName、release APK の 16 KB zipalign、Mozc・arm64 Karukan／C++・辞書・法務文書、R8 後 DEX の JNI 名、本体と音声モジュールの debug 署名一致を確認。公開・アプリ内プライバシー文書も一致。
+
+## rc.59-dev の作成条件
+
+音声認識の状態・途中結果・確定操作をキーボード内に表示し、同一署名限定の音声モジュールにバインドする。初回のモデル取得・マイク許可画面を整理し、キーボード非表示・入力先変更時は接続と録音を停止する。自動テスト307件（app 305、karukan 2）成功、app と voice の debug／release lint 成功。通常 APK・AAB と別呼び出しの ABI 別 APK を生成。全10 ABI 別 APK の ID・versionCode 83・versionName、release APK の16 KB zipalign、Mozc・arm64 Karukan／C++・辞書・法務文書、R8 後 DEX の JNI 名、本体と音声モジュールの debug 署名一致を確認。公開・アプリ内プライバシー文書も一致。
+
+Android のマイク利用制限を含む実機・エミュレータでの音声認識、画面の表示・操作、停止動作、既存モデルの引き継ぎは未確認。Play プロテクトの前版の警告も Google による再判定は未確認。配布は debug 署名のテスト APK で、未署名 release 成果物は公開しない。

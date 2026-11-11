@@ -61,6 +61,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onManageSnippets: (() -> Unit)? = null
     var onClipboardItemSelected: ((String) -> Unit)? = null
     var onClipboardHistoryCleared: (() -> Unit)? = null
+    private var voicePanelShowing = false
 
     var theme: KeyboardTheme = KeyboardTheme.Default
         set(value) {
@@ -226,6 +227,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
      * invalidate unconditionally, so assigning the same value still costs a layout pass.
      */
     fun setCandidates(candidates: List<MozcSession.Candidate>, focusedIndex: Int, converting: Boolean = false) {
+        if (voicePanelShowing) return
         paletteHeight(false)
         if (converting && candidates.any { !it.directCommit }) {
             showConversionCandidates(candidates, focusedIndex)
@@ -496,6 +498,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.VOICE -> R.drawable.ic_voice
     }
     fun showTools() {
+        if (voicePanelShowing) return
         paletteHeight(false)
         resetConversionPresentation()
         // The menu button itself lives in the fixed bar beside this strip (see the host), so it
@@ -524,6 +527,43 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     private fun rounded(color: Int, radius: Int = 16) = android.graphics.drawable.GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
     }
+
+    /** Keeps dictation controls in the keyboard without transferring editor focus. */
+    fun showVoicePanel(status: String, result: String, state: Int, onStop: () -> Unit,
+                       onApply: () -> Unit, onRetry: () -> Unit, onClose: () -> Unit) {
+        if (!voicePanelShowing) paletteHeight(true)
+        voicePanelShowing = true
+        layoutParams = layoutParams.apply { height = dp(180) }
+        setContainerFillWidth(false)
+        setContainerFillWidth(true)
+        container.removeAllViews()
+        scrollTo(0, 0)
+        val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(6), dp(12), dp(6)) }
+        val heading = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+        heading.addView(TextView(context).apply { text = "●  音声入力"; textSize = 16f; setTypeface(null, android.graphics.Typeface.BOLD); setTextColor(theme.candidateTextColor) }, LinearLayout.LayoutParams(0, dp(32), 1f))
+        heading.addView(TextView(context).apply { text = "閉じる"; textSize = 15f; gravity = Gravity.CENTER; setTextColor(theme.candidateTextColor); setOnClickListener { onClose() } }, LinearLayout.LayoutParams(dp(60), dp(40)))
+        panel.addView(heading)
+        panel.addView(TextView(context).apply { text = status; textSize = 14f; setTextColor(theme.candidateTextColor) })
+        val transcript = TextView(context).apply {
+            text = result.ifEmpty { "ここに聞き取った言葉を表示します" }; textSize = 19f
+            setTextColor(theme.candidateTextColor)
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        panel.addView(android.widget.ScrollView(context).apply { addView(transcript); isFillViewport = true },
+            LinearLayout.LayoutParams(-1, 0, 1f))
+        val controls = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+        fun button(label: String, action: () -> Unit) = TextView(context).apply {
+            text = label; textSize = 16f; gravity = Gravity.CENTER; setTextColor(theme.candidateTextColor)
+            background = rounded(theme.keyPressedColor, 12); setOnClickListener { action() }
+        }
+        if (state == 0) controls.addView(button("話し終える", onStop), LinearLayout.LayoutParams(0, dp(44), 1f))
+        if (state == 1 || state == 2) controls.addView(button(if (state == 2) "準備する" else "もう一度", onRetry), LinearLayout.LayoutParams(0, dp(44), 1f))
+        if (state == 1 && result.isNotBlank()) controls.addView(button("入力する", onApply), LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(8) })
+        panel.addView(controls)
+        container.addView(panel, LinearLayout.LayoutParams(-1, -1))
+    }
+
+    fun dismissVoicePanel() { voicePanelShowing = false; showTools() }
     private fun showToolMenu(editing: Boolean = false) {
         paletteHeight(true)
         layoutParams = layoutParams.apply { height = dp(180) }

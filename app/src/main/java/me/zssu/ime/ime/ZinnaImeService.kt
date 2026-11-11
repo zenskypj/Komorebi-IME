@@ -468,6 +468,7 @@ class ZinnaImeService : InputMethodService() {
             setPadding(padding, padding, padding, padding)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setOnClickListener {
+                if (voicePanelActive) closeVoicePanel()
                 if (this@ZinnaImeService.theme.hapticFeedback) {
                     it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 }
@@ -762,8 +763,6 @@ class ZinnaImeService : InputMethodService() {
 
     private var voicePending: VoicePending? = null
     private var voiceSequence = 0L
-    private var voiceApplyAttempts = 0
-    private val voiceApplyRetry = Runnable { tryApplyVoiceResult() }
 
     private fun voiceAnchor(): VoiceEditorAnchor? {
         val info = currentInputEditorInfo ?: return null
@@ -779,89 +778,118 @@ class ZinnaImeService : InputMethodService() {
             info.inputType, text.selectionStart, text.selectionEnd, text.startOffset, body)
     }
 
-    private suspend fun startVoiceInput() {
-        if (fieldPolicy.incognito || currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) {
-            Toast.makeText(this, "この入力欄では音声入力を利用できません", Toast.LENGTH_LONG).show()
-            return
-        }
-        val module = if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0)
-            "me.zssu.ime.voice.debug" else "me.zssu.ime.voice"
-        if (packageManager.checkSignatures(packageName, module) != android.content.pm.PackageManager.SIGNATURE_MATCH) {
-            Toast.makeText(this, "対応する音声入力モジュールをインストールしてください", Toast.LENGTH_LONG).show()
-            return
-        }
-        // Resolve the unfinished conversion before recording. Never silently replace composing text.
-        if (isComposing) submitCurrentComposition()
-        if (isComposing) {
-            Toast.makeText(this, "入力中の文字を確定してからお試しください", Toast.LENGTH_LONG).show()
-            return
-        }
-        val anchor = voiceAnchor()
-        if (anchor == null) {
-            Toast.makeText(this, "この入力欄では音声入力を安全に開始できません", Toast.LENGTH_LONG).show()
-            return
-        }
-        // The first use may include a model download before recording starts.
-        val pending = VoicePending(++voiceSequence, anchor, android.os.SystemClock.elapsedRealtime() + 30 * 60_000L)
-        voicePending = pending
-        val receiver = object : android.os.ResultReceiver(android.os.Handler(android.os.Looper.getMainLooper())) {
-            override fun onReceiveResult(resultCode: Int, resultData: android.os.Bundle?) {
-                val active = voicePending ?: return
-                if (active.id != pending.id) return
-                val text = resultData?.getString("text")?.take(4000)
-                if (resultCode != android.app.Activity.RESULT_OK || text.isNullOrBlank()) {
-                    voicePending = null
-                    return
+    private var voiceService: android.os.Messenger? = null
+    private var voiceConnection: android.content.ServiceConnection? = null
+    private var voicePanelActive = false
+    private var voicePanelText = ""
+    private var voicePanelStatus = "音声入力を準備しています…"
+    private var voicePanelState = 3 // 0 listening, 1 result/error, 2 setup, 3 preparing
+
+    private fun renderVoicePanel() {
+        if (!voicePanelActive) return
+        candidateView?.showVoicePanel(voicePanelStatus, voicePanelText, voicePanelState,
+            onStop = { sendVoiceCommand(2) },
+            onApply = {
+                val pending = voicePending
+                val text = voicePanelText
+                closeVoicePanel()
+                if (pending != null && text.isNotBlank()) enqueueInput {
+                    if (android.os.SystemClock.elapsedRealtime() <= pending.expiresAt &&
+                        pending.anchor.matches(voiceAnchor()) && !fieldPolicy.incognito &&
+                        currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) == 0) {
+                        currentInputConnection?.commitText(text, 1)
+                    } else Toast.makeText(this, "入力欄が変わったため音声の結果を破棄しました", Toast.LENGTH_LONG).show()
                 }
-                active.text = text
-                voiceApplyAttempts = 0
-                tryApplyVoiceResult()
-            }
-        }
-        // A subclass Parcelable is encoded using its concrete class name. The companion APK
-        // cannot load this IME's anonymous class, so pass a framework ResultReceiver proxy.
-        val parcel = android.os.Parcel.obtain()
-        val remoteReceiver = try {
-            receiver.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-            android.os.ResultReceiver.CREATOR.createFromParcel(parcel)
-        } finally { parcel.recycle() }
-        try {
-            startActivity(Intent().setClassName(module, "me.zssu.ime.voice.VoiceActivity")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra("receiver", remoteReceiver))
-        } catch (e: Exception) {
-            voicePending = null
-            Toast.makeText(this, "音声入力を開けませんでした", Toast.LENGTH_LONG).show()
-        }
+            },
+            onRetry = {
+                if (voicePanelState == 2) {
+                    val module = voiceModulePackage()
+                    closeVoicePanel()
+                    runCatching { startActivity(Intent().setClassName(module, "me.zssu.ime.voice.ModuleInfoActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        .onFailure { Toast.makeText(this, "音声入力の準備画面を開けませんでした", Toast.LENGTH_LONG).show() }
+                } else if (voiceService == null) {
+                    closeVoicePanel()
+                    enqueueInput { startVoiceInput() }
+                } else {
+                    voicePanelText = ""; voicePanelStatus = "音声モデルを準備しています…"; voicePanelState = 3
+                    renderVoicePanel(); sendVoiceCommand(1)
+                }
+            },
+            onClose = { closeVoicePanel() })
     }
 
-    private fun tryApplyVoiceResult() {
-        val pending = voicePending ?: return
-        val text = pending.text ?: return
-        if (android.os.SystemClock.elapsedRealtime() > pending.expiresAt) {
-            voicePending = null
-            return
+    private fun voiceModulePackage() = if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0)
+        "me.zssu.ime.voice.debug" else "me.zssu.ime.voice"
+
+    private var voiceReplies: android.os.Messenger? = null
+    private fun voiceReplyHandler(sessionId: Long) = android.os.Messenger(android.os.Handler(android.os.Looper.getMainLooper()) { message ->
+        if (!voicePanelActive || voicePending?.id != sessionId) return@Handler true
+        val text = message.data?.getString("text").orEmpty()
+        when (message.what) {
+            10 -> { voicePanelState = 2; voicePanelStatus = text }
+            11 -> { voicePanelState = if (text == "話してください") 0 else 3; voicePanelStatus = text }
+            12 -> { voicePanelText = text; voicePanelState = 0 }
+            13 -> { voicePanelText = text; voicePanelState = 1; voicePanelStatus = if (text.isBlank()) "聞き取れませんでした" else "内容を確認してください" }
+            14 -> { voicePanelState = 1; voicePanelStatus = text }
         }
-        // While the module Activity has focus, wait until the original input view returns.
-        if (!isInputViewShown) {
-            if (voiceApplyAttempts++ < 30) {
-                mainHandler.removeCallbacks(voiceApplyRetry)
-                mainHandler.postDelayed(voiceApplyRetry, 200)
-            }
-            return
+        renderVoicePanel(); true
+    })
+
+    private fun sendVoiceCommand(command: Int) {
+        val service = voiceService
+        if (service == null) {
+            voicePanelState = 1; voicePanelStatus = "音声モジュールに接続できませんでした"; renderVoicePanel(); return
         }
-        if (!pending.anchor.matches(voiceAnchor()) || fieldPolicy.incognito) {
-            voicePending = null
-            Toast.makeText(this, "入力欄が変わったため、音声の結果は入力しませんでした", Toast.LENGTH_LONG).show()
-            return
-        }
+        runCatching { service.send(android.os.Message.obtain(null, command).apply { replyTo = voiceReplies }) }
+            .onFailure { voicePanelState = 1; voicePanelStatus = "音声モジュールとの接続が切れました"; renderVoicePanel() }
+    }
+
+    private fun closeVoicePanel() {
+        voicePanelActive = false
+        runCatching { voiceService?.send(android.os.Message.obtain(null, 3)) }
+        voiceService = null
+        voiceReplies = null
+        voiceConnection?.let { runCatching { unbindService(it) } }
+        voiceConnection = null
         voicePending = null
-        enqueueInput {
-            if (pending.anchor.matches(voiceAnchor()) && !fieldPolicy.incognito &&
-                currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) == 0) {
-                currentInputConnection?.commitText(text, 1)
+        candidateView?.dismissVoicePanel()
+    }
+
+    private suspend fun startVoiceInput() {
+        if (fieldPolicy.incognito || currentInputEditorInfo?.imeOptions?.and(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) {
+            Toast.makeText(this, "この入力欄では音声入力を利用できません", Toast.LENGTH_LONG).show(); return
+        }
+        val module = voiceModulePackage()
+        if (packageManager.checkSignatures(packageName, module) != android.content.pm.PackageManager.SIGNATURE_MATCH) {
+            Toast.makeText(this, "対応する音声入力モジュールをインストールしてください", Toast.LENGTH_LONG).show(); return
+        }
+        if (isComposing) submitCurrentComposition()
+        val anchor = voiceAnchor()
+        if (isComposing || anchor == null) {
+            Toast.makeText(this, "入力中の文字を確定してからお試しください", Toast.LENGTH_LONG).show(); return
+        }
+        if (voicePanelActive) closeVoicePanel()
+        voicePending = VoicePending(++voiceSequence, anchor, android.os.SystemClock.elapsedRealtime() + 30 * 60_000L)
+        voiceReplies = voiceReplyHandler(voiceSequence)
+        val sessionId = voiceSequence
+        voicePanelActive = true; voicePanelText = ""; voicePanelStatus = "音声入力を準備しています…"; voicePanelState = 3
+        renderVoicePanel()
+        val connection = object : android.content.ServiceConnection {
+            override fun onServiceConnected(name: android.content.ComponentName?, binder: android.os.IBinder?) {
+                if (!voicePanelActive || voicePending?.id != sessionId || voiceConnection !== this || binder == null) return
+                voiceService = android.os.Messenger(binder); sendVoiceCommand(1)
             }
+            override fun onServiceDisconnected(name: android.content.ComponentName?) {
+                if (voicePending?.id != sessionId || voiceConnection !== this) return
+                voiceService = null
+                if (voicePanelActive) { voicePanelState = 1; voicePanelStatus = "音声モジュールとの接続が切れました"; renderVoicePanel() }
+            }
+        }
+        voiceConnection = connection
+        val bound = runCatching { bindService(Intent().setClassName(module, "me.zssu.ime.voice.VoiceRecognitionService"), connection, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
+        if (!bound) {
+            voiceConnection = null; voicePanelState = 1
+            voicePanelStatus = "音声モジュールを最新版に更新してください"; renderVoicePanel()
         }
     }
 
@@ -1051,7 +1079,6 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        android.os.Handler(android.os.Looper.getMainLooper()).post { tryApplyVoiceResult() }
         enqueueInput { session.setInputActive(true) }
         tryApplyProofreadResult()
         editAnchor = null
@@ -1149,6 +1176,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        if (voicePanelActive) closeVoicePanel()
         if (dressUpActive) {
             dressUpActive = false
             me.zssu.ime.settings.DressUpLivePreview.listener = null
@@ -1161,6 +1189,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        if (voicePanelActive) closeVoicePanel()
         super.onFinishInput()
         inputQueue.invalidate()
         keyboardView?.cancelGestures()
@@ -1308,8 +1337,8 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        if (voicePanelActive) closeVoicePanel()
         voicePending = null
-        mainHandler.removeCallbacks(voiceApplyRetry)
         if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {
             me.zssu.ime.settings.DressUpLivePreview.listener = null
         }
@@ -1336,6 +1365,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun onKeyOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {
+        if (voicePanelActive) closeVoicePanel()
         val started = System.nanoTime()
         val pressedStyle = layout?.inputStyle
         val pressedIncognito = fieldPolicy.incognito
