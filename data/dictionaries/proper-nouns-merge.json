@@ -8,7 +8,22 @@
   "overlap": 106,
   "addedUnique": 4362,
   "refinedPos": 94,
-  "outputRows": 4879,
+  "vtuberSourceSha256": "9b082246b6d3ea8ef5516d127c3e8b3bd021957cab1f857a5efbcca1e0fd751c",
+  "vtuberRows": 444,
+  "vtuberUnique": 444,
+  "vtuberAdded": 444,
+  "vtuberGroups": {
+    "にじさんじ": 172,
+    "NIJISANJI EN": 28,
+    "VirtuaReal": 39,
+    "ホロライブ": 81,
+    "ぶいすぽっ！": 32,
+    "ミリプロ": 12,
+    "あおぎり高校": 15,
+    "ホロスターズ": 25,
+    "その他": 40
+  },
+  "outputRows": 5323,
   "sourcePos": {
     "名詞,固有名詞,地名": 809,
     "名詞,固有名詞,人名": 1408,
@@ -19,10 +34,10 @@
     "固有名詞": 1911,
     "組織": 751,
     "地名": 809,
-    "人名": 1408
+    "人名": 1852
   },
   "sourceCostMin": 2000,
   "sourceCostMax": 7000,
   "costApplied": false,
-  "outputSha256": "28d100751cbdadbc55a6aa36fef60e0091c01b64b94d46768e4c6632ad726289"
+  "outputSha256": "87f29d7991b982faab5db78b5fe8359061bf8c7ff3b22c364de09485ceab97a1"
 }

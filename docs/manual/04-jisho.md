@@ -33,9 +33,13 @@ Komorebi IME の辞書は、目的の違う 4 種類があります。混同し�
 
 | 辞書 | 内容 | 出典・ライセンス |
 | --- | --- | --- |
-| 有名固有名詞 | 人名・地名・組織・企業・サービス名など **4,879語**（rc.38） | 同梱NOTICEと[原本・統合記録](https://github.com/zenskypj/Komorebi-IME/tree/main/data/dictionaries) |
+| 有名固有名詞 | 人名・地名・組織・企業・サービス名など **5,323語**（rc.61） | 同梱NOTICEと[原本・統合記録](https://github.com/zenskypj/Komorebi-IME/tree/main/data/dictionaries) |
 | AI・テクノロジー | AI企業・技術用語・スタートアップ名 | 同梱NOTICE |
 | カタカナ→英語 | [google-ime-user-dictionary-ja-en](https://github.com/KEINOS/google-ime-user-dictionary-ja-en)由来。**読みが完全一致したときだけ**補助候補に表示。誤入力補正には使わない | CC BY-SA 3.0 |
+
+### rc.61で追加したVTuber名
+
+ホロライブ、ホロスターズ、にじさんじ系列、ぶいすぽっ！、ミリプロ、あおぎり高校と、個人勢などの名前・読みを444組追加しました。公式一覧や個別発表を確認した時点の情報で、卒業生等も一部含みます。活動状況や今後追加される人を網羅するものではありません。出典と読みは[収録リスト](https://github.com/zenskypj/Komorebi-IME/blob/main/data/dictionaries/vtuber-names.tsv)を参照してください。
 
 ### rc.38で追加した固有名詞
 

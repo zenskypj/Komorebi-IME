@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.61-dev", "rc.61-dev", "VTuberの名前を同梱辞書に追加", "docs/releases/v0.3.0-rc.61-dev.md", "release rc61 VTuber 辞書"],
         ["releases/v0.3.0-rc.60-dev", "rc.60-dev", "変換候補の全件表示とページを越えた選択", "docs/releases/v0.3.0-rc.60-dev.md", "release rc60 変換 候補"],
         ["releases/v0.3.0-rc.59-dev", "rc.59-dev", "音声入力をキーボード内に統合", "docs/releases/v0.3.0-rc.59-dev.md", "release rc59 音声"],
         ["releases/v0.3.0-rc.58-dev", "rc.58-dev", "更新の自動確認・音声入力の起動修正", "docs/releases/v0.3.0-rc.58-dev.md", "release rc58 音声 更新"],
@@ -408,6 +409,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-12", "v0.3.0-rc.61-dev", "VTuberの名前を同梱固有名詞辞書に追加"],
     ["2026-11-11", "v0.3.0-rc.60-dev", "変換候補の全件表示と連続選択"],
     ["2026-11-11", "v0.3.0-rc.59-dev", "音声入力をキーボード内に統合"],
     ["2026-11-11", "v0.3.0-rc.58-dev", "更新確認・音声入力の起動を修正"],

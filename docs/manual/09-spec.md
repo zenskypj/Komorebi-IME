@@ -73,6 +73,7 @@
 | 再生成 | `python3 scripts/merge_bundled_proper_nouns.py` |
 
 原本・生成件数・ハッシュは[統合記録](https://github.com/zenskypj/Komorebi-IME/tree/main/data/dictionaries)に保存しています。
+rc.61ではVTuber名444組を追加し、合計5,323語（人名1,852語）になりました。追加分の読み・表記・確認先は `vtuber-names.tsv`、内訳は `proper-nouns-merge.json` を参照してください。
 この辞書は任意取得のNEologd・SKKデータセットとは別です。
 rc.38は利用者指定により追加テスト・lint・実機確認を省略しており、語の候補順位は未確認です。
 
