@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.61-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.62-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -634,3 +634,5 @@ Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第�
 端末内のAI文章校正については、[文章校正](docs/proofreading.md)を参照してください。
 
 `rc.61-dev` は同梱固有名詞辞書に VTuber の名前と読み 444 組を追加しました。追加取得は不要です。候補順位・取り込みの実機確認は未実施です。
+
+`rc.62-dev` は音声入力の操作からモジュールのマイク権限を要求し、録音中のバックグラウンド制限に対応するためフォアグラウンドサービスを使います。本体と音声モジュールの両方を更新してください。実機確認は未実施です。

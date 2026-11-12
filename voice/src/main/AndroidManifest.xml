@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <permission android:name="${applicationId}.ACCESS" android:protectionLevel="signature" />
     <application android:label="Komorebi 音声入力" android:icon="@drawable/ic_voice_module" android:allowBackup="false" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
         <activity android:name=".ModuleInfoActivity" android:exported="true">
@@ -9,7 +11,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".VoiceRecognitionService" android:exported="true" android:permission="${applicationId}.ACCESS" />
+        <service android:name=".VoiceRecognitionService" android:exported="true" android:foregroundServiceType="microphone" android:permission="${applicationId}.ACCESS" />
+        <activity android:name=".VoicePrepareActivity" android:exported="true" android:permission="${applicationId}.ACCESS" android:excludeFromRecents="true" />
         <activity android:name=".VoiceActivity" android:exported="true"
             android:permission="${applicationId}.ACCESS" android:excludeFromRecents="true" />
     </application>

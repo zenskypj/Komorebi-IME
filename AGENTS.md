@@ -47,6 +47,7 @@
 - 正式署名鍵はリポジトリへ置かない。CIまたは管理された外部環境で署名する。
 - RCでdebug署名APKを配る場合は、テスト用でapplication IDが `.debug` になることを
   リリースノートに明記する。
+- 利用者の指定により、公開対象の新しい Release は RC 表記を含めて GitHub の Latest に明示指定し、公開後に `/releases/latest` を確認する。GitHub が prerelease の Latest 指定を受け付けない場合は、RC であることを題名・本文に明記した通常 Release として公開する。
 - 差分と生成物を再確認し、コミット、`v<versionName>`タグ、`main`とタグのpush、
   GitHub Release作成の順で行う。公開後にタグ、リリースURL、添付ファイルを再取得して確認する。
 

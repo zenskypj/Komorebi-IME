@@ -14,8 +14,8 @@ android {
         applicationId = "me.zssu.ime.voice"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.2.0"
+        versionCode = 4
+        versionName = "0.3.0"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64") }
     }
     buildTypes {

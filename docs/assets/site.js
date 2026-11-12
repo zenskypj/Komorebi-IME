@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.62-dev", "rc.62-dev", "マイク許可と音声入力の起動を改善", "docs/releases/v0.3.0-rc.62-dev.md", "release rc62 音声 マイク"],
         ["releases/v0.3.0-rc.61-dev", "rc.61-dev", "VTuberの名前を同梱辞書に追加", "docs/releases/v0.3.0-rc.61-dev.md", "release rc61 VTuber 辞書"],
         ["releases/v0.3.0-rc.60-dev", "rc.60-dev", "変換候補の全件表示とページを越えた選択", "docs/releases/v0.3.0-rc.60-dev.md", "release rc60 変換 候補"],
         ["releases/v0.3.0-rc.59-dev", "rc.59-dev", "音声入力をキーボード内に統合", "docs/releases/v0.3.0-rc.59-dev.md", "release rc59 音声"],
@@ -409,6 +410,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-12", "v0.3.0-rc.62-dev", "音声入力のマイク許可と録音開始を改善"],
     ["2026-11-12", "v0.3.0-rc.61-dev", "VTuberの名前を同梱固有名詞辞書に追加"],
     ["2026-11-11", "v0.3.0-rc.60-dev", "変換候補の全件表示と連続選択"],
     ["2026-11-11", "v0.3.0-rc.59-dev", "音声入力をキーボード内に統合"],

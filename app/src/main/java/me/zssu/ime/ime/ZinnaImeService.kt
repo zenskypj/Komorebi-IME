@@ -777,6 +777,8 @@ class ZinnaImeService : InputMethodService() {
     private var voiceService: android.os.Messenger? = null
     private var voiceConnection: android.content.ServiceConnection? = null
     private var voicePanelActive = false
+    private var voicePreparing = false
+    private var voicePrepared = false
     private var voicePanelText = ""
     private var voicePanelStatus = "音声入力を準備しています…"
     private var voicePanelState = 3 // 0 listening, 1 result/error, 2 setup, 3 preparing
@@ -803,12 +805,9 @@ class ZinnaImeService : InputMethodService() {
                     closeVoicePanel()
                     runCatching { startActivity(Intent().setClassName(module, "me.zssu.ime.voice.ModuleInfoActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                         .onFailure { Toast.makeText(this, "音声入力の準備画面を開けませんでした", Toast.LENGTH_LONG).show() }
-                } else if (voiceService == null) {
+                } else {
                     closeVoicePanel()
                     enqueueInput { startVoiceInput() }
-                } else {
-                    voicePanelText = ""; voicePanelStatus = "音声モデルを準備しています…"; voicePanelState = 3
-                    renderVoicePanel(); sendVoiceCommand(1)
                 }
             },
             onClose = { closeVoicePanel() })
@@ -842,6 +841,8 @@ class ZinnaImeService : InputMethodService() {
 
     private fun closeVoicePanel() {
         voicePanelActive = false
+        voicePreparing = false
+        voicePrepared = false
         runCatching { voiceService?.send(android.os.Message.obtain(null, 3)) }
         voiceService = null
         voiceReplies = null
@@ -870,6 +871,46 @@ class ZinnaImeService : InputMethodService() {
         val sessionId = voiceSequence
         voicePanelActive = true; voicePanelText = ""; voicePanelStatus = "音声入力を準備しています…"; voicePanelState = 3
         renderVoicePanel()
+        voicePreparing = true
+        voicePrepared = false
+        val receiver = object : android.os.ResultReceiver(mainHandler) {
+            override fun onReceiveResult(code: Int, data: android.os.Bundle?) {
+                if (!voicePreparing || voicePending?.id != sessionId) return
+                if (code != 0) {
+                    val message = data?.getString("text").orEmpty().ifEmpty { "音声入力の準備を中止しました" }
+                    closeVoicePanel()
+                    Toast.makeText(this@ZinnaImeService, message, Toast.LENGTH_LONG).show()
+                    return
+                }
+                voicePrepared = true
+                mainHandler.postDelayed({ tryConnectPreparedVoice(sessionId, 0) }, 500)
+            }
+        }
+        val intent = Intent().setClassName(module, "me.zssu.ime.voice.VoicePrepareActivity")
+            .putExtra("receiver", receiver).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+        runCatching { startActivity(intent) }.onFailure {
+            closeVoicePanel()
+            Toast.makeText(this, "音声モジュールを最新版に更新してください", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun tryConnectPreparedVoice(sessionId: Long, attempt: Int) {
+        if (!voicePreparing || !voicePrepared || voicePending?.id != sessionId) return
+        if (!isInputViewShown || currentInputConnection == null) {
+            if (attempt < 100) mainHandler.postDelayed({ tryConnectPreparedVoice(sessionId, attempt + 1) }, 250)
+            else closeVoicePanel()
+            return
+        }
+        val pending = voicePending ?: return
+        if (!pending.anchor.matches(voiceAnchor()) || fieldPolicy.incognito) {
+            closeVoicePanel()
+            Toast.makeText(this, "入力欄が変わったため音声入力を中止しました", Toast.LENGTH_LONG).show()
+            return
+        }
+        voicePreparing = false
+        voicePrepared = false
+        voicePanelActive = true
+        renderVoicePanel()
         val connection = object : android.content.ServiceConnection {
             override fun onServiceConnected(name: android.content.ComponentName?, binder: android.os.IBinder?) {
                 if (!voicePanelActive || voicePending?.id != sessionId || voiceConnection !== this || binder == null) return
@@ -882,7 +923,7 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         voiceConnection = connection
-        val bound = runCatching { bindService(Intent().setClassName(module, "me.zssu.ime.voice.VoiceRecognitionService"), connection, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
+        val bound = runCatching { bindService(Intent().setClassName(voiceModulePackage(), "me.zssu.ime.voice.VoiceRecognitionService"), connection, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
         if (!bound) {
             voiceConnection = null; voicePanelState = 1
             voicePanelStatus = "音声モジュールを最新版に更新してください"; renderVoicePanel()
@@ -1172,7 +1213,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
-        if (voicePanelActive) closeVoicePanel()
+        if (voicePanelActive && !voicePreparing) closeVoicePanel()
         if (dressUpActive) {
             dressUpActive = false
             me.zssu.ime.settings.DressUpLivePreview.listener = null
@@ -1185,7 +1226,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onFinishInput() {
-        if (voicePanelActive) closeVoicePanel()
+        if (voicePanelActive && !voicePreparing) closeVoicePanel()
         super.onFinishInput()
         inputQueue.invalidate()
         keyboardView?.cancelGestures()
