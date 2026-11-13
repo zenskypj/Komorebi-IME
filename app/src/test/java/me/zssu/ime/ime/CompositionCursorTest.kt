@@ -42,4 +42,9 @@ class CompositionCursorTest {
         val before = CompositionCursor.Snapshot("かんじ", Int.MAX_VALUE - 1, 0, 3)
         assertEquals(CompositionCursor.Plan(3, null), CompositionCursor.plan("かんじ", 1, false, "かんじ", before))
     }
+    @org.junit.Test fun detectsReplacementInNonemptyEditor() {
+        org.junit.Assert.assertFalse(CompositionCursor.matchesAtCaret("こんにち", 4, false, "こんにちは！", 6, 6))
+        org.junit.Assert.assertTrue(CompositionCursor.matchesAtCaret("こんにち", 4, false, "先:こんにち", 6, 6))
+        org.junit.Assert.assertTrue(CompositionCursor.matchesAtCaret("変換中", 3, true, "先:変換中", 4, 4))
+    }
 }

@@ -15,6 +15,19 @@ internal object CompositionCursor {
         return absolute.takeIf { snapshot.startOffset.toLong() + end <= Int.MAX_VALUE }?.toInt()
     }
 
+    fun matchesAtCaret(preedit: String, offset: Int, converting: Boolean,
+                      text: CharSequence, start: Int, end: Int): Boolean {
+        if (preedit.isEmpty() || start != end) return false
+        if (!converting) {
+            val origin = start - offset
+            return origin >= 0 && origin <= text.length - preedit.length &&
+                text.regionMatches(origin, preedit, 0, preedit.length)
+        }
+        val earliest = (start - preedit.length).coerceAtLeast(0)
+        val latest = minOf(start, text.length - preedit.length)
+        return (earliest..latest).any { text.regionMatches(it, preedit, 0, preedit.length) }
+    }
+
     fun plan(preedit: String, nativeCursor: Int, converting: Boolean, previousPreedit: String, before: Snapshot?): Plan {
         val end = Plan(preedit.length, null)
         // Clause focus is shown by spans and the clause bar, not by moving the editor caret.

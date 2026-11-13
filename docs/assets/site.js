@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.66-dev", "rc.66-dev", "入力先で置き換えた未確定文字の残留を修正", "docs/releases/v0.3.0-rc.66-dev.md", "release rc66 未確定 チャット"],
         ["releases/v0.3.0-rc.65-dev", "rc.65-dev", "カスタム背景の透過・矢印キーの行移動", "docs/releases/v0.3.0-rc.65-dev.md", "release rc65 きせかえ 透過 背景"],
         ["releases/v0.3.0-rc.64-dev", "rc.64-dev", "きせかえ中のツール列の配色を修正", "docs/releases/v0.3.0-rc.64-dev.md", "release rc64 きせかえ ツール 配色"],
         ["releases/v0.3.0-rc.63-dev", "rc.63-dev", "きせかえ画像に合わせた自動配色", "docs/releases/v0.3.0-rc.63-dev.md", "release rc63 きせかえ 配色 画像"],
@@ -413,6 +414,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-14", "v0.3.0-rc.66-dev", "未確定文字の残留を修正"],
     ["2026-11-13", "v0.3.0-rc.65-dev", "カスタム背景の透過と矢印キーでの行移動"],
     ["2026-11-13", "v0.3.0-rc.64-dev", "きせかえプレビューのツール列の配色を修正"],
     ["2026-11-13", "v0.3.0-rc.63-dev", "きせかえの自動配色・カスタム画像一覧"],

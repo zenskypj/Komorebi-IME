@@ -156,6 +156,7 @@ class ZinnaImeService : InputMethodService() {
     private var learningCandidate: MozcSession.Candidate? = null
     private var renderedPreeditCursor = 0
     private var renderedPreedit = ""
+    private var editorReportsComposingSpans = false
 
     private var editorStateUpdateInProgress = false
 
@@ -1106,6 +1107,7 @@ class ZinnaImeService : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
+        editorReportsComposingSpans = false
         if (!restarting) {
             inputQueue.invalidate()
             session.requestReset()
@@ -1333,36 +1335,46 @@ class ZinnaImeService : InputMethodService() {
     private fun synchronizeEditorComposition(): Boolean {
         if (!isComposing || editorStateUpdateInProgress) return false
         val ic = currentInputConnection ?: return false
-        // A one-character window can prove an externally cleared field without copying an
-        // entire chat/document on every key. Keep the old path for unsupported editors/APIs.
+        // Ask for enough text to verify the old reading even when the editor kept the
+        // field nonempty and never delivered a selection callback.
+        val window = renderedPreedit.length.coerceIn(1, 4096)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val surrounding = runCatching { ic.getSurroundingText(1, 1, 0) }.getOrNull()
+            val surrounding = runCatching {
+                ic.getSurroundingText(window, window, InputConnection.GET_TEXT_WITH_STYLES)
+            }.getOrNull()
             if (surrounding != null) {
-                if (surrounding.offset == 0 && surrounding.selectionStart == 0 &&
-                    surrounding.selectionEnd == 0 && surrounding.text.isEmpty()) {
-                    discardExternalComposition()
-                    return true
-                }
-                return false
+                return reconcileEditorComposition(surrounding.text, surrounding.selectionStart,
+                    surrounding.selectionEnd, surrounding.offset == 0 && surrounding.text.isEmpty())
             }
         }
         val request = android.view.inputmethod.ExtractedTextRequest().apply {
             flags = InputConnection.GET_TEXT_WITH_STYLES
-            hintMaxChars = 1
-            hintMaxLines = 1
+            hintMaxChars = window * 2
+            hintMaxLines = 3
         }
-        val extracted = runCatching { ic.getExtractedText(request, 0) }.getOrNull()
-        val complete = extracted != null && extracted.startOffset == 0 &&
-            extracted.partialStartOffset < 0 && extracted.partialEndOffset < 0 && extracted.text != null
-        if (!complete) return false
-        // An empty partial patch, or an unsupported connection returning null, is not evidence
-        // that the editor discarded text. Only a complete, empty field proves external clearing.
-        if (extracted?.text?.isEmpty() != true) return false
-        discardExternalComposition()
+        val extracted = runCatching { ic.getExtractedText(request, 0) }.getOrNull() ?: return false
+        val text = extracted.text ?: return false
+        if (extracted.partialStartOffset >= 0 || extracted.partialEndOffset >= 0) return false
+        return reconcileEditorComposition(text, extracted.selectionStart, extracted.selectionEnd,
+            extracted.startOffset == 0 && text.isEmpty())
+    }
+
+    private fun reconcileEditorComposition(text: CharSequence, start: Int, end: Int, emptyField: Boolean): Boolean {
+        if (start !in 0..text.length || end !in 0..text.length) return false
+        val matches = CompositionCursor.matchesAtCaret(renderedPreedit, renderedPreeditCursor,
+            isConverting, text, start, end)
+        val styled = text as? Spanned
+        val hasComposingSpan = styled?.getSpans(0, styled.length, Any::class.java)?.any {
+            styled.getSpanFlags(it) and Spanned.SPAN_COMPOSING != 0
+        } == true
+        if (hasComposingSpan) editorReportsComposingSpans = true
+        if (!emptyField && (renderedPreedit.length > 4096 ||
+                (matches && (!editorReportsComposingSpans || hasComposingSpan)))) return false
+        discardExternalComposition(finishEditorSpan = false)
         return true
     }
 
-    private fun discardExternalComposition() {
+    private fun discardExternalComposition(finishEditorSpan: Boolean = true) {
         inputQueue.invalidate(rebaseCurrent = true)
         // Clear the guard before any InputConnection calls, which can synchronously notify us.
         isComposing = false
@@ -1381,7 +1393,7 @@ class ZinnaImeService : InputMethodService() {
         keyboardView?.isConversionAvailable = false
         cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.requestReset()
-        currentInputConnection?.finishComposingText()
+        if (finishEditorSpan) currentInputConnection?.finishComposingText()
         candidateView?.clear()
     }
 
@@ -1521,14 +1533,8 @@ class ZinnaImeService : InputMethodService() {
      */
     private suspend fun handleSpace() {
         val wasConverting = isConverting
-        val wasArmed = confirmCommitsWholeSentence
         conversionInteraction.convertPressed(isComposing, isConverting)
         confirmCommitsWholeSentence = WholeSentenceConfirm.arm(isComposing, wasConverting)
-        if (WholeSentenceConfirm.beginsCandidateSelection(wasConverting, wasArmed)) {
-            // The second Convert only opens candidate selection; sending another conversion
-            // command here would advance to the next candidate before the user chose anything.
-            return
-        }
         if (wasConverting && lastCandidates.isNotEmpty()) {
             ConversionNavigation.nextCandidate(lastCandidates, lastFocusedCandidateIndex)?.let { focusConversionCandidate(it) }
             return
