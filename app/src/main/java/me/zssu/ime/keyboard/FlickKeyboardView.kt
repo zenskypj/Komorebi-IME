@@ -780,7 +780,9 @@ class FlickKeyboardView @JvmOverloads constructor(
             invalidate()
             if (touch.key.spec.repeatable && touch.key.spec.center.action !is KeyAction.Space && touch.key.spec.center.action !is KeyAction.Convert && direction != FlickDirection.CENTER && !touch.longPressed) {
                 // Swiped to a flick direction on a repeatable key: keep repeating in that direction.
-                scheduleRepeat(touch, direction, skipInitialDelay = true)
+                val flickAction = touch.key.spec.output(direction)?.action
+                val isVerticalCursor = flickAction is KeyAction.MoveCursor && flickAction.vertical
+                scheduleRepeat(touch, direction, skipInitialDelay = !isVerticalCursor)
             }
         }
     }

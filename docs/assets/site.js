@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.65-dev", "rc.65-dev", "カスタム背景の透過・矢印キーの行移動", "docs/releases/v0.3.0-rc.65-dev.md", "release rc65 きせかえ 透過 背景"],
         ["releases/v0.3.0-rc.64-dev", "rc.64-dev", "きせかえ中のツール列の配色を修正", "docs/releases/v0.3.0-rc.64-dev.md", "release rc64 きせかえ ツール 配色"],
         ["releases/v0.3.0-rc.63-dev", "rc.63-dev", "きせかえ画像に合わせた自動配色", "docs/releases/v0.3.0-rc.63-dev.md", "release rc63 きせかえ 配色 画像"],
         ["releases/v0.3.0-rc.62-dev", "rc.62-dev", "マイク許可と音声入力の起動を改善", "docs/releases/v0.3.0-rc.62-dev.md", "release rc62 音声 マイク"],
@@ -412,6 +413,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-13", "v0.3.0-rc.65-dev", "カスタム背景の透過と矢印キーでの行移動"],
     ["2026-11-13", "v0.3.0-rc.64-dev", "きせかえプレビューのツール列の配色を修正"],
     ["2026-11-13", "v0.3.0-rc.63-dev", "きせかえの自動配色・カスタム画像一覧"],
     ["2026-11-12", "v0.3.0-rc.62-dev", "音声入力のマイク許可と録音開始を改善"],

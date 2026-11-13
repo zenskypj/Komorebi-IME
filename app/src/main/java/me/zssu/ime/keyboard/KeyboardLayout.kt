@@ -138,7 +138,7 @@ sealed interface KeyAction {
 
     @Serializable
     @SerialName("cursor")
-    data class MoveCursor(val delta: Int) : KeyAction
+    data class MoveCursor(val delta: Int, val vertical: Boolean = false) : KeyAction
 
     /** Switch to another layout by id, e.g. from kana to the alphabet plane. */
     @Serializable
@@ -222,3 +222,14 @@ enum class InputStyle(
 // HIRAGANA mode gets you kanji candidates for "abc".
 private const val HIRAGANA = 1
 private const val HALF_ASCII = 3
+
+/** Add vertical movement only where the user has not assigned that flick. */
+internal fun KeyboardLayout.withVerticalCursorFlicks(): KeyboardLayout = copy(rows = rows.map { row ->
+    row.copy(keys = row.keys.map { key ->
+        val action = key.center.action
+        if (action is KeyAction.MoveCursor && !action.vertical) key.copy(
+            up = key.up ?: KeyOutput("↑", KeyAction.MoveCursor(-1, vertical = true)),
+            down = key.down ?: KeyOutput("↓", KeyAction.MoveCursor(1, vertical = true)),
+        ) else key
+    })
+})

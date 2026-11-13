@@ -79,7 +79,7 @@ internal class DressUpBackground(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun rememberDressUpBackground(settings: ImeSettings, onImageColor: (Int) -> Unit): DressUpBackground {
+internal fun rememberDressUpBackground(settings: ImeSettings, onImageColor: (Int, Boolean) -> Unit): DressUpBackground {
     val context = LocalContext.current
     var opacity by remember { mutableFloatStateOf(settings.backgroundOpacity) }
     var mediaRevision by remember { mutableIntStateOf(0) }
@@ -106,10 +106,11 @@ internal fun rememberDressUpBackground(settings: ImeSettings, onImageColor: (Int
                     ?.let { runCatching { DressUpColors.fromFile(it) }.getOrNull() }
             } }
                 .onSuccess { color ->
-                    if (color != null) onImageColor(color)
+                    if (color != null) onImageColor(color, settings.backgroundPresetId == null)
                     else mediaMessage = "画像は設定しましたが、配色を読み取れませんでした"
                     mediaRevision++
                     selectedPreset = settings.backgroundPresetId
+                    opacity = settings.backgroundOpacity
                     videoStart = settings.backgroundVideoStart
                     videoEnd = settings.backgroundVideoEnd
                 }
@@ -119,10 +120,10 @@ internal fun rememberDressUpBackground(settings: ImeSettings, onImageColor: (Int
     }
 
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) importMedia { settings.setBackgroundPhotos(uris) }
+        if (uris.isNotEmpty()) importMedia { settings.setBackgroundPhotos(uris); settings.backgroundOpacity = 1f }
     }
     val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) importMedia { settings.setBackgroundVideo(uri) }
+        if (uri != null) importMedia { settings.setBackgroundVideo(uri); settings.backgroundOpacity = 1f }
     }
 
     val photo = remember(mediaRevision) { settings.backgroundImage }

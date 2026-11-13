@@ -37,6 +37,7 @@ import me.zssu.ime.keyboard.KeyAction
 import me.zssu.ime.keyboard.KeyOutput
 import me.zssu.ime.keyboard.KeySpec
 import me.zssu.ime.keyboard.KeyboardLayout
+import me.zssu.ime.keyboard.withVerticalCursorFlicks
 import me.zssu.ime.keyboard.KeyboardPanelView
 import me.zssu.ime.keyboard.LayoutRepository
 import me.zssu.ime.keyboard.MeaningPopupView
@@ -1034,7 +1035,7 @@ class ZinnaImeService : InputMethodService() {
 
     /** Keeps the bottom-left key as the language switch on the mixed QWERTY alphabet plane. */
     private fun adaptLayoutForStyle(source: KeyboardLayout): KeyboardLayout {
-        return effectiveKeyboardStyle().adapt(source)
+        return effectiveKeyboardStyle().adapt(source).withVerticalCursorFlicks()
     }
 
     /**
@@ -1482,7 +1483,7 @@ class ZinnaImeService : InputMethodService() {
 
             is KeyAction.Enter -> handleEnter()
 
-            is KeyAction.MoveCursor -> handleCursorMove(
+            is KeyAction.MoveCursor -> if (action.vertical) handleVerticalCursorMove(action.delta) else handleCursorMove(
                 delta = action.delta,
                 adjustSegment = isConverting && (key.center.action is KeyAction.Space || key.center.action is KeyAction.Convert),
             )
@@ -1688,14 +1689,15 @@ class ZinnaImeService : InputMethodService() {
     private fun sendRawKeyPress(
         ic: android.view.inputmethod.InputConnection,
         keyCode: Int,
-    ) {
+    ): Boolean {
         val now = android.os.SystemClock.uptimeMillis()
-        ic.sendKeyEvent(
+        val accepted = ic.sendKeyEvent(
             android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_DOWN, keyCode, 0)
         )
         ic.sendKeyEvent(
             android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_UP, keyCode, 0)
         )
+        return accepted
     }
 
     /**
@@ -1978,6 +1980,22 @@ class ZinnaImeService : InputMethodService() {
         }
         val absolute = extracted.startOffset + target
         ic.setSelection(editAnchor ?: absolute, absolute)
+    }
+
+    private suspend fun handleVerticalCursorMove(delta: Int) {
+        if (delta == 0) return
+        synchronizeEditorComposition()
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) return
+        val ic = currentInputConnection ?: return
+        val key = if (delta < 0) android.view.KeyEvent.KEYCODE_DPAD_UP else android.view.KeyEvent.KEYCODE_DPAD_DOWN
+        if (sendRawKeyPress(ic, key) || fieldPolicy.rawKeyEvents) return
+        val extracted = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
+        val text = extracted.text?.toString() ?: return
+        val cursor = minOf(extracted.selectionStart, extracted.selectionEnd)
+        if (cursor < 0) return
+        val target = EditorCursor.line(text, cursor, delta) + extracted.startOffset
+        ic.setSelection(target, target)
     }
 
     private suspend fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {

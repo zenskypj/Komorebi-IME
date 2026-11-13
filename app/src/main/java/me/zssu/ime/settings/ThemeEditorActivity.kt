@@ -125,8 +125,8 @@ private fun ThemeEditorScreen() {
     }
     var previewThemeBackground by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val background = rememberDressUpBackground(settings) { color ->
-        theme = DressUpColors.apply(theme, color)
+    val background = rememberDressUpBackground(settings) { color, customMedia ->
+        theme = DressUpColors.apply(theme, color, customMedia)
     }
     val colorScope = rememberCoroutineScope()
     fun matchImageColors() {
@@ -137,7 +137,8 @@ private fun ThemeEditorScreen() {
                 if (file != null && !previewThemeBackground) DressUpColors.fromFile(file)
                 else wallpaper?.let { DressUpColors.fromAsset(context, it.asset) }
             }
-            if (color != null) theme = DressUpColors.apply(theme, color)
+            if (color != null) theme = DressUpColors.apply(theme, color,
+                customMedia = file != null && !previewThemeBackground && settings.backgroundPresetId == null)
             else message = "色を合わせる画像を選んでください"
         }
     }

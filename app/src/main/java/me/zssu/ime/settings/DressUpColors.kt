@@ -40,8 +40,8 @@ internal object DressUpColors {
         return if (n == 0) null else Color.rgb((r / n).toInt(), (g / n).toInt(), (b / n).toInt())
     }
 
-    /** Opaque, coordinated surfaces keep labels legible over both light and busy pictures. */
-    fun apply(theme: KeyboardTheme, sampled: Int): KeyboardTheme {
+    /** Custom media stays visible; solid colors remain available for guides and tool tiles. */
+    fun apply(theme: KeyboardTheme, sampled: Int, customMedia: Boolean = false): KeyboardTheme {
         val hsv = FloatArray(3); Color.colorToHSV(sampled, hsv)
         val light = (0.2126 * Color.red(sampled) + 0.7152 * Color.green(sampled) + 0.0722 * Color.blue(sampled)) > 150
         fun tone(saturation: Float, value: Float): Int = Color.HSVToColor(floatArrayOf(hsv[0], saturation, value))
@@ -54,10 +54,10 @@ internal object DressUpColors {
         val accent = tone(hsv[1].coerceIn(0.35f, 0.65f), if (light) 0.36f else 0.9f)
         return theme.copy(backgroundColor = background, keyColor = keys, modifierKeyColor = modifiers,
             keyPressedColor = pressed, labelColor = text, lineColor = text,
-            candidateBackgroundColor = background, candidateTextColor = text, useCandidateBackground = true,
-            toolbarBackgroundColor = background, toolbarIconColor = text,
+            candidateBackgroundColor = background, candidateTextColor = text, useCandidateBackground = !customMedia,
+            toolbarBackgroundColor = if (customMedia) Color.TRANSPARENT else background, toolbarIconColor = text,
             flickGuideColor = keys, flickGuideLabelColor = text, flickGuideSelectedLabelColor = accent,
-            keyOpacity = 1f, labelShadow = !light)
+            keyOpacity = if (customMedia) 0.08f else 1f, labelShadow = !light)
     }
 
     fun unifiedText(theme: KeyboardTheme, color: Int): KeyboardTheme = theme.copy(

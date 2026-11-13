@@ -62,6 +62,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onClipboardItemSelected: ((String) -> Unit)? = null
     var onClipboardHistoryCleared: (() -> Unit)? = null
     private var voicePanelShowing = false
+    private var toolMenuShowing = false
 
     var theme: KeyboardTheme = KeyboardTheme.Default
         set(value) {
@@ -72,7 +73,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
                 showTools()
                 return
             }
-            applyCandidateBackdrop()
+            if (toolMenuShowing) applyStripBackdrop(value.candidateBackgroundColor) else applyCandidateBackdrop()
             for (i in 0 until container.childCount) {
                 val child = container.getChildAt(i)
                 val chips = if (child is TextView) listOf(child) else if (child in twoRowColumns)
@@ -520,6 +521,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     }
     fun showTools() {
         if (voicePanelShowing) return
+        toolMenuShowing = false
         paletteHeight(false)
         resetConversionPresentation()
         // The menu button itself lives in the fixed bar beside this strip (see the host), so it
@@ -590,6 +592,8 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         layoutParams = layoutParams.apply { height = dp(180) }
         container.removeAllViews()
         setContainerFillWidth(false)
+        toolMenuShowing = true
+        applyStripBackdrop(theme.candidateBackgroundColor)
         scrollTo(0, 0)
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -995,6 +999,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
     private fun setContainerFillWidth(fill: Boolean) {
         if (!fill) {
+            toolMenuShowing = false
             toolbarState = null
             applyCandidateBackdrop()
         }

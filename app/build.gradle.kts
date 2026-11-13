@@ -26,8 +26,8 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 88
-        versionName = "0.3.0-rc.64-dev"
+        versionCode = 89
+        versionName = "0.3.0-rc.65-dev"
     }
 
     buildTypes {

@@ -6,7 +6,9 @@ internal object OperationKeyIcons {
         is KeyAction.Backspace -> "削除"
         is KeyAction.Enter -> "Enter"
         is KeyAction.Undo -> "元に戻す"
-        is KeyAction.MoveCursor -> if (action.delta < 0) "カーソルを左へ移動" else "カーソルを右へ移動"
+        is KeyAction.MoveCursor -> if (action.vertical) {
+            if (action.delta < 0) "カーソルを上の行へ移動" else "カーソルを下の行へ移動"
+        } else if (action.delta < 0) "カーソルを左へ移動" else "カーソルを右へ移動"
         is KeyAction.Space -> "空白"
         is KeyAction.Shift -> "シフト"
         else -> label

@@ -253,7 +253,7 @@ private fun LayoutEditorScreen(initialId: String?) {
                                     value = action.delta.toString(), onValueChange = { text ->
                                         val delta = text.toIntOrNull() ?: return@OutlinedTextField
                                         layout = updateSelected(current, rowIndex, keyIndex) {
-                                            it.copy(center = it.center.copy(action = KeyAction.MoveCursor(delta)))
+                                            it.copy(center = it.center.copy(action = action.copy(delta = delta)))
                                         }
                                     }, label = { Text("移動量（マイナスで左）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, textStyle = MaterialTheme.typography.bodySmall)
 

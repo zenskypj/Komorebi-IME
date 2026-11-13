@@ -22,7 +22,7 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.64-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.65-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
@@ -640,3 +640,5 @@ Komorebi 独自変更と従来 Apache 2.0 で受領した部分の表示、第�
 `rc.63-dev` はきせかえ画像に合わせて配色を一括調整し、手動での微調整と直近のカスタム画像の選び直しに対応しました。実機での見え方は未確認です。
 
 `rc.64-dev` はきせかえのプレビューで、キーボード上段のツール列とメニューボタンが以前の配色のまま残る問題を修正しました。実機での表示は未確認です。
+
+`rc.65-dev` はカスタム画像の自動配色でキー面を薄くし、上段・候補の背景を透過して画像を見せます。左右矢印の上下フリックで入力欄の行も移動できます。フリックガイドとツール一覧には背景を残します。実機での見え方は未確認です。
