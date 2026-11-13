@@ -244,6 +244,7 @@ class ImeSettings(context: Context) {
             prefs.edit().remove(KEY_BACKGROUND_PRESET).putInt("background_album_count", images.size).apply()
             bumpRevision()
         }
+        saveCustomBackground()
     }
 
     fun setBackgroundVideo(uri: Uri) {
@@ -281,15 +282,65 @@ class ImeSettings(context: Context) {
             prefs.edit().remove(KEY_BACKGROUND_PRESET).remove("background_album_count")
                 .remove("background_video_start").remove("background_video_end").apply()
             markCustomizationChanged()
+            saveCustomBackground()
         } finally {
             temp.delete()
         }
     }
 
+    // Keep the last user-selected background separately when switching to a preset.
+    private val customBackgroundDir get() = File(appContext.filesDir, CUSTOM_BACKGROUND_DIR)
+    val customBackgroundPreview: File?
+        get() = listOf("photo.webp", "album_0.webp", "video.mp4")
+            .map { File(customBackgroundDir, it) }.firstOrNull { it.isFile }
+            ?: if (backgroundPresetId == null) backgroundImage ?: backgroundAlbum.firstOrNull() ?: backgroundVideo else null
+
+    private fun saveCustomBackground() {
+        val dir = customBackgroundDir
+        dir.mkdirs()
+        val files = listOfNotNull(backgroundImage?.let { it to "photo.webp" },
+            backgroundVideo?.let { it to "video.mp4" }) + backgroundAlbum.mapIndexed { i, f -> f to "album_$i.webp" }
+        if (files.isEmpty()) return
+        val names = files.map { it.second }.toSet()
+        files.forEach { (source, name) -> source.copyTo(File(dir, name), overwrite = true) }
+        dir.listFiles()?.filter { it.name !in names }?.forEach { it.delete() }
+    }
+
+    fun deleteCustomBackground() {
+        customBackgroundDir.deleteRecursively()
+        if (backgroundPresetId == null) clearBackgroundImage()
+    }
+
+    fun selectCustomBackground(): Boolean = runCatching {
+        val dir = customBackgroundDir
+        // Older installations may have a custom background without a saved copy.
+        if (!dir.exists() && backgroundPresetId == null) saveCustomBackground()
+        val photo = File(dir, "photo.webp")
+        val video = File(dir, "video.mp4")
+        val album = (0..3).map { File(dir, "album_$it.webp") }.filter { it.isFile }
+        check(photo.isFile || video.isFile || album.isNotEmpty())
+        backgroundDir.mkdirs()
+        if (photo.isFile) check(writeBackground(photo.readBytes(), null))
+        else if (video.isFile) {
+            video.copyTo(File(backgroundDir, VIDEO_FILE), overwrite = true)
+            File(backgroundDir, BACKGROUND_FILE).delete(); clearAlbumFiles()
+            prefs.edit().remove(KEY_BACKGROUND_PRESET).remove("background_album_count").apply()
+            bumpRevision()
+        } else {
+            album.forEachIndexed { i, file -> file.copyTo(File(backgroundDir, "album_$i.webp"), overwrite = true) }
+            (album.size until 4).forEach { File(backgroundDir, "album_$it.webp").delete() }
+            File(backgroundDir, BACKGROUND_FILE).delete(); File(backgroundDir, VIDEO_FILE).delete()
+            prefs.edit().remove(KEY_BACKGROUND_PRESET).putInt("background_album_count", album.size).apply()
+            bumpRevision()
+        }
+        true
+    }.getOrDefault(false)
+
     /** Replaces the selected backdrop without changing the bundled theme. */
     fun setBackgroundImage(bytes: ByteArray): Boolean = writeBackground(bytes, null)
 
     fun setBackgroundPreset(id: String): Boolean {
+        if (backgroundPresetId == null) saveCustomBackground()
         val preset = BACKGROUND_PRESETS.firstOrNull { it.id == id } ?: return false
         val bytes = runCatching { appContext.assets.open(preset.assetPath).use { it.readBytes() } }
             .getOrNull() ?: return false
@@ -374,6 +425,7 @@ class ImeSettings(context: Context) {
         private const val KEY_BACKGROUND_OPACITY = "background_opacity"
         private const val KEY_REVISION = "revision"
         const val BACKGROUND_DIR = "backgrounds"
+        const val CUSTOM_BACKGROUND_DIR = "custom_background"
         private const val BACKGROUND_FILE = "keyboard_background"
         private const val VIDEO_FILE = "keyboard_video"
         private const val KEY_HEIGHT_SCALE = "key_height_scale"

@@ -73,12 +73,13 @@ internal data class DressUpMedia(
 
 internal class DressUpBackground(
     val media: DressUpMedia,
+    val busy: Boolean,
     val controls: @Composable () -> Unit,
 )
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground {
+internal fun rememberDressUpBackground(settings: ImeSettings, onImageColor: (Int) -> Unit): DressUpBackground {
     val context = LocalContext.current
     var opacity by remember { mutableFloatStateOf(settings.backgroundOpacity) }
     var mediaRevision by remember { mutableIntStateOf(0) }
@@ -99,8 +100,14 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
         importing = true
         mediaMessage = null
         scope.launch {
-            runCatching { withContext(Dispatchers.IO) { task() } }
-                .onSuccess {
+            runCatching { withContext(Dispatchers.IO) {
+                task()
+                (settings.backgroundImage ?: settings.backgroundAlbum.firstOrNull() ?: settings.backgroundVideo)
+                    ?.let { runCatching { DressUpColors.fromFile(it) }.getOrNull() }
+            } }
+                .onSuccess { color ->
+                    if (color != null) onImageColor(color)
+                    else mediaMessage = "画像は設定しましたが、配色を読み取れませんでした"
                     mediaRevision++
                     selectedPreset = settings.backgroundPresetId
                     videoStart = settings.backgroundVideoStart
@@ -124,7 +131,7 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
     val snapshot = DressUpMedia(mediaRevision, photo, album, video, opacity, brightness, blur,
         horizontal, vertical, slideSeconds.toInt(), videoStart, videoEnd, filter)
     val hasImage = snapshot.hasImage
-    return DressUpBackground(snapshot) {
+    return DressUpBackground(snapshot, importing) {
         Text("選んだ写真・動画はすぐ背景に反映されます。", style = MaterialTheme.typography.bodySmall)
         Card(shape = RoundedCornerShape(14.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -134,7 +141,26 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
                         modifier = Modifier.weight(1f)) { Text("アルバムから選ぶ") }
                     OutlinedButton(onClick = { pickVideo.launch(arrayOf("video/*")) }, enabled = !importing) { Text("動画") }
                 }
+                Text("画像を選ぶと文字やキーの色をまとめて合わせます。後から配色を変更できます。", style = MaterialTheme.typography.bodySmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val custom = remember(mediaRevision) { settings.customBackgroundPreview }
+                    if (custom != null) {
+                        val thumb by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, custom, mediaRevision) {
+                            value = withContext(Dispatchers.IO) {
+                                if (custom.extension.equals("mp4", true)) null else
+                                    BitmapFactory.decodeFile(custom.absolutePath, BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap()
+                            }
+                        }
+                        Card(onClick = { importMedia { check(settings.selectCustomBackground()) { "画像を読み込めませんでした" } } },
+                            modifier = Modifier.width(120.dp), shape = RoundedCornerShape(10.dp)) {
+                            if (thumb != null) Image(thumb!!, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(64.dp))
+                            else androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) { Text("動画") }
+                            Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (selectedPreset == null && hasImage) Icon(Icons.Filled.Check, contentDescription = "選択中", modifier = Modifier.size(16.dp))
+                                Text("自分の画像・動画", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
                     ImeSettings.BACKGROUND_PRESETS.forEach { preset ->
                         val thumb = remember(preset.id) {
                             context.assets.open(preset.assetPath).use {
@@ -151,6 +177,11 @@ internal fun rememberDressUpBackground(settings: ImeSettings): DressUpBackground
                             }
                         }
                     }
+                }
+                if (settings.customBackgroundPreview != null) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        settings.deleteCustomBackground(); mediaRevision++; selectedPreset = settings.backgroundPresetId
+                    }, enabled = !importing) { Text("自分の画像・動画を一覧から削除") }
                 }
                 if (importing) Text("取り込み中…")
                 mediaMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }

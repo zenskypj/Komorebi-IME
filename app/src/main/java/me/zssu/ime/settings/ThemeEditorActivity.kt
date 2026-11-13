@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -124,7 +125,22 @@ private fun ThemeEditorScreen() {
     }
     var previewThemeBackground by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    val background = rememberDressUpBackground(settings)
+    val background = rememberDressUpBackground(settings) { color ->
+        theme = DressUpColors.apply(theme, color)
+    }
+    val colorScope = rememberCoroutineScope()
+    fun matchImageColors() {
+        val file = background.media.photo ?: background.media.album.firstOrNull() ?: background.media.video
+        val wallpaper = theme.wallpaper
+        colorScope.launch {
+            val color = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (file != null && !previewThemeBackground) DressUpColors.fromFile(file)
+                else wallpaper?.let { DressUpColors.fromAsset(context, it.asset) }
+            }
+            if (color != null) theme = DressUpColors.apply(theme, color)
+            else message = "色を合わせる画像を選んでください"
+        }
+    }
     val edited = theme != base || name.isNotBlank()
     var appliedLayoutId by rememberSaveable { mutableStateOf(settings.activeLayoutId) }
     var selectedLayoutId by rememberSaveable { mutableStateOf(settings.activeLayoutId) }
@@ -177,7 +193,7 @@ private fun ThemeEditorScreen() {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る")
             }
         }, actions = {
-            TextButton(onClick = ::apply, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
+            TextButton(onClick = ::apply, enabled = !background.busy, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
         })
     }) { insets ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) {
@@ -339,7 +355,17 @@ private fun ThemeEditorScreen() {
                                     background.controls()
                                     Text("テーマの背景イラスト", style = MaterialTheme.typography.titleMedium)
                                     ArtPicker(listOf(null) + ThemeWallpaper.entries, theme.wallpaper,
-                                        { it?.label ?: "なし" }, { it?.asset }, { theme = theme.copy(wallpaper = it) })
+                                        { it?.label ?: "なし" }, { it?.asset }, { selected ->
+                                            theme = theme.copy(wallpaper = selected)
+                                            if (selected != null && !background.media.hasImage) {
+                                                colorScope.launch {
+                                                    val color = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                        DressUpColors.fromAsset(context, selected.asset)
+                                                    }
+                                                    if (color != null && theme.wallpaper == selected) theme = DressUpColors.apply(theme, color)
+                                                }
+                                            }
+                                        })
                                     if (theme.wallpaper != null) ThemeSlider("イラストの濃さ", theme.wallpaperOpacity * 100f, 0f..100f, "%") {
                                         theme = theme.copy(wallpaperOpacity = it / 100f)
                                     }
@@ -371,11 +397,28 @@ private fun ThemeEditorScreen() {
                                     }) { Text("キーを一つずつ編集") }
                                 }
                                 EditorPage.COLORS -> {
+                                    Text("まとめて調整", style = MaterialTheme.typography.titleMedium)
+                                    OutlinedButton(onClick = { matchImageColors() }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("背景画像に色を合わせる")
+                                    }
+                                    Text("文字・キーとツールのアイコンの色", style = MaterialTheme.typography.bodySmall)
+                                    var unifiedHex by remember { mutableStateOf("#%06X".format(theme.labelColor and 0xFFFFFF)) }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { unifiedHex = "#000000"; theme = DressUpColors.unifiedText(theme, android.graphics.Color.BLACK) }, modifier = Modifier.weight(1f)) { Text("まとめて黒") }
+                                        OutlinedButton(onClick = { unifiedHex = "#FFFFFF"; theme = DressUpColors.unifiedText(theme, android.graphics.Color.WHITE) }, modifier = Modifier.weight(1f)) { Text("まとめて白") }
+                                    }
+                                    OutlinedTextField(unifiedHex, { value ->
+                                        unifiedHex = value.take(9)
+                                        parseThemeColor(unifiedHex)?.let { theme = DressUpColors.unifiedText(theme, it) }
+                                    }, label = { Text("文字とアイコンの色をまとめて指定") }, singleLine = true,
+                                        supportingText = { Text("#RRGGBB または #AARRGGBB") },
+                                        isError = parseThemeColor(unifiedHex) == null, modifier = Modifier.fillMaxWidth())
+                                    Text("細かく調整", style = MaterialTheme.typography.titleMedium)
                                     ThemeToggle("候補に背景色を付ける", theme.useCandidateBackground) { theme = theme.copy(useCandidateBackground = it) }
                                     var prop by remember { mutableStateOf(colors.first()) }
                                     ChoiceChips(colors.associateWith { it.title }, prop) { prop = it }
                                     key(prop) {
-                                        var hex by remember { mutableStateOf("#%08X".format(prop.get(theme))) }
+                                        var hex by remember(prop.get(theme)) { mutableStateOf("#%08X".format(prop.get(theme))) }
                                         val parsed = parseThemeColor(hex)
                                         OutlinedTextField(hex, {
                                             hex = it.take(9)
