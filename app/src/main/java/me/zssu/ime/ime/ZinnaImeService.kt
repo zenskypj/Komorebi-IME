@@ -479,6 +479,7 @@ class ZinnaImeService : InputMethodService() {
                 }
             }
         }
+        toolMenuButton = menuButton
         val menuButtonWidth = (44 * resources.displayMetrics.density).toInt()
 
         val keyboard = FlickKeyboardView(this).apply {
@@ -1049,6 +1050,15 @@ class ZinnaImeService : InputMethodService() {
             settings.backgroundVideoStart, settings.backgroundVideoEnd, settings.backgroundFilter)
     }
 
+    private var toolMenuButton: ImageButton? = null
+    private fun applyToolMenuTheme(colors: me.zssu.ime.theme.KeyboardTheme) {
+        toolMenuButton?.apply {
+            imageTintList = ColorStateList.valueOf(colors.toolbarIconColor.takeUnless { it == Color.TRANSPARENT }
+                ?: colors.candidateTextColor)
+            setBackgroundColor(colors.toolbarBackgroundColor)
+        }
+    }
+
     private var dressUpActive = false
     private val dressUpListener: (me.zssu.ime.settings.DressUpLivePreview.Draft) -> Unit = { draft ->
         if (dressUpActive) applyDressUpDraft(draft)
@@ -1070,6 +1080,7 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         candidateView?.theme = selected
+        applyToolMenuTheme(selected)
         panelView?.apply {
             setBackgroundColor(selected.backgroundColor)
             setWallpaper(selected.wallpaper, selected.wallpaperOpacity, selected.wallpaperMotion)
@@ -1374,6 +1385,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        toolMenuButton = null
         if (voicePanelActive) closeVoicePanel()
         voicePending = null
         if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {

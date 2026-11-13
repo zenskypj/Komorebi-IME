@@ -66,6 +66,13 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var theme: KeyboardTheme = KeyboardTheme.Default
         set(value) {
             field = value
+            // The toolbar contains ImageButtons, not candidate TextViews. Rebuild it using
+            // the new colors while it is visible; do not replace open palettes or candidates.
+            if (toolbarState != null) {
+                showTools()
+                return
+            }
+            applyCandidateBackdrop()
             for (i in 0 until container.childCount) {
                 val child = container.getChildAt(i)
                 val chips = if (child is TextView) listOf(child) else if (child in twoRowColumns)
