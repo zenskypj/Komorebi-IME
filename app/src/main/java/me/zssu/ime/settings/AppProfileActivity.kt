@@ -150,6 +150,11 @@ private fun ProfileEditorDialog(
     var height by remember(initial) { mutableFloatStateOf(initial.keyHeightScale) }
     var correction by remember(initial) { mutableStateOf(initial.typingCorrection) }
     var neuralEnabled by remember(initial) { mutableStateOf(initial.neuralEnabled) }
+    val context = LocalContext.current
+    val themes = remember { me.zssu.ime.keyboard.LayoutRepository(context).let { repo ->
+        repo.availableThemeIds().associateWith { id -> repo.loadTheme(id)?.label ?: "端末の配色" }
+    } }
+    var themeId by remember(initial) { mutableStateOf(initial.themeId) }
     var incognito by remember(initial) { mutableStateOf(initial.incognito) }
 
     AlertDialog(
@@ -189,6 +194,9 @@ private fun ProfileEditorDialog(
                     Text("入力ミスを補正", Modifier.weight(1f))
                     Switch(checked = correction, onCheckedChange = { correction = it })
                 }
+                Text("このアプリのきせかえ")
+                ThemeDropdown("テーマ", mapOf<String?, String>(null to "共通設定を使う") +
+                    themes.mapKeys { (id, _) -> id as String? }, themeId) { themeId = it }
                 Text("片手モード")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ImeSettings.OneHandMode.entries.forEach { option ->
@@ -227,6 +235,7 @@ private fun ProfileEditorDialog(
                             incognito = incognito,
                             neuralEnabled = neuralEnabled,
                             typingCorrection = correction,
+                            themeId = themeId,
                         )
                     )
                 },

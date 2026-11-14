@@ -2,6 +2,14 @@ package me.zssu.ime.settings
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.zssu.ime.ime.AppLearning
+import me.zssu.ime.ime.InputPerformance
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,6 +64,23 @@ private fun LearningScreen() {
     val context = LocalContext.current
     val diagnostic = remember { context.getSharedPreferences("input_performance", 0) }
     var performanceEnabled by remember { mutableStateOf(diagnostic.getBoolean("enabled", false)) }
+    val scope = rememberCoroutineScope()
+    var performanceReport by remember { mutableStateOf(InputPerformance.report(context)) }
+    var exportText by remember { mutableStateOf<String?>(null) }
+    var appLearning by remember { mutableStateOf(ImeSettings(context).appLearningEnabled) }
+    var learnedApps by remember { mutableStateOf(emptyList<String>()) }
+    var confirmApp by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { learnedApps = withContext(Dispatchers.IO) { AppLearning.apps(context) } }
+    val saveDiagnostic = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        val text = exportText
+        exportText = null
+        if (uri != null && text != null) scope.launch {
+            val saved = withContext(Dispatchers.IO) { runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()); true } == true
+            }.getOrDefault(false) }
+            android.widget.Toast.makeText(context, if (saved) "診断を保存しました" else "保存できませんでした", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
     var confirmTtt by remember { mutableStateOf(false) }
     val priority = remember { me.zssu.ime.ime.PriorityCandidateRepository(context) }
     var pinned by remember { mutableStateOf(priority.entries()) }
@@ -120,12 +145,27 @@ private fun LearningScreen() {
                     Text("性能診断", style = MaterialTheme.typography.titleMedium)
                     Text("入力処理と AI の所要時間だけを記録します。入力本文は保存しません。")
                     Switch(checked = performanceEnabled, onCheckedChange = { performanceEnabled = it; diagnostic.edit().putBoolean("enabled", it).apply() })
-                    for ((key, label) in listOf("key" to "キー処理", "ai" to "AI 推論")) {
-                        val count = diagnostic.getLong(key + "_count", 0)
-                        val mean = diagnostic.getLong(key + "_total_us", 0) / count.coerceAtLeast(1) / 1000.0
-                        Text("$label: $count 回 / 平均 $mean ms / 最大 ${diagnostic.getLong(key + "_max_us", 0) / 1000.0} ms")
+                    Text(performanceReport)
+                    OutlinedButton(onClick = { performanceReport = InputPerformance.report(context) }) { Text("最新の状態を表示") }
+                    OutlinedButton(onClick = {
+                        exportText = InputPerformance.report(context)
+                        saveDiagnostic.launch("komorebi-diagnostics.txt")
+                    }) { Text("診断をファイルに保存") }
+                    OutlinedButton(onClick = {
+                        InputPerformance.clear(context)
+                        performanceReport = InputPerformance.report(context)
+                    }) { Text("診断記録を消去") }
+                }
+            }
+            Card {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("アプリごとの変換学習", style = MaterialTheme.typography.titleMedium)
+                    Text("確定した表記を端末に暗号化して保存し、同じアプリで候補の順に反映します。Mozc や zenzai-plus の学習は別に管理されます。")
+                    Switch(checked = appLearning, onCheckedChange = { appLearning = it; settings.appLearningEnabled = it })
+                    learnedApps.forEach { app ->
+                        OutlinedButton(onClick = { confirmApp = app }) { Text("$app の学習を消去") }
                     }
-                    OutlinedButton(onClick = { diagnostic.edit().clear().putBoolean("enabled", performanceEnabled).apply() }) { Text("診断記録を消去") }
+                    if (learnedApps.isNotEmpty()) OutlinedButton(onClick = { confirmApp = "" }) { Text("全アプリの追加学習を消去") }
                 }
             }
             Card {
@@ -152,6 +192,22 @@ private fun LearningScreen() {
         }
     }
 
+    confirmApp?.let { app ->
+        AlertDialog(onDismissRequest = { confirmApp = null },
+            title = { Text("アプリごとの追加学習を消去しますか？") },
+            text = { Text(app.ifEmpty { "すべてのアプリ" }) },
+            confirmButton = { TextButton(onClick = {
+                confirmApp = null
+                scope.launch {
+                    val (removed, apps) = withContext(Dispatchers.IO) {
+                        AppLearning.forget(context, app.ifEmpty { null }) to AppLearning.apps(context)
+                    }
+                    learnedApps = apps
+                    result = if (removed) "追加学習を消去しました" else "消去できませんでした"
+                }
+            }) { Text("消去") } },
+            dismissButton = { TextButton(onClick = { confirmApp = null }) { Text("戻る") } })
+    }
     if (confirmTtt) AlertDialog(
         onDismissRequest = { confirmTtt = false },
         title = { Text("TTT 学習をリセットしますか？") },

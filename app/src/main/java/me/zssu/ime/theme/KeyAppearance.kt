@@ -29,6 +29,7 @@ enum class WallpaperMotion { NONE, LIGHTS, SNOW }
 @Serializable
 enum class ThemeFlickGuide { INHERIT, PREVIEW, DIRECTIONS }
 
+@Serializable
 enum class BackgroundFilter(val label: String) {
     NATURAL("標準"), WARM("暖色"), COOL("寒色"), MONO("白黒"),
 }

@@ -26,8 +26,8 @@ android {
         applicationId = "me.zssu.ime"
         minSdk = 24
         targetSdk = 36
-        versionCode = 91
-        versionName = "0.3.0-rc.67-dev"
+        versionCode = 92
+        versionName = "0.3.0-rc.68-dev"
     }
 
     buildTypes {
@@ -88,6 +88,9 @@ android {
 }
 
 dependencies {
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:digital-ink-recognition:19.0.0")
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
     implementation(project(":mozc"))
     implementation(project(":karukan"))
 

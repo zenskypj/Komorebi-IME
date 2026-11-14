@@ -87,6 +87,8 @@ class MozcSession(
         internal val dictionaryCompletion: Boolean = false,
         internal val personalRegistration: Boolean = false,
         internal val nativeOrder: Int = -1,
+        internal val appLearned: Boolean = false,
+        internal val sourceLabel: String? = null,
     )
     data class Segment(val text: String, val highlighted: Boolean, val reading: String = "")
 

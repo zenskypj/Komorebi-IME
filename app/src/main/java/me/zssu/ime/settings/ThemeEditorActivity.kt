@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,6 +99,15 @@ private fun ThemeEditorScreen() {
     val themes = remember(revision) { repo.availableThemeIds().associateWith { id ->
         if (id == MaterialYouTheme.ID) MaterialYouTheme.create(context) else repo.loadTheme(id)
     }.mapNotNull { (id, theme) -> theme?.let { id to it } }.toMap() }
+    val bundles = remember { ThemeMediaBundles(context) }
+    var saveMedia by rememberSaveable { mutableStateOf(false) }
+    var replaceCurrent by rememberSaveable { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    val schedule = remember { ThemeSchedule(context) }
+    var scheduleMode by remember { mutableStateOf(schedule.mode) }
+    var scheduleId by remember { mutableStateOf(schedule.themeId) }
+    var scheduleStart by remember { mutableIntStateOf(schedule.start) }
+    var scheduleEnd by remember { mutableIntStateOf(schedule.end) }
     val startingId = settings.activeThemeId
     var baseId by rememberSaveable { mutableStateOf(startingId) }
     val base = themes[baseId] ?: KeyboardTheme.Default
@@ -129,6 +139,40 @@ private fun ThemeEditorScreen() {
         theme = DressUpColors.apply(theme, color, customMedia)
     }
     val colorScope = rememberCoroutineScope()
+    var imported by remember { mutableStateOf<ThemePackage.Draft?>(null) }
+    val cleanup = remember { arrayOfNulls<ThemePackage.Draft>(1) }
+    DisposableEffect(Unit) { onDispose { cleanup[0]?.close() } }
+    fun discardImport() { imported?.close(); imported = null; cleanup[0] = null }
+    var sharing by remember { mutableStateOf<Triple<KeyboardTheme, java.io.File?, Boolean>?>(null) }
+    val importTheme = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) colorScope.launch {
+            try {
+                val draft = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val input = context.contentResolver.openInputStream(uri) ?: error("ファイルを開けません")
+                    input.use { ThemePackage.read(context, it) }.also {
+                        try { repo.validate(it.theme) } catch (e: Exception) { it.close(); throw e }
+                    }
+                }
+                discardImport()
+                cleanup[0] = draft; imported = draft
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) { message = e.message ?: "テーマを読み込めませんでした" }
+        }
+    }
+    val exportTheme = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val export = sharing
+        sharing = null
+        if (uri != null && export != null) colorScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val output = context.contentResolver.openOutputStream(uri) ?: error("保存先を開けません")
+                    output.use { ThemePackage.write(it, export.first, export.second, export.third) }
+                }
+                message = "テーマを書き出しました"
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) { message = e.message ?: "書き出せませんでした" }
+        }
+    }
     fun matchImageColors() {
         val file = background.media.photo ?: background.media.album.firstOrNull() ?: background.media.video
         val wallpaper = theme.wallpaper
@@ -142,7 +186,10 @@ private fun ThemeEditorScreen() {
             else message = "色を合わせる画像を選んでください"
         }
     }
-    val edited = theme != base || name.isNotBlank()
+    val bundledMedia = remember(baseId, revision) { bundles.load(baseId) }
+    val previewMedia = if (saveMedia) background.media else bundledMedia ?: background.media
+    val edited = theme != base || name.isNotBlank() || saveMedia
+    val canReplace = repo.hasUserOverride(LayoutRepository.THEMES_DIR, baseId)
     var appliedLayoutId by rememberSaveable { mutableStateOf(settings.activeLayoutId) }
     var selectedLayoutId by rememberSaveable { mutableStateOf(settings.activeLayoutId) }
     val layouts = remember(revision) { repo.availableLayoutIds().mapNotNull { id ->
@@ -159,10 +206,15 @@ private fun ThemeEditorScreen() {
         }
     }
 
+    val reduceMotion = remember(revision) { settings.reducedKeyboardMotion }
     SideEffect {
+        val previewTheme = (if (settings.pureBlack) theme.asPureBlack() else theme).let {
+            if (reduceMotion) it.copy(wallpaperMotion = me.zssu.ime.theme.WallpaperMotion.NONE,
+                tapEffect = me.zssu.ime.theme.TapEffect.NONE, keywordEffects = emptyList()) else it
+        }
         DressUpLivePreview.update(DressUpLivePreview.Draft(
-            if (settings.pureBlack) theme.asPureBlack() else theme, layout,
-            background.media.takeUnless { previewThemeBackground },
+            imported?.theme ?: previewTheme, layout,
+            if (imported != null) imported?.media else previewMedia.takeUnless { previewThemeBackground },
         ))
     }
 
@@ -172,20 +224,77 @@ private fun ThemeEditorScreen() {
     }
 
     fun apply() {
-        runCatching {
-            val selected = if (!edited && baseId in themes) baseId else {
+        if (saving) return
+        val selected = when {
+            !edited && baseId in themes -> baseId
+            replaceCurrent && canReplace -> baseId
+            else -> {
                 val used = repo.availableThemeIds().toSet()
-                val next = generateSequence(1) { it + 1 }
-                    .map { if (it == 1) "my_theme" else "my_theme_$it" }
-                    .first { it !in used }
-                repo.saveTheme(theme.copy(id = next, label = name.trim().ifEmpty { "${base.label} のアレンジ" }))
-                settings.markCustomizationChanged()
-                next
+                generateSequence(1) { it + 1 }.map { if (it == 1) "my_theme" else "my_theme_$it" }.first { it !in used }
             }
-            settings.activeThemeId = selected
-            if (appliedLayoutId != selectedLayoutId) settings.activeLayoutId = selectedLayoutId
-            (context as? ComponentActivity)?.finish()
-        }.onFailure { message = it.message ?: "保存できませんでした" }
+        }
+        val draft = theme.copy(id = selected, label = name.trim().ifEmpty {
+            if (selected == baseId) base.label else "${base.label} のアレンジ"
+        })
+        val snapshot = if (saveMedia) background.media else bundledMedia?.takeIf { edited && selected != baseId }
+        saving = true
+        colorScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    if (edited) {
+                        snapshot?.let { bundles.save(selected, it) }
+                        repo.saveTheme(draft)
+                        settings.markCustomizationChanged()
+                    }
+                    settings.activeThemeId = selected
+                    if (appliedLayoutId != selectedLayoutId) settings.activeLayoutId = selectedLayoutId
+                }
+                (context as? ComponentActivity)?.finish()
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) { message = e.message ?: "保存できませんでした" }
+            finally { saving = false }
+        }
+    }
+
+    imported?.let { draft ->
+        AlertDialog(onDismissRequest = ::discardImport,
+            title = { Text("テーマの取り込み") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(draft.theme.label.take(80))
+                    Text("展開後 %.1f MB。新しいテーマとして追加します。".format(draft.size / 1048576.0))
+                    val thumb = remember(draft) {
+                        (draft.media?.photo ?: draft.media?.album?.firstOrNull())?.let { file ->
+                            android.graphics.BitmapFactory.decodeFile(file.absolutePath,
+                                android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })
+                        }
+                    }
+                    if (thumb != null) Image(thumb.asImageBitmap(), "取り込む背景",
+                        Modifier.fillMaxWidth().height(110.dp), contentScale = ContentScale.Crop)
+                    Text("文字色の見本：あいうえお", color = androidx.compose.ui.graphics.Color(draft.theme.labelColor),
+                        modifier = Modifier.background(androidx.compose.ui.graphics.Color(draft.theme.keyColor)).padding(8.dp))
+                }
+            },
+            confirmButton = { TextButton(enabled = !saving, onClick = {
+                saving = true
+                val used = repo.availableThemeIds().toSet()
+                val id = generateSequence(1) { it + 1 }.map { "imported_theme_$it" }.first { it !in used }
+                colorScope.launch {
+                    try {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            draft.media?.let { bundles.save(id, it) }
+                            repo.saveTheme(draft.theme.copy(id = id, label = draft.theme.label.take(80)))
+                            settings.markCustomizationChanged()
+                        }
+                        baseId = id; theme = draft.theme.copy(id = id, label = draft.theme.label.take(80))
+                        saveMedia = false; replaceCurrent = false; name = ""; revision++
+                        discardImport()
+                    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                    catch (e: Exception) { discardImport(); message = e.message ?: "保存できませんでした" }
+                    finally { saving = false }
+                }
+            }) { Text("新しく追加") } },
+            dismissButton = { TextButton(enabled = !saving, onClick = ::discardImport) { Text("キャンセル") } })
     }
 
     Scaffold(topBar = {
@@ -194,7 +303,7 @@ private fun ThemeEditorScreen() {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る")
             }
         }, actions = {
-            TextButton(onClick = ::apply, enabled = !background.busy, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
+            TextButton(onClick = ::apply, enabled = !background.busy && !saving, modifier = Modifier.padding(end = 8.dp)) { Text("完了") }
         })
     }) { insets ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets).imePadding()) {
@@ -284,25 +393,58 @@ private fun ThemeEditorScreen() {
                                     if (illustrated.isNotEmpty()) {
                                         ArtPicker(illustrated.keys.toList(), baseId, { themes.getValue(it).label },
                                             { themes.getValue(it).wallpaper?.asset }) {
-                                            baseId = it; theme = themes.getValue(it); name = ""; message = null
+                                            baseId = it; theme = themes.getValue(it); name = ""; message = null; saveMedia = false; replaceCurrent = false
                                         }
                                     }
                                     Text("色のテーマ", style = MaterialTheme.typography.titleMedium)
                                     ChoiceChips(themes.filterValues { it.wallpaper == null }.mapValues { it.value.label }, baseId) {
-                                        baseId = it; theme = themes.getValue(it); name = ""; message = null
+                                        baseId = it; theme = themes.getValue(it); name = ""; message = null; saveMedia = false; replaceCurrent = false
                                     }
+                                    if (bundledMedia != null) Text("このテーマには保存した背景があります。")
                                     if (background.media.hasImage) {
+                                        ThemeToggle("今の写真・動画もテーマに保存", saveMedia) { saveMedia = it }
+                                    }
+                                    if (edited && canReplace) ThemeToggle("このテーマを更新する", replaceCurrent) { replaceCurrent = it }
+                                    if (previewMedia.hasImage) {
                                         ThemeToggle("テーマの背景だけ試す", previewThemeBackground) { previewThemeBackground = it }
-                                        Text("適用後は「背景」で選んだ写真・動画が優先されます。",
+                                        Text("テーマに保存した背景がある場合は、その背景を表示します。",
                                             style = MaterialTheme.typography.bodySmall)
                                     }
                                     if (edited) OutlinedTextField(name, { name = it.take(80) }, label = { Text("新しいテーマ名（任意）") },
                                         singleLine = true, modifier = Modifier.fillMaxWidth())
+                                    OutlinedButton(onClick = { importTheme.launch(arrayOf("application/zip", "application/octet-stream")) }) {
+                                        Text("テーマ一式を読み込む")
+                                    }
+                                    OutlinedButton(onClick = {
+                                        sharing = Triple(theme, null, false); exportTheme.launch("komorebi-theme.zip")
+                                    }) { Text("配色・キー設定だけを書き出す") }
+                                    if (bundledMedia != null) OutlinedButton(onClick = {
+                                        sharing = Triple(theme, bundles.folder(baseId), true); exportTheme.launch("komorebi-theme-background.zip")
+                                    }) { Text("保存済みの背景も書き出す") }
+                                    Text("テーマを自動で切り替える", style = MaterialTheme.typography.titleMedium)
+                                    ChoiceChips(ThemeSchedule.Mode.entries.associateWith { it.title }, scheduleMode) {
+                                        scheduleMode = it; schedule.mode = it
+                                    }
+                                    if (scheduleMode != ThemeSchedule.Mode.OFF) {
+                                        ThemeDropdown("切り替え先", mapOf<String?, String>(null to "指定なし") +
+                                            themes.map { (id, item) -> (id as String?) to item.label }.toMap(), scheduleId) {
+                                            scheduleId = it; schedule.themeId = it
+                                        }
+                                        if (scheduleMode == ThemeSchedule.Mode.HOURS) {
+                                            val hours = (0..23).associateWith { "%02d:00".format(it) }
+                                            ThemeDropdown("開始", hours, scheduleStart) { scheduleStart = it; schedule.start = it }
+                                            ThemeDropdown("終了", hours, scheduleEnd) { scheduleEnd = it; schedule.end = it }
+                                            if (scheduleStart == scheduleEnd) Text("開始と終了が同じ場合は切り替えません。")
+                                        }
+                                        Text("アプリ別の指定を優先します。切り替えはキーボードを開くときに反映します。",
+                                            style = MaterialTheme.typography.bodySmall)
+                                    }
                                     DressUpAdvanced(repo, true, baseId, revision, onImport = { id ->
                                         settings.markCustomizationChanged()
                                         revision++
-                                        repo.loadTheme(id)?.let { baseId = id; theme = it; name = "" }
+                                        repo.loadTheme(id)?.let { baseId = id; theme = it; name = ""; saveMedia = false; replaceCurrent = false }
                                     }, onRemove = { id ->
+                                        bundles.delete(id)
                                         settings.markCustomizationChanged()
                                         if (appliedId == id && repo.loadTheme(id) == null) {
                                             settings.activeThemeId = ImeSettings.DEFAULT_THEME_ID
@@ -340,6 +482,7 @@ private fun ThemeEditorScreen() {
                                         selectedLayoutId = id
                                         repo.loadLayout(id)?.let { qwerty = isQwerty(it) }
                                     }, onRemove = { id ->
+                                        bundles.delete(id)
                                         settings.markCustomizationChanged()
                                         if (repo.loadLayout(id) == null) {
                                             if (appliedLayoutId == id) {
@@ -401,6 +544,16 @@ private fun ThemeEditorScreen() {
                                     Text("まとめて調整", style = MaterialTheme.typography.titleMedium)
                                     OutlinedButton(onClick = { matchImageColors() }, modifier = Modifier.fillMaxWidth()) {
                                         Text("背景画像に色を合わせる")
+                                    }
+                                    val photo = background.media.hasImage && !previewThemeBackground && settings.backgroundPresetId == null
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { theme = DressUpColors.highContrast(theme, true, photo) },
+                                            modifier = Modifier.weight(1f)) { Text("黒文字でくっきり") }
+                                        OutlinedButton(onClick = { theme = DressUpColors.highContrast(theme, false, photo) },
+                                            modifier = Modifier.weight(1f)) { Text("白文字でくっきり") }
+                                    }
+                                    ThemeToggle("動く演出を減らす", settings.reducedKeyboardMotion) {
+                                        settings.reducedKeyboardMotion = it; revision++
                                     }
                                     Text("文字・キーとツールのアイコンの色", style = MaterialTheme.typography.bodySmall)
                                     var unifiedHex by remember { mutableStateOf("#%06X".format(theme.labelColor and 0xFFFFFF)) }
@@ -630,3 +783,16 @@ internal fun ThemeToggle(label: String, value: Boolean, onChange: (Boolean) -> U
 internal fun parseThemeColor(raw: String): Int? = raw.takeIf {
     it.startsWith("#") && (it.length == 7 || it.length == 9)
 }?.let { runCatching { android.graphics.Color.parseColor(it) }.getOrNull() }
+
+@Composable
+internal fun <T> ThemeDropdown(label: String, options: Map<T, String>, selected: T, onSelect: (T) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }) { Text("$label：${options[selected] ?: "指定なし"}") }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 280.dp)) {
+            options.forEach { (id, title) ->
+                DropdownMenuItem(text = { Text(title) }, onClick = { expanded = false; onSelect(id) })
+            }
+        }
+    }
+}

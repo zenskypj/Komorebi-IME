@@ -217,6 +217,14 @@ class ImeSettings(context: Context) {
      * process that never held the SAF grant, and the picked document can be deleted or unmounted
      * at any time. Copying makes the setting survive both.
      */
+    var appLearningEnabled: Boolean
+        get() = prefs.getBoolean("app_learning_enabled", false)
+        set(value) { prefs.edit { putBoolean("app_learning_enabled", value) } }
+
+    var reducedKeyboardMotion: Boolean
+        get() = prefs.getBoolean("reduced_keyboard_motion", false)
+        set(value) { prefs.edit { putBoolean("reduced_keyboard_motion", value) }; bumpRevision() }
+
     val backgroundImage: File?
         get() = File(backgroundDir, BACKGROUND_FILE).takeIf { it.isFile }
 

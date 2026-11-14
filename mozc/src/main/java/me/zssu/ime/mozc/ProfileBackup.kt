@@ -79,6 +79,7 @@ object ProfileBackup {
         setOf(".server.lock", ".session.ipc", ".registry.db", ".encrypt_key.db")
 
     /** Largest archive we will unpack, so a hostile file cannot exhaust storage. */
+    private val SEALED_FILES = setOf("priority_candidates.enc", "snippets.enc", "snippet_name.enc", "app_learning.enc")
     private const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
 
     sealed interface Result {
@@ -209,6 +210,10 @@ object ProfileBackup {
             return Result.Failed("バックアップの形式または暗号鍵が不正です")
         }
 
+        if (entries.keys.any { it.startsWith("sealed/") && it.removePrefix("sealed/") !in SEALED_FILES }) {
+            return Result.Failed("このバージョンでは読み込めない保存項目があります")
+        }
+
         // Sealed under this device's Keystore while it waits, so a backup does not sit unprotected
         // in app storage between being chosen and being applied.
         return if (SecureStore.writeBytes(File(app.filesDir, STAGED_FILE), payload)) {
@@ -288,7 +293,7 @@ object ProfileBackup {
                         )
                     name.startsWith("sealed/") -> {
                         val relative = name.removePrefix("sealed/")
-                        require(relative == "priority_candidates.enc")
+                        require(relative in SEALED_FILES)
                         check(SecureStore.writeBytes(File(context.filesDir, relative), bytes))
                     }
                     name.startsWith(FILES_PREFIX) ->

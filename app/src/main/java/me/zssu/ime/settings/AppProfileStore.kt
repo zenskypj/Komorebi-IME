@@ -23,6 +23,7 @@ class AppProfileStore(context: Context) {
         val incognito: Boolean = false,
         val neuralEnabled: Boolean = true,
         val typingCorrection: Boolean = true,
+        val themeId: String? = null,
     ) {
         val resolvedKeyboardStyle: KeyboardStyle get() = KeyboardStyle.of(keyboardStyle)
         val resolvedOneHandMode: ImeSettings.OneHandMode get() = runCatching {
@@ -70,6 +71,7 @@ class AppProfileStore(context: Context) {
         require(validPackageName(profile.packageName)) { "正しいパッケージ名を入力してください" }
         val normalized = profile.copy(
             label = profile.label.take(80),
+            themeId = profile.themeId?.takeIf { Regex("[A-Za-z0-9_-]{1,64}").matches(it) },
             keyHeightScale = profile.keyHeightScale.coerceIn(
                 ImeSettings.MIN_KEY_HEIGHT_SCALE,
                 ImeSettings.MAX_KEY_HEIGHT_SCALE,

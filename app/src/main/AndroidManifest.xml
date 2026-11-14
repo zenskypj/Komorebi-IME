@@ -49,6 +49,8 @@
                 android:resource="@xml/beam_file_paths" />
         </provider>
 
+        <activity android:name=".ime.TextToolActivity" android:exported="false"
+            android:excludeFromRecents="true" />
         <activity
             android:name=".ime.ProofreadActivity"
             android:exported="false"

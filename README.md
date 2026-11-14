@@ -22,12 +22,14 @@
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.67-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.68-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
 > テスト用APKはすべて debug 署名（`me.zssu.ime.debug`）です。
+
+`rc.68-dev` は端末内の翻訳・手書き・画像の文字認識、入力補助、アプリ別学習、きせかえの保存を追加しています。翻訳には [Google 翻訳](https://cloud.google.com/translate) を使用します。未実装・未検証事項は[作業状況](docs/research/input-roadmap-status.md)を参照してください。
 
 rc.32 はツールでの高さ調整、予測順位・学習、次文節への自動移行を改善しています。[操作と検証範囲](docs/conversion-ui.md)を参照してください。
 

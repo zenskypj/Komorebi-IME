@@ -139,3 +139,8 @@ Java Native Access 5.18.1 (Apache License 2.0 option), and the user-downloaded
 vosk-model-small-ja-0.22 (Apache License 2.0). Third-party notices and the license
 text are included in voice/src/main/assets/legal/. Model source:
 https://alphacephei.com/vosk/models
+
+Optional text input tools use Google ML Kit for Android:
+  https://developers.google.com/ml-kit/terms
+  On-device translation is powered by Google Translate:
+  https://cloud.google.com/translate

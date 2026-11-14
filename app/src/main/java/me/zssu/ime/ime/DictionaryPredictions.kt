@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /** Prefix completion for bundled names/terms and personal registrations. No English dictionary. */
 internal class DictionaryPredictions(context: Context, private val pins: () -> List<PriorityCandidateRepository.Entry>) {
     private data class Word(val reading: String, val value: String, val pinned: Boolean = false,
-        val personal: Boolean = false)
+        val personal: Boolean = false, val sourceLabel: String? = null)
     private class Index(entries: List<Word>) {
         private val words = entries.sortedWith(compareBy<Word> { it.reading }.thenBy { it.value })
             .distinctBy { it.reading to it.value }
@@ -54,8 +54,8 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
             if (closed || ticket != generation.get()) return@execute
             try {
                 if (!publicLoaded) {
-                    proper = load("proper-nouns.txt")
-                    technology = load("ai-tech-nouns.txt")
+                    proper = load("proper-nouns.txt", "内蔵固有名詞辞書")
+                    technology = load("ai-tech-nouns.txt", "内蔵技術用語辞書")
                     publicLoaded = true
                 }
                 val entries = UserDictionary(app).entries()
@@ -75,11 +75,11 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
         }
     }
 
-    private fun load(name: String): Index = app.assets.open("dictionaries/$name").bufferedReader().useLines { lines ->
+    private fun load(name: String, sourceLabel: String): Index = app.assets.open("dictionaries/$name").bufferedReader().useLines { lines ->
         Index(lines.filterNot { it.startsWith("#") }.mapNotNull { line ->
             val columns = line.split('\t')
             if (columns.size < 2 || columns[0].isBlank() || columns[1].isBlank()) null
-            else Word(ReadingSimilarity.normalize(columns[0]), columns[1])
+            else Word(ReadingSimilarity.normalize(columns[0]), columns[1], sourceLabel = sourceLabel)
         }.toList())
     }
 
@@ -94,7 +94,7 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
             .thenBy { !it.pinned }.thenBy { it.reading.length }).take(12).mapIndexed { index, word ->
             MozcSession.Candidate(-50_000 - index, word.value, inputReading = reading,
                 sourceReading = word.reading, prediction = word.reading != prefix,
-                directCommit = true, dictionaryCompletion = true, personalRegistration = word.personal)
+                directCommit = true, dictionaryCompletion = true, personalRegistration = word.personal, sourceLabel = word.sourceLabel)
         }
     }
 

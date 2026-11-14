@@ -178,6 +178,8 @@ internal fun BackupCard() {
             title = { Text(if (exporting) "バックアップを書き出す" else "バックアップを読み込む") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (exporting) "個人辞書・変換学習・定型文・設定・きせかえを暗号化して保存します。取得した言語モデルやクリップボード履歴は含みません。"
+                        else "復元すると、バックアップに含まれる個人辞書・学習・設定・きせかえ等が上書きされます。必要なら今のデータを先に書き出してください。")
                     OutlinedTextField(
                         value = passphrase,
                         onValueChange = { passphrase = it },
@@ -232,10 +234,11 @@ private const val BACKUP_MIME = "application/octet-stream"
 internal val BACKUP_EXTRAS = ProfileBackup.Extras(
     preferences = listOf(ImeSettings.NAME, "emoji_palette"),
     files = listOf("app_profiles.json"),
-    encryptedFiles = listOf("priority_candidates.enc"),
+    encryptedFiles = listOf("priority_candidates.enc", "snippets.enc", "snippet_name.enc", me.zssu.ime.ime.AppLearning.FILE_NAME),
     directories = listOf(
         ImeSettings.BACKGROUND_DIR,
         ImeSettings.CUSTOM_BACKGROUND_DIR,
+        ThemeMediaBundles.DIRECTORY,
         me.zssu.ime.theme.LocalArt.KEY_ART_DIR,
         LayoutRepository.LAYOUTS_DIR,
         LayoutRepository.THEMES_DIR,

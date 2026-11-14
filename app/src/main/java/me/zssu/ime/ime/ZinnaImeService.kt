@@ -2,6 +2,7 @@ package me.zssu.ime.ime
 
 import android.content.Context
 import android.content.ClipboardManager
+import kotlinx.coroutines.launch
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.inputmethodservice.InputMethodService
@@ -74,14 +75,15 @@ class ZinnaImeService : InputMethodService() {
     private var clipboardManager: ClipboardManager? = null
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         // Capture copy events without polling while the IME is hidden.
-        if (::settings.isInitialized && settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
-            clipboardHistory.record(this, clipboardManager)
+        if (::settings.isInitialized && settings.clipboardHistoryEnabled && !restrictedTextToolField()) {
+            clipboardHistory.record(clipboardManager)
         }
     }
     private val inputQueue by lazy {
         SerialInputQueue(java.util.concurrent.Executors.newSingleThreadExecutor { work ->
             Thread(work, "mozc-input")
         }, { mainHandler.post(it); Unit }, { error ->
+            if (::settings.isInitialized && !restrictedTextToolField()) InputPerformance.record(this, "error", 0)
             Log.e(TAG, "asynchronous input failed", error)
             currentInputConnection?.let(::recoverFromLostSession)
         })
@@ -109,6 +111,9 @@ class ZinnaImeService : InputMethodService() {
     private lateinit var karukanEngine: KarukanEngine
 
     private var editAnchor: Int? = null
+    private val appLearningWorker = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "app-learning").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+    }
     private var segmentBar: LinearLayout? = null
     private var segmentEditing = false
     private var heightPanel: LinearLayout? = null
@@ -323,7 +328,15 @@ class ZinnaImeService : InputMethodService() {
              } }
             onCandidateLongPressed = { candidate ->
                 val entries = meaningDictionaries.lookup(candidate.text)
-                val definitions = entries.flatMap { entry ->
+                val provenance = buildList {
+                    if (candidate.priorityMatch == PriorityMatch.EXACT) add("★ 最優先登録")
+                    if (candidate.personalRegistration) add("個人辞書")
+                    if (candidate.appLearned) add("このアプリでの学習")
+                    else if (candidate.fromUserHistory) add("Mozc の変換学習")
+                    candidate.sourceLabel?.let(::add)
+                    if (candidate.correction) add("入力補正")
+                }.takeIf { it.isNotEmpty() }?.joinToString("・", prefix = "候補の出典：")
+                val definitions = listOfNotNull(provenance) + entries.flatMap { entry ->
                     entry.meanings.map { meaning ->
                         buildString {
                             if (entry.tags.isNotEmpty()) append("[${entry.tags.joinToString("・")}] ")
@@ -407,16 +420,31 @@ class ZinnaImeService : InputMethodService() {
                 if (isConverting) focusConversionCandidate(candidate)
              } }
             onToolAction = ::handleToolAction
-            onSnippetSelected = { text -> enqueueInput { if (!fieldPolicy.incognito) { handleSymbol(text); showTools() }  } }
+            onSnippetSelected = { text -> enqueueInput {
+                if (!restrictedTextToolField()) {
+                    if ("{{名前}}" in text) startTextTool(TextTool.SNIPPET_NAME, text)
+                    else pasteSnippet(text)
+                }
+                showTools()
+            } }
+            onSnippetSearch = { enqueueInput { startTextTool(TextTool.SNIPPET_SEARCH) } }
+            onClipboardSearch = { enqueueInput { startTextTool(TextTool.CLIP_SEARCH) } }
             onManageSnippets = { startActivity(Intent(this@ZinnaImeService, me.zssu.ime.settings.SnippetActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             onStyleSelected = { style -> enqueueInput {
                 applyStyleCorrection(style)
                 candidateView?.showTools()
              } }
             onClipboardItemSelected = { text -> enqueueInput {
-                handleSymbol(text)
+                if (!restrictedTextToolField() && settings.clipboardHistoryEnabled) handleSymbol(text)
                 showTools()
              } }
+            onClipboardItemChanged = { value, remove ->
+                if (!restrictedTextToolField() && settings.clipboardHistoryEnabled) {
+                    if (remove) clipboardHistory.remove(value) else clipboardHistory.togglePinned(value)
+                    showClipboardHistory(clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L),
+                        clipboardHistory.pinnedItems())
+                }
+            }
             onClipboardHistoryCleared = {
                 clipboardHistory.clear()
                 showClipboardHistory(emptyList())
@@ -712,6 +740,9 @@ class ZinnaImeService : InputMethodService() {
         }
         when (action) {
             CandidateStripView.ToolAction.VOICE -> startVoiceInput()
+            CandidateStripView.ToolAction.TRANSLATE -> startTextTool(TextTool.TRANSLATE)
+            CandidateStripView.ToolAction.HANDWRITING -> startHandwriting()
+            CandidateStripView.ToolAction.IMAGE_TEXT -> startTextTool(TextTool.OCR)
             CandidateStripView.ToolAction.INPUT_HELP -> {
                 startActivity(Intent(this, me.zssu.ime.settings.InputGuideActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -727,7 +758,7 @@ class ZinnaImeService : InputMethodService() {
                 startActivity(intent)
             }
             CandidateStripView.ToolAction.SNIPPETS -> {
-                if (!fieldPolicy.incognito) candidateView?.showSnippets(SnippetStore(this).entries())
+                if (!restrictedTextToolField()) candidateView?.showSnippets(SnippetStore(this).entries())
                 else Toast.makeText(this, "機密モードでは定型文を表示しません", Toast.LENGTH_SHORT).show()
             }
             CandidateStripView.ToolAction.PROOFREAD -> startProofreading()
@@ -739,9 +770,10 @@ class ZinnaImeService : InputMethodService() {
             CandidateStripView.ToolAction.EDIT -> candidateView?.showEditPanel()
             CandidateStripView.ToolAction.AI_STYLE -> candidateView?.showStyleSelector()
             CandidateStripView.ToolAction.CLIPBOARD -> {
-                if (settings.clipboardHistoryEnabled && !fieldPolicy.incognito) {
-                    clipboardHistory.record(this, getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
-                    candidateView?.showClipboardHistory(clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L))
+                if (settings.clipboardHistoryEnabled && !restrictedTextToolField()) {
+                    clipboardHistory.record(getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                    candidateView?.showClipboardHistory(clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L),
+                        clipboardHistory.pinnedItems())
                 } else {
                     candidateView?.showClipboardHistory(emptyList())
                 }
@@ -758,6 +790,162 @@ class ZinnaImeService : InputMethodService() {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
         }
+    }
+
+    private suspend fun pasteSnippet(template: String, nameOverride: String? = null) {
+        synchronizeEditorComposition()
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) return
+        val ic = currentInputConnection ?: return
+        val expanded = SnippetTemplate.expand(template, nameOverride ?: SnippetStore(this).name(), selectedText(ic).orEmpty(),
+            SnippetTemplate.date(SnippetStore(this).dateFormat()))
+        if (expanded.text.isEmpty()) return
+        val anchor = if (expanded.caret != expanded.text.length) voiceAnchor() else null
+        if (ic.commitText(expanded.text, 1) && anchor != null &&
+            anchor.selectionStart in 0..anchor.text.length && anchor.selectionEnd in 0..anchor.text.length) {
+            val start = anchor.startOffset + minOf(anchor.selectionStart, anchor.selectionEnd)
+            val caret = start + expanded.caret
+            ic.setSelection(caret, caret)
+        }
+    }
+
+    private val handwritingScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate)
+    private var handwritingJob: kotlinx.coroutines.Job? = null
+    private var handwritingPanel: LinearLayout? = null
+
+    private fun closeHandwriting() {
+        handwritingJob?.cancel()
+        handwritingJob = null
+        if (handwritingPanel == null) return
+        handwritingPanel = null
+        candidateView?.showTools()
+    }
+
+    private suspend fun startHandwriting() {
+        if (restrictedTextToolField()) {
+            Toast.makeText(this, "この入力欄では手書きを利用できません", Toast.LENGTH_SHORT).show()
+            return
+        }
+        synchronizeEditorComposition()
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) return
+        val anchor = voiceAnchor() ?: return
+        closeHandwriting()
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(theme.candidateBackgroundColor)
+        }
+        val pad = InkPad(this)
+        val status = android.widget.TextView(this).apply {
+            text = "指かペンで書いてください"; setTextColor(theme.candidateTextColor)
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
+        val controls = LinearLayout(this)
+        val results = LinearLayout(this)
+        fun button(parent: LinearLayout, label: String, work: () -> Unit) = android.widget.Button(this).apply {
+            text = label
+            setOnClickListener { work() }
+            parent.addView(this, LinearLayout.LayoutParams(-2, -2))
+        }
+        button(controls, "閉じる", ::closeHandwriting)
+        button(controls, "一画戻す") { if (pad.isEnabled) pad.undo() }
+        button(controls, "消去") { if (pad.isEnabled) pad.clear() }
+        val read = button(controls, "読み取る") {
+            if (pad.hasInk && handwritingJob?.isActive != true) {
+                pad.isEnabled = false
+                results.removeAllViews()
+                val ink = pad.ink()
+                handwritingJob = handwritingScope.launch {
+                    try {
+                        val matches = recognizeJapaneseInk(ink) { status.text = it }
+                        status.text = if (matches.isEmpty()) "文字を読み取れませんでした" else "入力する候補を選んでください"
+                        for (match in matches) button(results, match) {
+                            enqueueInput {
+                                if (handwritingPanel === panel && !restrictedTextToolField() && anchor.matches(voiceAnchor())) {
+                                    currentInputConnection?.commitText(match, 1)
+                                } else Toast.makeText(this@ZinnaImeService, "入力欄が変わりました", Toast.LENGTH_SHORT).show()
+                                closeHandwriting()
+                            }
+                        }
+                    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                    catch (_: Exception) { status.text = "読み取れませんでした。初回は Wi-Fi を確認してください。" }
+                    finally { pad.isEnabled = true }
+                }
+            }
+        }
+        read.isEnabled = false
+        pad.onChanged = { read.isEnabled = pad.hasInk; results.removeAllViews(); status.text = "読み取るを押してください" }
+        panel.addView(android.widget.HorizontalScrollView(this).apply { addView(controls) })
+        panel.addView(status)
+        panel.addView(pad, LinearLayout.LayoutParams(-1, 0, 1f))
+        panel.addView(android.widget.HorizontalScrollView(this).apply { addView(results) })
+        handwritingPanel = panel
+        candidateView?.showHandwritingPanel(panel)
+    }
+
+    private suspend fun startTextTool(tool: TextTool, template: String? = null) {
+        if (restrictedTextToolField()) {
+            Toast.makeText(this, "この入力欄では利用できません", Toast.LENGTH_SHORT).show()
+            return
+        }
+        synchronizeEditorComposition()
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) return
+        val anchor = voiceAnchor()
+        if (anchor == null || anchor.selectionStart !in 0..anchor.text.length ||
+            anchor.selectionEnd !in 0..anchor.text.length) {
+            Toast.makeText(this, "この入力欄を読み取れません", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val selection = anchor.text.substring(minOf(anchor.selectionStart, anchor.selectionEnd),
+            maxOf(anchor.selectionStart, anchor.selectionEnd))
+        if (tool == TextTool.TRANSLATE && (selection.isBlank() || selection.length > 4000)) {
+            Toast.makeText(this, "翻訳する文章を選択してください（4,000文字まで）", Toast.LENGTH_LONG).show()
+            return
+        }
+        val entries = when (tool) {
+            TextTool.CLIP_SEARCH -> if (settings.clipboardHistoryEnabled)
+                clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L) else return
+            TextTool.SNIPPET_SEARCH -> SnippetStore(this).entries()
+            TextTool.SNIPPET_NAME -> listOfNotNull(template)
+            else -> emptyList()
+        }
+        val request = TextToolRequest.Request(tool, selection.takeIf { it.isNotEmpty() }, anchor, entries = entries)
+        TextToolRequest.pending = request
+        runCatching {
+            startActivity(Intent(this, TextToolActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            ).putExtra("request", request.id))
+        }.onFailure {
+            TextToolRequest.pending = null
+            Toast.makeText(this, "画面を開けませんでした", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun restrictedTextToolField(): Boolean {
+        val info = currentInputEditorInfo ?: return true
+        val policy = effectivePolicy(InputFieldPolicy.from(info), appProfiles.profileFor(info.packageName))
+        return policy.incognito || policy.rawKeyEvents ||
+            info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
+    }
+
+    private suspend fun applyTextToolResult() {
+        val pending = TextToolRequest.pending ?: return
+        val result = pending.result ?: return
+        TextToolRequest.pending = null
+        val applied = runCatching {
+            if (android.os.SystemClock.elapsedRealtime() >= pending.expiresAt || restrictedTextToolField() ||
+                !pending.anchor.matches(voiceAnchor())) false
+            else when (pending.tool) {
+                TextTool.CLIP_SEARCH -> settings.clipboardHistoryEnabled &&
+                    result in clipboardHistory.items(settings.clipboardRetentionMinutes * 60_000L) &&
+                    currentInputConnection?.commitText(result, 1) == true
+                TextTool.SNIPPET_SEARCH, TextTool.SNIPPET_NAME -> { pasteSnippet(result, pending.snippetName); true }
+                else -> currentInputConnection?.commitText(result, 1) == true
+            }
+        }.getOrDefault(false)
+        if (!applied) Toast.makeText(this, "入力欄やデータが変わったため反映できませんでした", Toast.LENGTH_LONG).show()
     }
 
     private var voicePending: VoicePending? = null
@@ -824,11 +1012,15 @@ class ZinnaImeService : InputMethodService() {
         if (!voicePanelActive || voicePending?.id != sessionId) return@Handler true
         val text = message.data?.getString("text").orEmpty()
         when (message.what) {
-            10 -> { voicePanelState = 2; voicePanelStatus = text }
-            11 -> { voicePanelState = if (text == "話してください") 0 else 3; voicePanelStatus = text }
+            10 -> { cancelVoiceTimeout(); voicePanelState = 2; voicePanelStatus = text }
+            11 -> {
+                voicePanelState = if (text == "話してください") 0 else 3
+                if (voicePanelState == 0) cancelVoiceTimeout()
+                voicePanelStatus = text
+            }
             12 -> { voicePanelText = text; voicePanelState = 0 }
-            13 -> { voicePanelText = text; voicePanelState = 1; voicePanelStatus = if (text.isBlank()) "聞き取れませんでした" else "内容を確認してください" }
-            14 -> { voicePanelState = 1; voicePanelStatus = text }
+            13 -> { cancelVoiceTimeout(); voicePanelText = text; voicePanelState = 1; voicePanelStatus = if (text.isBlank()) "聞き取れませんでした" else "内容を確認してください" }
+            14 -> { cancelVoiceTimeout(); voicePanelState = 1; voicePanelStatus = text }
         }
         renderVoicePanel(); true
     })
@@ -842,7 +1034,13 @@ class ZinnaImeService : InputMethodService() {
             .onFailure { voicePanelState = 1; voicePanelStatus = "音声モジュールとの接続が切れました"; renderVoicePanel() }
     }
 
+    private var voiceTimeout: Runnable? = null
+    private fun cancelVoiceTimeout() {
+        voiceTimeout?.let(mainHandler::removeCallbacks)
+        voiceTimeout = null
+    }
     private fun closeVoicePanel() {
+        cancelVoiceTimeout()
         voicePanelActive = false
         voicePreparing = false
         voicePrepared = false
@@ -897,11 +1095,24 @@ class ZinnaImeService : InputMethodService() {
         }
     }
 
+    private fun voiceConnectionFailed(message: String) {
+        cancelVoiceTimeout()
+        voicePreparing = false
+        voicePrepared = false
+        runCatching { voiceService?.send(android.os.Message.obtain(null, 3)) }
+        voiceService = null
+        voiceConnection?.let { runCatching { unbindService(it) } }
+        voiceConnection = null
+        voicePanelState = 1
+        voicePanelStatus = message
+        renderVoicePanel()
+    }
+
     private fun tryConnectPreparedVoice(sessionId: Long, attempt: Int) {
         if (!voicePreparing || !voicePrepared || voicePending?.id != sessionId) return
         if (!isInputViewShown || currentInputConnection == null) {
             if (attempt < 100) mainHandler.postDelayed({ tryConnectPreparedVoice(sessionId, attempt + 1) }, 250)
-            else closeVoicePanel()
+            else voiceConnectionFailed("キーボードに戻ってから、もう一度お試しください")
             return
         }
         val pending = voicePending ?: return
@@ -926,11 +1137,11 @@ class ZinnaImeService : InputMethodService() {
             }
         }
         voiceConnection = connection
+        voiceTimeout = Runnable {
+            if (voicePending?.id == sessionId) voiceConnectionFailed("音声認識の準備がタイムアウトしました")
+        }.also { mainHandler.postDelayed(it, 20_000L) }
         val bound = runCatching { bindService(Intent().setClassName(voiceModulePackage(), "me.zssu.ime.voice.VoiceRecognitionService"), connection, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
-        if (!bound) {
-            voiceConnection = null; voicePanelState = 1
-            voicePanelStatus = "音声モジュールを最新版に更新してください"; renderVoicePanel()
-        }
+        if (!bound) voiceConnectionFailed("音声モジュールに接続できません。最新版を確認してください")
     }
 
     /**
@@ -1046,7 +1257,15 @@ class ZinnaImeService : InputMethodService() {
      * palette, which also means the keyboard tracks light/dark without a setting.
      */
     private fun KeyboardPanelView.applyBackgroundMedia() {
-        setMedia(settings.backgroundImage, settings.backgroundAlbum, settings.backgroundVideo,
+        val reduced = settings.reducedKeyboardMotion
+        val bundle = me.zssu.ime.settings.ThemeMediaBundles(this@ZinnaImeService).load(scheduledThemeId(activeProfile))
+        if (bundle != null) {
+            if (!reduced) bundle.render(this)
+            else bundle.copy(photo = bundle.photo ?: bundle.album.firstOrNull(), album = emptyList(), video = null).render(this)
+            return
+        }
+        setMedia(settings.backgroundImage ?: settings.backgroundAlbum.firstOrNull().takeIf { reduced },
+            if (reduced) emptyList() else settings.backgroundAlbum, settings.backgroundVideo.takeUnless { reduced },
             settings.backgroundOpacity, settings.backgroundBrightness, settings.backgroundBlur,
             settings.backgroundHorizontal, settings.backgroundVertical, settings.backgroundSlideSeconds,
             settings.backgroundVideoStart, settings.backgroundVideoEnd, settings.backgroundFilter)
@@ -1091,7 +1310,7 @@ class ZinnaImeService : InputMethodService() {
     }
 
     private fun resolveTheme(): KeyboardTheme {
-        val selected = settings.activeThemeId
+        val selected = scheduledThemeId(activeProfile)
         val base = if (selected == MaterialYouTheme.ID) {
             MaterialYouTheme.create(this, forceDark = settings.pureBlack)
         } else {
@@ -1101,6 +1320,9 @@ class ZinnaImeService : InputMethodService() {
         val sized = base.copy(
             keyHeightDp = base.keyHeightDp * effectiveKeyHeightScale(),
             hapticFeedback = settings.hapticFeedbackEnabled,
+            wallpaperMotion = if (settings.reducedKeyboardMotion) me.zssu.ime.theme.WallpaperMotion.NONE else base.wallpaperMotion,
+            tapEffect = if (settings.reducedKeyboardMotion) me.zssu.ime.theme.TapEffect.NONE else base.tapEffect,
+            keywordEffects = if (settings.reducedKeyboardMotion) emptyList() else base.keywordEffects,
         )
         return if (settings.pureBlack) sized.asPureBlack() else sized
     }
@@ -1132,11 +1354,13 @@ class ZinnaImeService : InputMethodService() {
         super.onStartInputView(info, restarting)
         enqueueInput { session.setInputActive(true) }
         tryApplyProofreadResult()
+        enqueueInput { applyTextToolResult() }
         editAnchor = null
         priorityCandidates.invalidate()
         refreshDictionaryPredictions()
         refreshZenzai()
         meaningPopup?.hide(notify = false)
+        if (settings.appLearningEnabled) appLearningWorker.execute { AppLearning.warm(this) }
         appProfiles.recordSeenPackage(info?.packageName)
         val nextProfile = appProfiles.profileFor(info?.packageName)
         val nextPolicy = effectivePolicy(InputFieldPolicy.from(info), nextProfile)
@@ -1145,7 +1369,7 @@ class ZinnaImeService : InputMethodService() {
         val structureChanged =
             nextPolicy != fieldPolicy ||
                 nextProfile != activeProfile ||
-                viewStructureFingerprint() != builtStructureFingerprint
+                viewStructureFingerprint(nextProfile) != builtStructureFingerprint
         when (
             InputViewRefreshPolicy.target(
                 structureChanged = structureChanged,
@@ -1236,11 +1460,13 @@ class ZinnaImeService : InputMethodService() {
         keyboardView?.cancelGestures()
         panelView?.setMediaActive(false)
         closeHeightControl()
+        closeHandwriting()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onFinishInput() {
         if (voicePanelActive && !voicePreparing) closeVoicePanel()
+        closeHandwriting()
         super.onFinishInput()
         inputQueue.invalidate()
         keyboardView?.cancelGestures()
@@ -1398,13 +1624,17 @@ class ZinnaImeService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        closeHandwriting()
+        handwritingScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         toolMenuButton = null
         if (voicePanelActive) closeVoicePanel()
         voicePending = null
+        TextToolRequest.pending = null
         if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {
             me.zssu.ime.settings.DressUpLivePreview.listener = null
         }
         dictionaryPredictions.close()
+        appLearningWorker.shutdown()
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
         mainHandler.removeCallbacks(proofreadApplyRetry)
         cancelKarukanSuggestions()
@@ -1446,7 +1676,18 @@ class ZinnaImeService : InputMethodService() {
                 }
                 handleKeyOutput(output, key, direction)
             }
-            finally { InputPerformance.record(this, "key", System.nanoTime() - started) }
+            finally {
+                if (!pressedIncognito && !restrictedTextToolField() && InputPerformance.enabled(this)) {
+                    InputPerformance.record(this, "key", System.nanoTime() - started)
+                    candidateView?.takeIf { it.isShown && lastCandidates.isNotEmpty() }?.let { strip ->
+                        androidx.core.view.OneShotPreDrawListener.add(strip) {
+                            if (strip === candidateView && !restrictedTextToolField()) {
+                                InputPerformance.record(this, "display", System.nanoTime() - started)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1456,11 +1697,14 @@ class ZinnaImeService : InputMethodService() {
         if (fieldPolicy.incognito) {
             clientContext.inputFieldType = org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Context.InputFieldType.PASSWORD
         } else {
-            val before = currentInputConnection?.getTextBeforeCursor(160, 0)?.toString().orEmpty()
-            clientContext.precedingText = before.dropLast(if (isComposing) renderedPreeditCursor.coerceAtMost(before.length) else 0).takeLast(80)
+            val before = runCatching { currentInputConnection?.getTextBeforeCursor(160, 0)?.toString() }.getOrNull().orEmpty()
+            val prefix = if (isComposing) renderedPreedit.take(renderedPreeditCursor.coerceIn(0, renderedPreedit.length)) else ""
+            clientContext.precedingText = if (prefix.isEmpty()) before.takeLast(80)
+                else if (before.endsWith(prefix)) before.dropLast(prefix.length).takeLast(80) else ""
         }
         session.clientContext = clientContext.build()
         val action = output.action
+        if (action !is KeyAction.MoveCursor) editAnchor = null
         if (action !is KeyAction.Space && action !is KeyAction.Convert && action !is KeyAction.Enter) {
             confirmCommitsWholeSentence = false
         }
@@ -1956,8 +2200,10 @@ class ZinnaImeService : InputMethodService() {
 
     private fun handleEditCommand(command: String) = enqueueInput { handleEditCommandNow(command) }
 
-    private fun handleEditCommandNow(command: String) {
+    private suspend fun handleEditCommandNow(command: String) {
         synchronizeEditorComposition()
+        if (isComposing) submitCurrentComposition()
+        if (isComposing) return
         val ic = currentInputConnection ?: return
         when (command) {
             "all" -> { ic.performContextMenuAction(android.R.id.selectAll); return }
@@ -1969,11 +2215,19 @@ class ZinnaImeService : InputMethodService() {
         val text = extracted.text?.toString() ?: return
         val cursor = extracted.selectionEnd.coerceIn(0, text.length)
         if (command == "select") {
-            editAnchor = if (editAnchor == null) extracted.startOffset + cursor else null
+            editAnchor = extracted.startOffset + extracted.selectionStart.coerceIn(0, text.length)
+            return
+        }
+        if (command == "cancel") {
+            editAnchor = null
+            val end = extracted.startOffset + cursor
+            ic.setSelection(end, end)
             return
         }
         val target = when (command) {
-            "home" -> text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (cursor == 0) 0 else it + 1 }
+            "up" -> EditorCursor.line(text, cursor, -1)
+            "down" -> EditorCursor.line(text, cursor, 1)
+            "home" -> text.lastIndexOf('\n', cursor - 1) + 1
             "end" -> text.indexOf('\n', cursor).let { if (it < 0) text.length else it }
             "word_left", "word_right" -> {
                 val breaker = java.text.BreakIterator.getWordInstance(java.util.Locale.JAPANESE)
@@ -1982,7 +2236,8 @@ class ZinnaImeService : InputMethodService() {
                 if (next == java.text.BreakIterator.DONE) cursor else next
             }
             "left" -> if (cursor > 0) text.offsetByCodePoints(cursor, -1) else 0
-            else -> if (cursor < text.length) text.offsetByCodePoints(cursor, 1) else cursor
+            "right" -> if (cursor < text.length) text.offsetByCodePoints(cursor, 1) else cursor
+            else -> return
         }
         val absolute = extracted.startOffset + target
         ic.setSelection(editAnchor ?: absolute, absolute)
@@ -1995,13 +2250,13 @@ class ZinnaImeService : InputMethodService() {
         if (isComposing) return
         val ic = currentInputConnection ?: return
         val key = if (delta < 0) android.view.KeyEvent.KEYCODE_DPAD_UP else android.view.KeyEvent.KEYCODE_DPAD_DOWN
-        if (sendRawKeyPress(ic, key) || fieldPolicy.rawKeyEvents) return
+        if (editAnchor == null && (sendRawKeyPress(ic, key) || fieldPolicy.rawKeyEvents)) return
         val extracted = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
         val text = extracted.text?.toString() ?: return
-        val cursor = minOf(extracted.selectionStart, extracted.selectionEnd)
-        if (cursor < 0) return
+        val cursor = extracted.selectionEnd
+        if (cursor !in 0..text.length) return
         val target = EditorCursor.line(text, cursor, delta) + extracted.startOffset
-        ic.setSelection(target, target)
+        ic.setSelection(editAnchor ?: target, target)
     }
 
     private suspend fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {
@@ -2036,9 +2291,14 @@ class ZinnaImeService : InputMethodService() {
         val extracted = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
         val start = minOf(extracted.selectionStart, extracted.selectionEnd)
         val end = maxOf(extracted.selectionStart, extracted.selectionEnd)
-        val target = if (start != end) { if (delta < 0) start else end }
-            else EditorCursor.step(extracted.text?.toString().orEmpty(), start, delta)
-        ic.setSelection(extracted.startOffset + target, extracted.startOffset + target)
+        val text = extracted.text?.toString() ?: return
+        if (start < 0 || end > text.length) return
+        val target = when {
+            editAnchor != null -> EditorCursor.step(text, extracted.selectionEnd, delta)
+            start != end -> if (delta < 0) start else end
+            else -> EditorCursor.step(text, start, delta)
+        } + extracted.startOffset
+        ic.setSelection(editAnchor ?: target, target)
     }
 
     private suspend fun switchLayout(layoutId: String) {
@@ -2098,6 +2358,15 @@ class ZinnaImeService : InputMethodService() {
             val units = ConfirmedLearning.examples(zenzaiState, state.committedText, learningCandidate) +
                 ConfirmedLearning.fromReading(state.committedReading, state.committedText)
             units.distinct().take(6).forEach { zenzai.confirm(it.reading, "", it.value) }
+            val app = currentInputEditorInfo?.packageName
+            if (app != null && settings.appLearningEnabled && !restrictedTextToolField()) {
+                val examples = (listOf(ConfirmedLearning.Example(actualReading, state.committedText)) + units)
+                    .distinct().take(7)
+                val generation = AppLearning.generation()
+                appLearningWorker.execute {
+                    if (settings.appLearningEnabled) AppLearning.learn(this, app, examples, generation)
+                }
+            }
         }
         zenzaiState = state
         val hadComposition = isComposing
@@ -2281,18 +2550,21 @@ class ZinnaImeService : InputMethodService() {
         if (!canRequestLiveSuggestions(state)) return
         val reading = state.preeditReading
         val preceding = session.clientContext?.precedingText.orEmpty()
-        val prompt = if (session.zenzaiEnabled) ZenzaiConversion.prompt(reading, preceding) else null
+        val prompt = if (session.zenzaiEnabled && !restrictedTextToolField()) ZenzaiConversion.prompt(reading, preceding) else null
         // Pins are explicit commitments, even when Mozc's bounded live pool or either AI did
         // not return that value. Match the complete reading; never use fuzzy pins to override AI.
         val suggestions = dictionaryPredictions.candidates(reading,
             settings.useProperNounDictionary, settings.useAiTechDictionary).map { candidate ->
             state.candidates.firstOrNull {
                 it.text == candidate.text && ReadingSimilarity.normalize(it.sourceReading) == candidate.sourceReading
-            }?.copy(dictionaryCompletion = true, personalRegistration = candidate.personalRegistration,
+            }?.copy(dictionaryCompletion = true, personalRegistration = candidate.personalRegistration, sourceLabel = candidate.sourceLabel,
                 correction = false, prediction = candidate.prediction) ?: candidate
         }
         val pool = (suggestions + state.candidates).distinctBy { it.text }
-        val base = if (suggestions.isEmpty()) state.candidates else CandidateRanking.rankLiveJapaneseSuggestions(pool,
+        val app = currentInputEditorInfo?.packageName
+        val supplemental = app != null && settings.appLearningEnabled && !restrictedTextToolField()
+        val rankedPool = if (supplemental) AppLearning.prioritize(app, reading, pool) else pool
+        val base = if (suggestions.isEmpty() && rankedPool == pool) state.candidates else CandidateRanking.rankLiveJapaneseSuggestions(rankedPool,
             maxOf(state.candidates.size, minOf(8, pool.size)))
         var neural: MozcSession.Candidate? = null
         var karukan: List<MozcSession.Candidate> = emptyList()
@@ -2306,7 +2578,9 @@ class ZinnaImeService : InputMethodService() {
                 it.copy(priorityMatch = priorityCandidates.match(reading, it.text))
             }
             karukanSuggestionCandidate = karukan.firstOrNull()
-            val ai = neural ?: karukan.firstOrNull()
+            val ai = (neural ?: karukan.firstOrNull())?.let { candidate ->
+                if (candidate.correction) null else candidate.copy(sourceLabel = if (neural != null) "zenzai-plus" else "Karukan")
+            }
             // A user/network dictionary entry the user registered or pinned outranks the neural
             // converters; everything else keeps the neural candidate first.
             val specified = DictionaryPriority.firstSpecified(combined, reading)
@@ -2653,12 +2927,16 @@ class ZinnaImeService : InputMethodService() {
     private fun combinedRevision(): Int = settings.revision * 31 + appProfiles.revision
 
     /** Settings that can change layout, measurement, labels or haptics of the input view. */
-    private fun viewStructureFingerprint(): Int = listOf(
+    private fun scheduledThemeId(profile: AppProfileStore.Profile?): String =
+        me.zssu.ime.settings.ThemeSchedule(this).effectiveId(resources.configuration, profile, settings.activeThemeId)
+
+    private fun viewStructureFingerprint(profile: AppProfileStore.Profile? = activeProfile): Int = listOf(
         settings.pureBlack,
+        settings.reducedKeyboardMotion,
         settings.keyHeightScale,
         settings.keyboardStyle,
         settings.flickInputMode,
-        settings.activeThemeId,
+        scheduledThemeId(profile),
         settings.activeLayoutId,
         settings.customizationRevision,
         settings.oneHandMode,

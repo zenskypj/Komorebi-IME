@@ -1,7 +1,6 @@
 package me.zssu.ime.ime
 
 import android.content.ClipboardManager
-import android.content.Context
 
 /**
  * Process-local clipboard history.
@@ -15,7 +14,7 @@ internal class ClipboardHistory(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
-    private data class Entry(val text: String, val addedAt: Long)
+    private data class Entry(val text: String, val addedAt: Long, val pinned: Boolean = false)
     private val entries = ArrayDeque<Entry>()
 
     init {
@@ -24,25 +23,27 @@ internal class ClipboardHistory(
 
     fun items(retentionMillis: Long = Long.MAX_VALUE): List<String> {
         val currentTime = now()
-        entries.removeAll { currentTime - it.addedAt > retentionMillis }
-        return entries.map { it.text }
+        entries.removeAll { !it.pinned && currentTime - it.addedAt > retentionMillis }
+        return entries.sortedByDescending { it.pinned }.map { it.text }
     }
 
     fun clear() = entries.clear()
+    fun pinnedItems(): Set<String> = entries.filter { it.pinned }.mapTo(mutableSetOf()) { it.text }
+    fun remove(text: String) { entries.removeAll { it.text == text } }
+    fun togglePinned(text: String) {
+        val index = entries.indexOfFirst { it.text == text }
+        if (index >= 0) entries[index] = entries[index].let { it.copy(pinned = !it.pinned) }
+    }
 
-    fun record(context: Context, clipboard: ClipboardManager?) {
+    fun record(clipboard: ClipboardManager?) {
         runCatching {
             val clip = clipboard?.primaryClip ?: return
             if (clip.description.extras?.getBoolean(EXTRA_IS_SENSITIVE, false) == true) return
 
-            val text = buildList {
-                for (index in 0 until clip.itemCount) {
-                    val itemText = runCatching {
-                        clip.getItemAt(index).coerceToText(context)?.toString()
-                    }.getOrNull()
-                    if (itemText != null) add(itemText)
-                }
-            }.joinToString("\n")
+            // Read only text explicitly supplied by the clipboard provider; never open URIs.
+            val text = (0 until minOf(clip.itemCount, 20)).mapNotNull {
+                clip.getItemAt(it).text?.take(16_000)?.toString()
+            }.joinToString("\n").take(16_000)
 
             add(text)
         }
@@ -50,9 +51,13 @@ internal class ClipboardHistory(
 
     internal fun add(text: String) {
         if (text.isBlank()) return
-        entries.removeAll { it.text == text }
-        entries.addFirst(Entry(text, now()))
-        while (entries.size > limit) entries.removeLast()
+        val previous = entries.firstOrNull { it.text == text }
+        remove(text)
+        entries.addFirst(Entry(text, now(), previous?.pinned == true))
+        while (entries.size > limit) {
+            val evict = entries.indexOfLast { !it.pinned }
+            entries.removeAt(if (evict < 0) entries.lastIndex else evict)
+        }
     }
 
     private companion object {

@@ -36,7 +36,7 @@ import me.zssu.ime.theme.KeyboardTheme
 @SuppressLint("ViewConstructor")
 class CandidateStripView(context: Context) : HorizontalScrollView(context) {
 
-    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, HEIGHT, INPUT_HELP, VOICE }
+    enum class ToolAction { CLIPBOARD, EMOJI, ONE_HAND_CYCLE, PROOFREAD, SETTINGS, SNIPPETS, AI_STYLE, MEETS_BEAM, EDIT, RECONVERT, HEIGHT, INPUT_HELP, VOICE, TRANSLATE, HANDWRITING, IMAGE_TEXT }
     enum class OneHandDisplayMode { FULL, LEFT, RIGHT }
     enum class EmojiPage { RECENT, EMOJI, KAOMOJI, FAVORITE }
 
@@ -58,8 +58,11 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
     var onCandidateFocusRequested: ((MozcSession.Candidate) -> Unit)? = null
     var onToolAction: ((ToolAction) -> Unit)? = null
     var onSnippetSelected: ((String) -> Unit)? = null
+    var onSnippetSearch: (() -> Unit)? = null
+    var onClipboardSearch: (() -> Unit)? = null
     var onManageSnippets: (() -> Unit)? = null
     var onClipboardItemSelected: ((String) -> Unit)? = null
+    var onClipboardItemChanged: ((String, Boolean) -> Unit)? = null
     var onClipboardHistoryCleared: (() -> Unit)? = null
     private var voicePanelShowing = false
     private var toolMenuShowing = false
@@ -503,6 +506,9 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.PROOFREAD -> "AI 文章校正"
         ToolAction.INPUT_HELP -> "入力の使い方"
         ToolAction.VOICE -> "音声入力"
+        ToolAction.TRANSLATE -> "翻訳"
+        ToolAction.HANDWRITING -> "手書き入力"
+        ToolAction.IMAGE_TEXT -> "画像から文字"
     }
     private fun toolIcon(action: ToolAction): Int = when (action) {
         ToolAction.AI_STYLE -> R.drawable.ic_ai_style
@@ -518,6 +524,9 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         ToolAction.PROOFREAD -> R.drawable.ic_ai_style
         ToolAction.INPUT_HELP -> R.drawable.ic_material_settings
         ToolAction.VOICE -> R.drawable.ic_voice
+        ToolAction.TRANSLATE -> R.drawable.ic_ai_style
+        ToolAction.HANDWRITING -> R.drawable.ic_ime_cursor_right
+        ToolAction.IMAGE_TEXT -> R.drawable.ic_material_content_paste
     }
     fun showTools() {
         if (voicePanelShowing) return
@@ -584,6 +593,16 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         if (state == 1 && result.isNotBlank()) controls.addView(button("入力する", onApply), LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(8) })
         panel.addView(controls)
         container.addView(panel, LinearLayout.LayoutParams(-1, -1))
+    }
+
+    internal fun showHandwritingPanel(panel: View) {
+        paletteHeight(true)
+        layoutParams = layoutParams.apply { height = dp(272) }
+        setContainerFillWidth(false)
+        setContainerFillWidth(true)
+        container.removeAllViews()
+        container.addView(panel, LinearLayout.LayoutParams(-1, -1))
+        scrollTo(0, 0)
     }
 
     fun dismissVoicePanel() { voicePanelShowing = false; showTools() }
@@ -686,6 +705,9 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             text = "定型文を追加・編集"; applyTheme(this)
             setOnClickListener { onManageSnippets?.invoke() }
         })
+        if (items.isNotEmpty()) panel.addView(TextView(context).apply {
+            text = "定型文を検索"; applyTheme(this); setOnClickListener { onSnippetSearch?.invoke() }
+        })
         for (value in items) panel.addView(TextView(context).apply {
             text = value; maxLines = 2; applyTheme(this)
             setOnClickListener { onSnippetSelected?.invoke(value) }
@@ -701,10 +723,14 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         setContainerFillWidth(false)
         val panel = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         panel.addView(iconButton(R.drawable.ic_material_arrow_back, "閉じる") { showTools() })
-        for (group in listOf(listOf("前の単語" to "word_left", "左" to "left", "右" to "right", "次の単語" to "word_right"), listOf("行頭" to "home", "行末" to "end", "選択開始・終了" to "select"), listOf("全選択" to "all", "コピー" to "copy", "切り取り" to "cut", "貼り付け" to "paste"))) {
+        for (group in listOf(listOf("前の単語" to "word_left", "左" to "left", "右" to "right", "次の単語" to "word_right"), listOf("↑" to "up", "↓" to "down", "行頭" to "home", "行末" to "end", "選択" to "select", "解除" to "cancel"), listOf("全選択" to "all", "コピー" to "copy", "切り取り" to "cut", "貼り付け" to "paste"))) {
             val row = LinearLayout(context)
             for ((label, command) in group) row.addView(TextView(context).apply {
                 text = label; applyTheme(this); gravity = Gravity.CENTER
+                contentDescription = when (command) {
+                    "up" -> "上の行"; "down" -> "下の行"; "select" -> "範囲選択を開始"; "cancel" -> "範囲選択を解除"
+                    else -> label
+                }
                 setOnClickListener { onEditCommand?.invoke(command) }
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             panel.addView(row)
@@ -737,7 +763,7 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
         }
     }
 
-    fun showClipboardHistory(items: List<String>) {
+    fun showClipboardHistory(items: List<String>, pinned: Set<String> = emptySet()) {
         focusedChild = -1
         container.removeAllViews()
         setContainerFillWidth(false)
@@ -755,6 +781,10 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
             })
             return
         }
+        container.addView(TextView(context).apply {
+            text = "検索"; applyTheme(this); gravity = Gravity.CENTER
+            setOnClickListener { onClipboardSearch?.invoke() }
+        })
         container.addView(TextView(context).apply {
             text = "すべて消去"
             applyTheme(this)
@@ -776,7 +806,20 @@ class CandidateStripView(context: Context) : HorizontalScrollView(context) {
                 isSingleLine = true
                 ellipsize = TextUtils.TruncateAt.END
                 maxWidth = (240 * resources.displayMetrics.density).toInt()
+                val fixed = value in pinned
+                if (fixed) text = "★ $text"
                 contentDescription = "クリップボード履歴: $text"
+                setOnLongClickListener { anchor ->
+                    android.widget.PopupMenu(context, anchor).apply {
+                        menu.add(if (fixed) "固定を解除" else "固定する").setOnMenuItemClickListener {
+                            onClipboardItemChanged?.invoke(value, false); true
+                        }
+                        menu.add("削除").setOnMenuItemClickListener {
+                            onClipboardItemChanged?.invoke(value, true); true
+                        }
+                    }.show()
+                    true
+                }
                 setOnClickListener {
                     if (theme.hapticFeedback) {
                         it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)

@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.media.MediaMetadataRetriever
+import androidx.core.graphics.ColorUtils
 import me.zssu.ime.theme.KeyboardTheme
 import java.io.File
 
@@ -43,7 +44,7 @@ internal object DressUpColors {
     /** Custom media stays visible; solid colors remain available for guides and tool tiles. */
     fun apply(theme: KeyboardTheme, sampled: Int, customMedia: Boolean = false): KeyboardTheme {
         val hsv = FloatArray(3); Color.colorToHSV(sampled, hsv)
-        val light = (0.2126 * Color.red(sampled) + 0.7152 * Color.green(sampled) + 0.0722 * Color.blue(sampled)) > 150
+        val light = ColorUtils.calculateContrast(Color.BLACK, sampled) >= ColorUtils.calculateContrast(Color.WHITE, sampled)
         fun tone(saturation: Float, value: Float): Int = Color.HSVToColor(floatArrayOf(hsv[0], saturation, value))
         val saturation = hsv[1].coerceIn(0.08f, 0.30f)
         val background = tone(saturation, if (light) 0.94f else 0.18f)
@@ -58,6 +59,19 @@ internal object DressUpColors {
             toolbarBackgroundColor = if (customMedia) Color.TRANSPARENT else background, toolbarIconColor = text,
             flickGuideColor = keys, flickGuideLabelColor = text, flickGuideSelectedLabelColor = accent,
             keyOpacity = if (customMedia) 0.08f else 1f, labelShadow = !light)
+    }
+
+    fun highContrast(theme: KeyboardTheme, light: Boolean, customMedia: Boolean): KeyboardTheme {
+        val foreground = if (light) Color.BLACK else Color.WHITE
+        val background = if (light) Color.WHITE else Color.BLACK
+        return unifiedText(theme, foreground).copy(
+            backgroundColor = background, lineColor = foreground, labelBold = true, labelShadow = customMedia,
+            toolbarBackgroundColor = if (customMedia) Color.TRANSPARENT else background,
+            candidateBackgroundColor = background, useCandidateBackground = !customMedia,
+            keyColor = background, modifierKeyColor = background,
+            keyPressedColor = if (light) 0xffc4c4c4.toInt() else 0xff444444.toInt(),
+            keyOpacity = if (customMedia) 0.08f else 1f, flickGuideColor = background,
+        )
     }
 
     fun unifiedText(theme: KeyboardTheme, color: Int): KeyboardTheme = theme.copy(

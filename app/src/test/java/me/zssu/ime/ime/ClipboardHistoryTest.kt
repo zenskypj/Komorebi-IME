@@ -58,4 +58,17 @@ class ClipboardHistoryTest {
 
         assertEquals(emptyList<String>(), history.items())
     }
+    @Test
+    fun pinsSurviveExpiryAndEvictionButCanBeRemoved() {
+        var time = 1000L
+        val history = ClipboardHistory(limit = 2, now = { time })
+        history.add("pin")
+        history.togglePinned("pin")
+        history.add("old")
+        time += 100
+        history.add("new")
+        assertEquals(listOf("pin", "new"), history.items(10))
+        history.remove("pin")
+        assertEquals(listOf("new"), history.items(10))
+    }
 }

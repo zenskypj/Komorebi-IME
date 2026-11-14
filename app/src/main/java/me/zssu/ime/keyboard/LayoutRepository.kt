@@ -125,7 +125,7 @@ class LayoutRepository(private val context: Context) {
         }
     }
 
-    private fun validate(theme: KeyboardTheme) {
+    internal fun validate(theme: KeyboardTheme) {
         require(theme.keyHeightDp in 32f..96f) { "キー高さは 32〜96dp にしてください" }
         require(theme.keyGapDp in 0f..16f && theme.keyCornerRadiusDp in 0f..32f) {
             "キー間隔または角丸が範囲外です"

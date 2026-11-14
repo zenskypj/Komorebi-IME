@@ -19,7 +19,7 @@ internal object DictionaryPriority {
         // Bulk user/system dictionaries are not an explicit request to prefer English.
         if (EnglishCandidateOrder.isFallback(candidate)) return false
         if (!sameReading(candidate, reading)) return false
-        return candidate.fromUserDictionary || candidate.dictionaryCompletion || candidate.id == REGISTERED_DICTIONARY_ID
+        return candidate.personalRegistration || (candidate.fromUserDictionary && !candidate.dictionaryCompletion) || candidate.id == REGISTERED_DICTIONARY_ID
     }
 
     /** The first individually specified candidate for [reading], in list order. */
