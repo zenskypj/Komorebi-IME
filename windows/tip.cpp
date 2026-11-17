@@ -335,7 +335,12 @@ static HRESULT registerTsf(bool add,const wchar_t* path) {
     if (SUCCEEDED(hr)) hr=profiles->AddLanguageProfile(tip,ja,profile,name,ARRAYSIZE(name)-1,
         path,static_cast<ULONG>(wcslen(path)),0);
     if (SUCCEEDED(hr)) hr=categories->RegisterCategory(tip,GUID_TFCAT_TIP_KEYBOARD,tip);
-    if (FAILED(hr)) profiles->Unregister(tip);
+    if (SUCCEEDED(hr)) hr=profiles->EnableLanguageProfile(tip,ja,profile,TRUE);
+    if (FAILED(hr)) {
+        categories->UnregisterCategory(tip,GUID_TFCAT_TIP_KEYBOARD,tip);
+        profiles->RemoveLanguageProfile(tip,ja,profile);
+        profiles->Unregister(tip);
+    }
     return hr;
 }
 

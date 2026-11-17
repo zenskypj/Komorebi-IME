@@ -8,3 +8,5 @@ python3 windows/generate_tables.py "$out/tables.inc"
 flags=(-std=c++20 -O2 -Wall -Wextra -static "-I$out")
 "$compiler" "${flags[@]}" -shared windows/tip.cpp windows/tip.def -lole32 -loleaut32 -ladvapi32 -luuid -o "$out/KomorebiDesktop.dll"
 "$compiler" "${flags[@]}" windows/smoke.cpp -luuid -o "$out/Smoke.exe"
+"${WINDRES:-${compiler%clang++}windres}" -i windows/setup.rc -o "$out/setup-res.o" -O coff
+"$compiler" "${flags[@]}" -municode -mwindows windows/setup.cpp "$out/setup-res.o" -lole32 -lshell32 -luuid -o "$out/Setup.exe"
