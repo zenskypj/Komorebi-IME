@@ -9,6 +9,8 @@
 > **ユーザーマニュアル・ドキュメント**: <https://zenskypj.github.io/Komorebi-IME/>
 > 初心者向けの設定手順から、変換・AI・辞書・プライバシー・詳細仕様までを1冊にまとめています。本文は [`docs/`](docs) から取得して表示します。
 
+Windows 向けの独自日本語 IME は [Komorebi Desktop 開発プレビュー](windows/README.md) を参照してください。
+
 言葉を木漏れ日のようにそっと照らす、Android向けオープンソース日本語IMEです。
 入力内容を端末の外へ送らずに使えます。
 [Mozc](https://github.com/google/mozc) をネイティブ組み込みし、フリック入力と QWERTY
