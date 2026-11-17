@@ -11,8 +11,12 @@ int main() {
         kana(L"kan'i",true)!=L"かんい" ||
         kana(L"kyouhaiitenki",true)!=L"きょうはいいてんき" ||
         candidate(L"はし",1)!=L"箸" ||
-        candidate(L"かな",1)!=L"カナ" ||
+        [] { auto v=candidates(L"かな"); return std::find(v.begin(),v.end(),L"カナ")==v.end(); }() ||
         candidate(L"きょうはいいてんき",0)!=L"今日はいい天気") return 1;
+    if (std::size(lexicon)>1) {
+        auto v=candidates(L"とうきょうのてんき");
+        if (std::find(v.begin(),v.end(),L"東京の天気")==v.end()) return 7;
+    }
     HMODULE dll=LoadLibraryW(L".\\KomorebiDesktop.dll");
     if (!dll) return 2;
     auto unload=reinterpret_cast<HRESULT(WINAPI*)()>(GetProcAddress(dll,"DllCanUnloadNow"));

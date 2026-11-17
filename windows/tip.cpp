@@ -7,6 +7,7 @@
 #include <new>
 #include <utility>
 #include "engine.h"
+#include "settings.h"
 
 static HMODULE module;
 static std::atomic<long> objects{0}, locks{0};
@@ -57,6 +58,45 @@ class Service final : public ITfTextInputProcessor, public ITfKeyEventSink, publ
     size_t choice=0;
     bool converting=false;
     bool enabled=true;
+    HWND popup=nullptr;
+    bool showCandidates=true;
+    std::vector<std::wstring> list;
+    static constexpr WPARAM toggleKey=0x10000;
+
+    void hidePopup() {
+        if (popup) DestroyWindow(std::exchange(popup,nullptr));
+    }
+    void showPopup(ITfContext* ctx,TfEditCookie ec,ITfRange* anchor,const std::wstring& text) {
+        Ptr<ITfContextView> view;
+        if (FAILED(ctx->GetActiveView(view.put()))) return;
+        RECT rect{};
+        BOOL clipped=FALSE;
+        HWND owner=nullptr;
+        if (FAILED(view->GetWnd(&owner)) || !owner || !IsWindow(owner) ||
+            FAILED(view->GetTextExt(ec,anchor,&rect,&clipped)) || clipped) return;
+        hidePopup();
+        popup=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_NOACTIVATE,L"STATIC",text.c_str(),
+            WS_POPUP|WS_BORDER|SS_LEFT|SS_NOPREFIX,0,0,0,0,owner,nullptr,module,nullptr);
+        if (!popup) return;
+        SendMessageW(popup,WM_SETFONT,reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)),0);
+        RECT area{0,0,310,0};
+        if (auto dc=GetDC(popup)) {
+            auto font=SelectObject(dc,GetStockObject(DEFAULT_GUI_FONT));
+            DrawTextW(dc,text.c_str(),-1,&area,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);
+            SelectObject(dc,font); ReleaseDC(popup,dc);
+        }
+        MONITORINFO monitor{sizeof(MONITORINFO),{},{},0};
+        int x=rect.left, y=rect.bottom, width=std::clamp<int>(area.right+16,48,330), height=area.bottom+12;
+        if (GetMonitorInfoW(MonitorFromRect(&rect,MONITOR_DEFAULTTONEAREST),&monitor)) {
+            x=std::clamp(x,static_cast<int>(monitor.rcWork.left),static_cast<int>(monitor.rcWork.right)-width);
+            if (y+height>monitor.rcWork.bottom) y=rect.top-height;
+        }
+        SetWindowPos(popup,HWND_TOP,x,y,width,height,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+    }
+    bool modeKey(WPARAM key) const {
+        return key==VK_KANJI || key==VK_IME_ON || key==VK_IME_OFF ||
+            (key=='J' && GetKeyState(VK_CONTROL)<0 && GetKeyState(VK_MENU)>=0 && GetKeyState(VK_SHIFT)>=0);
+    }
 
     bool allowed(ITfContext* ctx) {
         if (!ctx) return false;
@@ -105,23 +145,24 @@ class Service final : public ITfTextInputProcessor, public ITfKeyEventSink, publ
 
     bool keySupported(ITfContext* ctx, WPARAM key) {
         if (!manager || !allowed(ctx) || (ownerContext && ctx!=ownerContext.p)) return false;
-        if (GetKeyState(VK_CONTROL)<0 && GetKeyState(VK_MENU)>=0 && GetKeyState(VK_SHIFT)>=0 && key=='J')
-            return !composition;
+        if (modeKey(key)) return true;
         if (!enabled || GetKeyState(VK_CONTROL)<0 || GetKeyState(VK_MENU)<0 ||
             GetKeyState(VK_LWIN)<0 || GetKeyState(VK_RWIN)<0) return false;
         if (GetKeyState(VK_SHIFT)>=0 && key>='A' && key<='Z') return true;
         if (composition && GetKeyState(VK_SHIFT)>=0 &&
             (key==VK_OEM_7 || key==VK_OEM_COMMA || key==VK_OEM_PERIOD || key==VK_OEM_MINUS)) return true;
-        return composition && (key==VK_SPACE || key==VK_RETURN || key==VK_ESCAPE || key==VK_BACK);
+        return composition && (key==VK_SPACE || key==VK_RETURN || key==VK_ESCAPE || key==VK_BACK ||
+            (converting && (key==VK_UP || key==VK_DOWN || (key>='1' && key<='9' && (choice/9)*9+key-'1'<list.size()))));
     }
 
     void clear() {
-        raw.clear(); converting=false; choice=0;
+        hidePopup();
+        raw.clear(); converting=false; choice=0; list.clear();
         composition.reset(); ownerContext.reset();
     }
 public:
     Service() { ++objects; }
-    ~Service() { --objects; }
+    ~Service() { hidePopup(); --objects; }
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** out) override {
         if (!out) return E_POINTER;
         *out=nullptr;
@@ -138,6 +179,8 @@ public:
         Ptr<ITfKeystrokeMgr> keys;
         auto hr=mgr->QueryInterface(IID_ITfKeystrokeMgr,reinterpret_cast<void**>(keys.put()));
         if (FAILED(hr)) return hr;
+        enabled=readSetting(L"StartInKana",true);
+        showCandidates=readSetting(L"ShowCandidates",true);
         hr=keys->AdviseKeyEventSink(id,this,TRUE);
         if (SUCCEEDED(hr)) { manager.p=mgr; mgr->AddRef(); client=id; }
         return hr;
@@ -155,6 +198,7 @@ public:
         clear(); manager.reset(); client=0; return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnSetFocus(BOOL foreground) override {
+        if (!foreground) hidePopup();
         if (!foreground && ownerContext && composition) {
             BOOL eaten=FALSE;
             request(ownerContext.p,VK_RETURN,&eaten);
@@ -163,7 +207,9 @@ public:
     }
     HRESULT STDMETHODCALLTYPE OnTestKeyDown(ITfContext* ctx,WPARAM key,LPARAM,BOOL* eaten) override {
         if (!eaten) return E_POINTER;
-        *eaten=keySupported(ctx,key); return S_OK;
+        *eaten=keySupported(ctx,key);
+        if (!*eaten && !composition) hidePopup();
+        return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnTestKeyUp(ITfContext*,WPARAM,LPARAM,BOOL* eaten) override {
         if (!eaten) return E_POINTER;
@@ -178,8 +224,13 @@ public:
         if (!eaten) return E_POINTER;
         *eaten=FALSE;
         if (!keySupported(ctx,key)) return S_OK;
-        if (key=='J' && GetKeyState(VK_CONTROL)<0) {
-            enabled=!enabled; *eaten=TRUE; return S_OK;
+        if (modeKey(key)) {
+            if (composition) {
+                BOOL committed=FALSE;
+                request(ctx,VK_RETURN,&committed);
+                if (!committed) return S_OK;
+            }
+            return request(ctx,key==VK_IME_ON ? toggleKey+1 : key==VK_IME_OFF ? toggleKey+2 : toggleKey,eaten);
         }
         return request(ctx,key,eaten);
     }
@@ -198,6 +249,17 @@ public:
     }
     HRESULT edit(ITfContext* ctx,WPARAM key,TfEditCookie ec) {
         if (key!=VK_RETURN && key!=VK_ESCAPE && sensitive(ctx,ec)) return S_FALSE;
+        if (key>=toggleKey) {
+            enabled=key==toggleKey ? !enabled : key==toggleKey+1;
+            TF_SELECTION selection{};
+            ULONG fetched=0;
+            if (SUCCEEDED(ctx->GetSelection(ec,TF_DEFAULT_SELECTION,1,&selection,&fetched)) && fetched==1) {
+                showPopup(ctx,ec,selection.range,enabled ? L"あ" : L"A");
+                selection.range->Release();
+            }
+            return S_OK;
+        }
+        hidePopup();
         if (composition && key!=VK_RETURN && key!=VK_ESCAPE) {
             TF_SELECTION current{};
             ULONG fetched=0;
@@ -217,12 +279,17 @@ public:
         auto next=raw;
         auto index=choice;
         bool convert=converting;
-        bool commit=key==VK_RETURN || key==VK_ESCAPE;
+        const bool direct=convert && key>='1' && key<='9';
+        bool commit=key==VK_RETURN || key==VK_ESCAPE || direct;
         if (key==VK_BACK) {
             if (convert) { convert=false; index=0; }
             else if (!next.empty()) next.pop_back();
-        } else if (key==VK_SPACE) {
+        } else if (key==VK_SPACE || key==VK_DOWN) {
             index=convert ? index+1 : 0; convert=true;
+        } else if (key==VK_UP && !list.empty()) {
+            index=(index+list.size()-1)%list.size();
+        } else if (direct) {
+            index=(choice/9)*9+key-'1';
         } else if (key>='A' && key<='Z') {
             if (next.size()>=128) return S_FALSE;
             next+=static_cast<wchar_t>(key-'A'+L'a'); convert=false; index=0;
@@ -233,8 +300,10 @@ public:
             convert=false; index=0;
         }
         auto reading=kana(next,commit||convert);
-        auto shown=convert ? candidate(reading,index) : reading;
-        if (shown.empty() && convert) { index=0; shown=candidate(reading,index); }
+        if (convert && (list.empty() || next!=raw)) list=candidates(reading);
+        else if (!convert) list.clear();
+        if (index>=list.size()) index=0;
+        auto shown=convert && !list.empty() ? list[index] : reading;
         if (key==VK_ESCAPE) shown.clear();
 
         if (!composition) {
@@ -262,6 +331,16 @@ public:
         if (SUCCEEDED(range->Collapse(ec,TF_ANCHOR_END))) {
             TF_SELECTION sel{range.p,{TF_AE_NONE,FALSE}};
             ctx->SetSelection(ec,1,&sel);
+        }
+        if (!commit && convert && showCandidates && !list.empty()) {
+            std::wstring rows;
+            const auto first=(index/9)*9;
+            for (size_t i=first;i<list.size() && i<first+9;++i) {
+                if (i>first) rows+=L"\r\n";
+                rows+=(i==index ? L"▶ " : L"   ");
+                rows+=std::to_wstring(i-first+1)+L"  "+list[i].substr(0,36);
+            }
+            showPopup(ctx,ec,range.p,rows);
         }
         if (commit || shown.empty()) {
             composition->EndComposition(ec);
