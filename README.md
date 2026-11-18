@@ -24,12 +24,14 @@ Windows 向けの独自日本語 IME は [Komorebi Desktop 開発プレビュー
 > [support@zslink.xyz](mailto:support@zslink.xyz) へお願いします。
 
 > [!IMPORTANT]
-> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.69-dev`。過去のテスト版もGitHub Releasesで確認できます。
+> 現在は正式版に向けた Release Candidate です。Latest は `0.3.0-rc.70-dev`。過去のテスト版もGitHub Releasesで確認できます。
 > 自動テストを通過したビルドでも、公開前に複数Android世代・
 > ナビゲーション方式・実機での確認が必要です。変更点と入手方法は
 > [GitHub Releases](https://github.com/zenskypj/Komorebi-IME/releases)、正式版までに必要な
 > 人手確認は[リリース受け入れ基準](docs/release-readiness.md)に記録しています。
 > テスト用APKはすべて debug 署名（`me.zssu.ime.debug`）です。
+
+`rc.70-dev` は日本語フリックで記号が入力される不具合と、意図せず記号面に切り替わる経路を修正しています。
 
 `rc.69-dev` は入力中の文章候補、フリックの補正、スタイラス入力、画像付きテーマの共有を改善しています。変換1回目から文節の区切りを調整でき、人名はフルネーム・姓・名で変換できます。実機での確認は未実施です。
 

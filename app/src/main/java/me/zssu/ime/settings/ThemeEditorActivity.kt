@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import me.zssu.ime.keyboard.FlickKeyboardView
+import me.zssu.ime.keyboard.isSymbolPlane
 import me.zssu.ime.keyboard.KeyboardLayout
 import me.zssu.ime.keyboard.KeyboardPanelView
 import me.zssu.ime.keyboard.LayoutRepository
@@ -248,7 +249,9 @@ private fun ThemeEditorScreen() {
                         settings.markCustomizationChanged()
                     }
                     settings.activeThemeId = selected
-                    if (appliedLayoutId != selectedLayoutId) settings.activeLayoutId = selectedLayoutId
+                    if (appliedLayoutId != selectedLayoutId && selectedLayoutId?.let { layouts[it]?.isSymbolPlane } != true) {
+                        settings.activeLayoutId = selectedLayoutId
+                    }
                 }
                 (context as? ComponentActivity)?.finish()
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
@@ -471,13 +474,13 @@ private fun ThemeEditorScreen() {
                                     Text("配列プリセット", style = MaterialTheme.typography.titleLarge)
                                     Text("キーの並びを試してから「適用」。自動を選ぶと入力方式に合わせて切り替わります。",
                                         style = MaterialTheme.typography.bodyMedium)
-                                    val primary = layouts.filterKeys { !it.contains("symbol") }
+                                    val primary = layouts.filterValues { !it.isSymbolPlane }
                                     val choices = mapOf<String?, String>(null to "入力方式に合わせる") +
                                         primary.mapValues { (id, layout) -> layoutPresetName(id, layout) }
                                     ChoiceChips(choices, selectedLayoutId) { selectLayout(it) }
-                                    val symbols = layouts.filterKeys { it.contains("symbol") }
+                                    val symbols = layouts.filterValues { it.isSymbolPlane }
                                     if (symbols.isNotEmpty()) {
-                                        Text("記号の配列", style = MaterialTheme.typography.titleMedium)
+                                        Text("記号の配列を試す", style = MaterialTheme.typography.titleMedium)
                                         val symbolChoices: Map<String?, String> = symbols.entries.associate { (id, layout) ->
                                             id to layoutPresetName(id, layout)
                                         }

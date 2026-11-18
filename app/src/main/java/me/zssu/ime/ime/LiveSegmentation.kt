@@ -4,7 +4,6 @@ import me.zssu.ime.mozc.MozcEngine
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.CompositionMode
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Input
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.KeyEvent
-import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Request
 
 /** A short-lived session never alters the active composition, manual boundary or learning. */
 internal object LiveSegmentation {
@@ -16,8 +15,9 @@ internal object LiveSegmentation {
         if (!created.hasId()) return null
         val id = created.id
         try {
-            engine.eval(Input.newBuilder().setType(Input.CommandType.SET_REQUEST).setId(id)
-                .setRequest(Request.newBuilder().setMixedConversion(true)))
+            // Mozc applies SET_REQUEST to every session, even if the command carries an ID.
+            // The temporary session inherits the active request. AS_IS below feeds it kana
+            // directly without replacing the live session's flick table.
             val sent = engine.eval(Input.newBuilder().setType(Input.CommandType.SEND_KEY).setId(id)
                 .setKey(KeyEvent.newBuilder().setKeyString(reading).setInputStyle(KeyEvent.InputStyle.AS_IS)
                     .setMode(CompositionMode.HIRAGANA).setActivated(true)))

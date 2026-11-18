@@ -62,6 +62,7 @@
     {
       group: "リリースノート",
       items: [
+        ["releases/v0.3.0-rc.70-dev", "rc.70-dev", "フリックの記号切り替え修正", "docs/releases/v0.3.0-rc.70-dev.md", "release rc70 記号"],
         ["releases/v0.3.0-rc.69-dev", "rc.69-dev", "文節ごとの確定・人名辞書・スタイラス", "docs/releases/v0.3.0-rc.69-dev.md", "release rc69 変換 手書き 共有"],
         ["releases/v0.3.0-rc.68-dev", "rc.68-dev", "翻訳・手書き・入力補助", "docs/releases/v0.3.0-rc.68-dev.md", "release rc68 翻訳 手書き きせかえ"],
         ["releases/v0.3.0-rc.67-dev", "rc.67-dev", "Meets Beam の受信と再試行を修正", "docs/releases/v0.3.0-rc.67-dev.md", "release rc67 Meets Beam NFC Wi-Fi Direct"],
@@ -417,6 +418,7 @@
   ];
 
   const RECENT = [
+    ["2026-11-18", "v0.3.0-rc.70-dev", "フリックの記号切り替え修正"],
     ["2026-11-18", "v0.3.0-rc.69-dev", "文節ごとの確定・人名辞書・スタイラス"],
     ["2026-11-14", "v0.3.0-rc.68-dev", "翻訳・手書き・入力補助"],
     ["2026-11-14", "v0.3.0-rc.67-dev", "Meets Beam の受信と再試行を修正"],

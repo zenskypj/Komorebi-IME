@@ -37,6 +37,7 @@ import me.zssu.ime.keyboard.FlickKeyboardView
 import me.zssu.ime.keyboard.KeyAction
 import me.zssu.ime.keyboard.KeyOutput
 import me.zssu.ime.keyboard.KeySpec
+import me.zssu.ime.keyboard.isSymbolPlane
 import me.zssu.ime.keyboard.KeyboardLayout
 import me.zssu.ime.keyboard.withVerticalCursorFlicks
 import me.zssu.ime.keyboard.KeyboardPanelView
@@ -1429,7 +1430,10 @@ class ZinnaImeService : InputMethodService() {
         val nextPolicy = effectivePolicy(InputFieldPolicy.from(info), nextProfile)
         // Settings live in another process's Activity, so this is the first moment we can notice
         // they changed. Rebuilding only on a revision bump keeps the common case free.
+        val nextDressUp = info?.packageName == packageName &&
+            info.privateImeOptions == me.zssu.ime.settings.DressUpLivePreview.EDITOR_MARKER
         val structureChanged =
+            (dressUpActive && !nextDressUp) ||
             nextPolicy != fieldPolicy ||
                 nextProfile != activeProfile ||
                 viewStructureFingerprint(nextProfile) != builtStructureFingerprint
@@ -1452,8 +1456,7 @@ class ZinnaImeService : InputMethodService() {
             }
             InputViewRefreshPolicy.Target.NONE -> Unit
         }
-        dressUpActive = info?.packageName == packageName &&
-            info.privateImeOptions == me.zssu.ime.settings.DressUpLivePreview.EDITOR_MARKER
+        dressUpActive = nextDressUp
         if (dressUpActive) {
             me.zssu.ime.settings.DressUpLivePreview.listener = dressUpListener
             me.zssu.ime.settings.DressUpLivePreview.current?.let(::applyDressUpDraft)
@@ -1724,12 +1727,14 @@ class ZinnaImeService : InputMethodService() {
     private fun onKeyOutput(output: KeyOutput, key: KeySpec, direction: FlickDirection) {
         if (voicePanelActive) closeVoicePanel()
         val started = System.nanoTime()
-        val pressedStyle = layout?.inputStyle
+        val pressedLayout = keyboardView?.layout
+        val pressedStyle = pressedLayout?.inputStyle
         val pressedIncognito = fieldPolicy.incognito
         val pressedCorrection = activeProfile?.typingCorrection ?: true
         val pressedToggle = settings.flickInputMode == ImeSettings.FlickInputMode.FLICK_AND_TOGGLE
         enqueueInput(repeated = keyboardView?.isRepeatingOutput == true) {
             try {
+                if (output.action is KeyAction.SwitchLayout && keyboardView?.layout !== pressedLayout) return@enqueueInput
                 session.setIncognitoMode(pressedIncognito)
                 session.setTypingCorrectionEnabled(pressedCorrection)
                 session.setPhoneToggleEnabled(pressedToggle)
@@ -2388,7 +2393,7 @@ class ZinnaImeService : InputMethodService() {
         InputFieldPolicy.Plane.USER_DEFAULT ->
             settings.activeLayoutId
                 ?.takeIf { activeProfile == null }
-                ?.takeIf { repository.loadLayout(it) != null }
+                ?.takeIf { repository.loadLayout(it)?.isSymbolPlane == false }
                 ?: effectiveKeyboardStyle().defaultLayoutId
         InputFieldPolicy.Plane.ASCII -> effectiveKeyboardStyle().resolve("qwerty_ascii")
         InputFieldPolicy.Plane.NUMERIC -> when (effectiveKeyboardStyle()) {

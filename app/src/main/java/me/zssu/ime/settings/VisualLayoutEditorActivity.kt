@@ -70,6 +70,7 @@ import me.zssu.ime.keyboard.KeyAction
 import me.zssu.ime.keyboard.KeyOutput
 import me.zssu.ime.keyboard.KeySpec
 import me.zssu.ime.keyboard.KeyStyle
+import me.zssu.ime.keyboard.isSymbolPlane
 import me.zssu.ime.keyboard.KeyboardLayout
 import me.zssu.ime.keyboard.LayoutRepository
 import me.zssu.ime.theme.ZinnaTheme
@@ -391,14 +392,14 @@ private fun LayoutEditorScreen(initialId: String?) {
                     runCatching { repository.saveLayout(current) }
                         .onSuccess {
                             settings.markCustomizationChanged()
-                            settings.activeLayoutId = current.id
-                            message = "${current.id} を保存して使用します"
+                            if (!current.isSymbolPlane) settings.activeLayoutId = current.id
+                            message = if (current.isSymbolPlane) "記号の配列を保存しました" else "${current.id} を保存して使用します"
                             refresh++
                         }.onFailure { message = it.message ?: "保存できませんでした" }
                 }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Save, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("保存して使用")
+                    Text(if (current.isSymbolPlane) "保存" else "保存して使用")
                 }
             }
 

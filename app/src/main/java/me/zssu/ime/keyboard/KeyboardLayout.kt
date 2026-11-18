@@ -170,6 +170,10 @@ enum class KeyStyle { CHARACTER, MODIFIER, ACTION }
 
 enum class FlickDirection { CENTER, LEFT, UP, RIGHT, DOWN }
 
+val KeyboardLayout.isSymbolPlane: Boolean
+    get() = id == "flick_symbol" || id == "flick_symbol2" || id == "qwerty_symbol" || id == "qwerty_symbol2" ||
+        inputStyle == InputStyle.FLICK_NUMBER || inputStyle == InputStyle.TOGGLE_FLICK_NUMBER
+
 /**
  * Maps onto mozc's `Request.SpecialRomanjiTable`. The app resolves the flick direction itself and
  * sends the resulting kana, so FLICK_TO_HIRAGANA is the natural pairing — mozc then treats each

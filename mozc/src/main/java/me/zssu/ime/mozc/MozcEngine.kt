@@ -179,7 +179,8 @@ class MozcEngine private constructor(private val dictionaries: SystemDictionaryM
                 return null
             }
             val output = Command.parseFrom(responseBytes).output
-            if (input.type == Input.CommandType.SEND_KEY || input.type == Input.CommandType.SEND_COMMAND) {
+            if (input.id == sessionId &&
+                (input.type == Input.CommandType.SEND_KEY || input.type == Input.CommandType.SEND_COMMAND)) {
                 composing = output.hasPreedit() && output.preedit.segmentCount > 0
             }
             if (output.hasEngineReloadResponse() && output.engineReloadResponse.status == EngineReloadResponse.Status.RELOADED) {

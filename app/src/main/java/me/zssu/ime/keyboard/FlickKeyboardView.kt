@@ -672,9 +672,10 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun onPointerDown(pointerId: Int, x: Float, y: Float) {
         val key = placedKeys.firstOrNull { it.bounds.contains(x, y) } ?: return
         // A new finger means the previous key is settled; commit it rather than letting a stray
-        // move event on the old pointer rewrite it.
+        // move event on the old pointer rewrite it. A plane switch needs its own release.
         activeTouches.values.forEach {
-            if (!it.deleteGesture || it.direction == FlickDirection.CENTER) commit(it)
+            if ((!it.deleteGesture || it.direction == FlickDirection.CENTER) &&
+                touchOutput(it)?.action !is KeyAction.SwitchLayout) commit(it)
         }
         activeTouches.clear()
         cancelTimers()
@@ -793,7 +794,11 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun onPointerUp(pointerId: Int) {
         val touch = activeTouches.remove(pointerId) ?: return
         cancelTimers()
-        commit(touch)
+        val switchingFromCenter = touch.direction == FlickDirection.CENTER &&
+            touchOutput(touch)?.action is KeyAction.SwitchLayout
+        if (!switchingFromCenter || touch.key.bounds.contains(
+                touch.downX + touch.path.dx, touch.downY + touch.path.dy,
+            )) commit(touch)
         invalidate()
     }
 
