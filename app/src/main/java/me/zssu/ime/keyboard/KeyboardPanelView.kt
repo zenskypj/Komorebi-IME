@@ -241,6 +241,28 @@ class KeyboardPanelView(context: Context) : LinearLayout(context) {
         if (video == null) drawWallpaperMotion(canvas)
     }
 
+    /** Approximate the visible photo at a point in a descendant, with crop and opacity. */
+    internal fun contrastAt(child: android.view.View, x: Float, y: Float): Int? {
+        if (video != null || width <= 0 || height <= 0) return null
+        val image = bitmap ?: wallpaper ?: return null
+        if (image.isRecycled || image.width == 0 || image.height == 0) return null
+        val childLocation = IntArray(2)
+        val panelLocation = IntArray(2)
+        child.getLocationInWindow(childLocation)
+        getLocationInWindow(panelLocation)
+        val px = x + childLocation[0] - panelLocation[0]
+        val py = y + childLocation[1] - panelLocation[1]
+        val scale = max(width.toFloat() / image.width, height.toFloat() / image.height)
+        val dx = (width - image.width * scale) * horizontalPosition
+        val dy = (height - image.height * scale) * verticalPosition
+        val ix = ((px - dx) / scale).toInt().coerceIn(0, image.width - 1)
+        val iy = ((py - dy) / scale).toInt().coerceIn(0, image.height - 1)
+        val sample = image.getPixel(ix, iy)
+        return if (androidx.core.graphics.ColorUtils.calculateContrast(android.graphics.Color.BLACK, sample) >=
+            androidx.core.graphics.ColorUtils.calculateContrast(android.graphics.Color.WHITE, sample)) android.graphics.Color.BLACK
+            else android.graphics.Color.WHITE
+    }
+
     private fun drawWallpaperMotion(canvas: Canvas) {
         if (wallpaperMotion == WallpaperMotion.NONE || !mediaActive || !isShown) return
         if (Build.VERSION.SDK_INT >= 26 && !android.animation.ValueAnimator.areAnimatorsEnabled()) return

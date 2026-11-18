@@ -1,6 +1,6 @@
 package me.zssu.ime.ime
 
-/** The first Convert navigates clauses; a further Convert enters candidate selection. */
+/** Converting enables boundary edits immediately; candidate selection also tracks explicit focus. */
 internal class ConversionInteraction {
     enum class Phase { INPUT, CLAUSES, CANDIDATES }
     private var continuing = false
@@ -30,5 +30,5 @@ internal class ConversionInteraction {
     fun chooseCandidates() { phase = Phase.CANDIDATES }
 
     fun resize(explicitResize: Boolean, explicitClauseMove: Boolean): Boolean =
-        explicitResize || (!explicitClauseMove && phase == Phase.CANDIDATES)
+        explicitResize || (!explicitClauseMove && phase != Phase.INPUT)
 }

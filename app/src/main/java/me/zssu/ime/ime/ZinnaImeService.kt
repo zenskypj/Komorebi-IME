@@ -149,14 +149,11 @@ class ZinnaImeService : InputMethodService() {
             field = value
             conversionInteraction.observe(value)
             if (!value) {
-                confirmCommitsWholeSentence = false
                 segmentEditing = false
                 if (!isComposing) conversionInteraction.reset()
             }
         }
     private var currentSegmentCount = 0
-    /** True only for a conversion opened by one Convert press and left untouched. */
-    private var confirmCommitsWholeSentence = false
     private var suppressPartialLearning = false
     private var learningCandidate: MozcSession.Candidate? = null
     private var renderedPreeditCursor = 0
@@ -405,7 +402,6 @@ class ZinnaImeService : InputMethodService() {
             }
             onConversionPageChanged = { ids -> session.visibleConversionCandidateIds = ids }
             onSegmentEditRequested = {
-                confirmCommitsWholeSentence = false
                 segmentEditing = !segmentEditing
                 if (segmentEditing && !getSharedPreferences(ImeSettings.NAME, MODE_PRIVATE)
                         .getBoolean("segment_help_seen", false)) {
@@ -416,7 +412,6 @@ class ZinnaImeService : InputMethodService() {
                 segmentBar?.visibility = if (isConverting && segmentEditing) View.VISIBLE else View.GONE
             }
             onCandidateFocusRequested = { candidate -> enqueueInput {
-                confirmCommitsWholeSentence = false
                 if (isConverting) focusConversionCandidate(candidate)
              } }
             onToolAction = ::handleToolAction
@@ -521,7 +516,6 @@ class ZinnaImeService : InputMethodService() {
         }
 
         candidates.onPanelExpanded = { expanded ->
-            if (expanded) confirmCommitsWholeSentence = false
             keyboard.visibility = if (expanded) View.GONE else View.VISIBLE
             menuButton.visibility = if (expanded) View.GONE else View.VISIBLE
             segmentBar?.visibility = if (!expanded && isConverting && segmentEditing) View.VISIBLE else View.GONE
@@ -820,6 +814,75 @@ class ZinnaImeService : InputMethodService() {
         if (handwritingPanel == null) return
         handwritingPanel = null
         candidateView?.showTools()
+    }
+
+    private var stylusPad: InkPad? = null
+    private var stylusAnchor: VoiceEditorAnchor? = null
+    private var stylusJob: kotlinx.coroutines.Job? = null
+    private var stylusGeneration = 0L
+    private val stylusRecognize = Runnable {
+        val pad = stylusPad ?: return@Runnable
+        val anchor = stylusAnchor ?: return@Runnable
+        if (!pad.hasInk || stylusJob?.isActive == true) return@Runnable
+        val ink = pad.ink()
+        val generation = stylusGeneration
+        stylusJob = handwritingScope.launch {
+            try {
+                val matches = recognizeJapaneseInk(ink) { }
+                if (generation != stylusGeneration || stylusPad !== pad) return@launch
+                val match = matches.firstOrNull()
+                if (match != null && !restrictedTextToolField() && anchor.matches(voiceAnchor())) {
+                    val connection = currentInputConnection
+                    if (connection?.commitText(match, 1) == true) {
+                        pad.clear()
+                        stylusAnchor = voiceAnchor()
+                    }
+                }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { Toast.makeText(this@ZinnaImeService,
+                "手書きを読み取れませんでした。日本語モデルと Wi-Fi を確認してください", Toast.LENGTH_SHORT).show() }
+        }
+    }
+
+    @android.annotation.TargetApi(33)
+    override fun onStartStylusHandwriting(): Boolean {
+        if (restrictedTextToolField() || isComposing) return false
+        val anchor = voiceAnchor() ?: return false
+        val window = stylusHandwritingWindow ?: return false
+        stylusGeneration++
+        stylusAnchor = anchor
+        val pad = InkPad(this).apply {
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        }
+        stylusPad = pad
+        window.setContentView(pad)
+        return true
+    }
+
+    @android.annotation.TargetApi(33)
+    override fun onStylusHandwritingMotionEvent(event: android.view.MotionEvent) {
+        val pad = stylusPad ?: return
+        mainHandler.removeCallbacks(stylusRecognize)
+        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+            stylusGeneration++
+            stylusJob?.cancel()
+            stylusJob = null
+        }
+        pad.onTouchEvent(event)
+        if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+            mainHandler.postDelayed(stylusRecognize, 700)
+        }
+    }
+
+    @android.annotation.TargetApi(33)
+    override fun onFinishStylusHandwriting() {
+        mainHandler.removeCallbacks(stylusRecognize)
+        stylusGeneration++
+        stylusJob?.cancel()
+        stylusJob = null
+        stylusPad = null
+        stylusAnchor = null
+        super.onFinishStylusHandwriting()
     }
 
     private suspend fun startHandwriting() {
@@ -1633,6 +1696,8 @@ class ZinnaImeService : InputMethodService() {
         if (me.zssu.ime.settings.DressUpLivePreview.listener === dressUpListener) {
             me.zssu.ime.settings.DressUpLivePreview.listener = null
         }
+        liveSegmentTask?.let(mainHandler::removeCallbacks)
+        liveSegmentTask = null
         dictionaryPredictions.close()
         appLearningWorker.shutdown()
         enginePreferences.unregisterOnSharedPreferenceChangeListener(enginePreferenceListener)
@@ -1705,13 +1770,16 @@ class ZinnaImeService : InputMethodService() {
         session.clientContext = clientContext.build()
         val action = output.action
         if (action !is KeyAction.MoveCursor) editAnchor = null
-        if (action !is KeyAction.Space && action !is KeyAction.Convert && action !is KeyAction.Enter) {
-            confirmCommitsWholeSentence = false
-        }
         when (action) {
             is KeyAction.Input -> {
                 cancelKarukanConversion()
-                render(session.sendText(action.text, output.label))
+                val alternatives = if (layout?.inputStyle == me.zssu.ime.keyboard.InputStyle.FLICK_HIRAGANA &&
+                    key.hasFlicks && (activeProfile?.typingCorrection ?: true)) {
+                    FlickDirection.entries.asSequence().filter { it != direction }.mapNotNull { other ->
+                        (key.output(other)?.action as? KeyAction.Input)?.text?.singleOrNull()?.code
+                    }.toList()
+                } else emptyList()
+                render(session.sendText(action.text, output.label, alternatives))
             }
 
             // The dakuten/small-kana cycle is a table entry, not a session command: mozc's flick
@@ -1778,7 +1846,6 @@ class ZinnaImeService : InputMethodService() {
     private suspend fun handleSpace() {
         val wasConverting = isConverting
         conversionInteraction.convertPressed(isComposing, isConverting)
-        confirmCommitsWholeSentence = WholeSentenceConfirm.arm(isComposing, wasConverting)
         if (wasConverting && lastCandidates.isNotEmpty()) {
             ConversionNavigation.nextCandidate(lastCandidates, lastFocusedCandidateIndex)?.let { focusConversionCandidate(it) }
             return
@@ -1809,7 +1876,6 @@ class ZinnaImeService : InputMethodService() {
     private suspend fun focusConversionCandidate(candidate: MozcSession.Candidate) {
         val index = lastCandidates.indexOfFirst { it.id == candidate.id && it.text == candidate.text }
         if (!isConverting || index < 0) return
-        confirmCommitsWholeSentence = false
         conversionInteraction.chooseCandidates()
         cancelKarukanConversion(clearReading = true, revertMozc = false)
         if (candidate.directCommit) {
@@ -1958,27 +2024,29 @@ class ZinnaImeService : InputMethodService() {
      * also fire the editor action and send the message you were only trying to finalise.
      */
     private suspend fun handleEnter() {
-        val commitsWholeSentence = WholeSentenceConfirm.commitsAll(
-            converting = isConverting,
-            armed = confirmCommitsWholeSentence,
-            segmentCount = currentSegmentCount,
-        )
-        confirmCommitsWholeSentence = false
-        if (commitsWholeSentence) {
-            submitCurrentComposition()
-            return
-        }
         if (isConverting) {
             val focused = lastCandidates.getOrNull(lastFocusedCandidateIndex)
-            if (focused?.directCommit == true) { commitCandidate(focused); return }
-        }
-        val partial = ConversionNavigation.partialCandidate(
-            isConverting, currentSegmentCount, lastCandidates, lastFocusedCandidateIndex,
-        )
-        if (partial != null) {
-            cancelKarukanConversion(clearReading = true, revertMozc = false)
-            commitCandidate(partial, partial = true)
-            return
+            val explicitlyChoosing = conversionInteraction.phase == ConversionInteraction.Phase.CANDIDATES
+            if (focused?.directCommit == true && (explicitlyChoosing || currentSegmentCount <= 1)) {
+                commitCandidate(focused)
+                return
+            }
+            if (currentSegmentCount > 1) {
+                // A neural whole-sentence highlight can be automatic. In that case Enter still
+                // accepts the native clause; only choosing the whole-sentence candidate commits all.
+                val nativeFocused = zenzaiState?.let { it.candidates.getOrNull(it.focusedCandidateIndex) }
+                    ?.takeUnless { it.directCommit }?.let { native ->
+                        lastCandidates.firstOrNull { it.id == native.id && !it.directCommit }
+                    }
+                val partial = ConversionNavigation.partialCandidate(
+                    true, currentSegmentCount, lastCandidates, lastFocusedCandidateIndex,
+                ) ?: nativeFocused ?: lastCandidates.firstOrNull { !it.directCommit }
+                if (partial != null) {
+                    cancelKarukanConversion(clearReading = true, revertMozc = false)
+                    commitCandidate(partial, partial = true)
+                }
+                return
+            }
         }
         if (isComposing && !isConverting && (zenzaiCandidate != null || karukanSuggestionCandidate != null)) {
             submitCurrentComposition()
@@ -2261,7 +2329,6 @@ class ZinnaImeService : InputMethodService() {
 
     private suspend fun handleCursorMove(delta: Int, adjustSegment: Boolean, forceClauseMove: Boolean = false) {
         synchronizeEditorComposition()
-        if (isComposing) confirmCommitsWholeSentence = false
         if (karukanConversionActive) cancelKarukanConversion(clearReading = true, revertMozc = false)
         session.stopKeyToggling()
         if (
@@ -2518,10 +2585,45 @@ class ZinnaImeService : InputMethodService() {
             editorStateUpdateInProgress = false
         }
 
+        if (requestNeural && canRequestLiveSuggestions(state)) scheduleLiveSegmentation(state)
+        else {
+            liveSegmentTask?.let(mainHandler::removeCallbacks)
+            liveSegmentTask = null
+            liveSegmentState = null
+            liveSegmentCandidate = null
+        }
         lastCandidates = state.candidates
         lastFocusedCandidateIndex = state.focusedCandidateIndex
         if (requestNeural && canRequestLiveSuggestions(state)) requestZenzai(state)
         else candidateView?.setCandidates(state.candidates, state.focusedCandidateIndex, converting = isConverting)
+    }
+
+    private var liveSegmentTask: Runnable? = null
+    private var liveSegmentState: MozcSession.State? = null
+    private var liveSegmentCandidate: MozcSession.Candidate? = null
+
+    private fun scheduleLiveSegmentation(state: MozcSession.State) {
+        liveSegmentTask?.let(mainHandler::removeCallbacks)
+        liveSegmentState = state
+        liveSegmentCandidate = null
+        if (!canRequestLiveSuggestions(state) || restrictedTextToolField() ||
+            state.preeditReading.length < 3 || state.preeditCursor != state.preedit.length) return
+        val task = Runnable {
+            enqueueInput {
+                if (liveSegmentState !== state || !isComposing || isConverting) return@enqueueInput
+                val result = session.liveSegmentation(state.preeditReading) ?: return@enqueueInput
+                if (liveSegmentState !== state || zenzaiState !== state || !isComposing || isConverting) return@enqueueInput
+                val candidate = MozcSession.Candidate(-60_000, result.text, inputReading = state.preeditReading,
+                    sourceReading = state.preeditReading, directCommit = true, sourceLabel = "Mozc の文章変換")
+                liveSegmentCandidate = candidate
+                if (lastCandidates.none { it.text == candidate.text }) {
+                    lastCandidates = (lastCandidates.take(2) + candidate + lastCandidates.drop(2)).take(64)
+                    candidateView?.setCandidates(lastCandidates, lastFocusedCandidateIndex, converting = false)
+                }
+            }
+        }
+        liveSegmentTask = task
+        mainHandler.postDelayed(task, 350)
     }
 
     private fun refreshZenzai() = enqueueInput { refreshZenzaiNow() }
@@ -2585,7 +2687,9 @@ class ZinnaImeService : InputMethodService() {
             // converters; everything else keeps the neural candidate first.
             val specified = DictionaryPriority.firstSpecified(combined, reading)
             val ordered = DictionaryPriority.order(combined, ai, reading)
-            lastCandidates = (ordered + karukan.drop(1)).distinctBy { it.text }
+            val sentence = liveSegmentCandidate?.takeIf { liveSegmentState === state }
+            lastCandidates = (ordered.take(2) + listOfNotNull(sentence) + ordered.drop(2) + karukan.drop(1))
+                .distinctBy { it.text }
             val nativeFocused = state.candidates.getOrNull(state.focusedCandidateIndex)?.id
             lastFocusedCandidateIndex = if (specified != null || ai != null) 0
                 else nativeFocused?.let { id -> lastCandidates.indexOfFirst { it.id == id } } ?: -1
@@ -2765,7 +2869,6 @@ class ZinnaImeService : InputMethodService() {
 
     private suspend fun commitCandidate(candidate: MozcSession.Candidate, partial: Boolean = isConverting && currentSegmentCount > 1 && !candidate.directCommit) {
         if (lastCandidates.none { it.id == candidate.id && it.text == candidate.text }) return
-        confirmCommitsWholeSentence = false
         if (synchronizeEditorComposition()) return
         learningCandidate = candidate
         suppressPartialLearning = partial

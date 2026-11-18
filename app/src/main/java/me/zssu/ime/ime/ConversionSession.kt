@@ -51,6 +51,9 @@ internal class ConversionSession(
     private suspend fun state(operation: NativeConversionSession.() -> MozcSession.State?): MozcSession.State? =
         call(operation).also { if (it != null) preedit = it.preedit }
 
+    suspend fun liveSegmentation(reading: String): LiveSegmentation.Result? = queue.native {
+        me.zssu.ime.mozc.MozcEngine.get(context)?.let { LiveSegmentation.analyze(it, reading) }
+    }
     suspend fun isAvailable() = call { isAvailable }
     fun currentPreedit() = preedit
     fun applyInputStyle(value: InputStyle) { desired = desired.copy(style = value) }
@@ -62,7 +65,7 @@ internal class ConversionSession(
         desired = desired.copy(enabled = enabled, alongside = alongside)
     }
     suspend fun setInputActive(value: Boolean) = call { me.zssu.ime.mozc.MozcEngine.get(context)?.setInputActive(value) }
-    suspend fun sendText(text: String, label: String = text) = state { sendText(text, label) }
+    suspend fun sendText(text: String, label: String = text, alternatives: List<Int> = emptyList()) = state { sendText(text, label, alternatives) }
     suspend fun sendSpecialKey(key: KeyEvent.SpecialKey, shift: Boolean = false) = state { sendSpecialKey(key, shift) }
     suspend fun submit() = state { submit() }
     suspend fun revert() = state { revert() }

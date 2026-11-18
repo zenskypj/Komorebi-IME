@@ -41,3 +41,7 @@ python3 scripts/merge_bundled_proper_nouns.py
 `vtuber-names.tsv` に読み・表記・分類・確認先を記録する。公式一覧や個別プロフィールと公開情報を参照して名前と読みを整理し、説明文や画像は収録しない。所属や活動状況は変わり得る。英語圏・卒業生を一部含む。従来データのCC0を自動適用しない。
 
 444組を追加し、統合後5,323語。内訳は生成記録 `proper-nouns-merge.json` を参照。既存の同梱固有名詞辞書に取り込むため、ネット辞書の取得は不要。実端末での取り込み・候補順位は未確認。
+
+姓・名の読み合わせには、Mozc OSS 辞書から抽出した `name-parts.tsv`（対応する Mozc ライセンスを参照）を使用します。
+単語を追加・更新した後は `python3 scripts/merge_bundled_proper_nouns.py` を実行すると、フルネームを保持したまま境界が一意の姓・名が再生成されます。
+読み合わせ用の辞書自体は `python3 scripts/generate_name_parts.py third_party/mozc/src/data/dictionary_oss mozc/src/main/assets/dictionaries/name-parts.tsv` で再生成できます。

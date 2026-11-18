@@ -52,8 +52,8 @@ internal class NativeConversionSession(private val context: Context, private val
         if (usesMozc) native().applyInputStyle(value)
     }
 
-    fun sendText(text: String, label: String = text): MozcSession.State? {
-        if (usesMozc) return native().sendText(text)
+    fun sendText(text: String, label: String = text, alternatives: List<Int> = emptyList()): MozcSession.State? {
+        if (usesMozc) return native().sendText(text, alternatives)
         if (text == "*") kana.modify()
         else if (!style.fullWidthSpace) kana.insert(label)
         else if (style == InputStyle.QWERTY_HIRAGANA) kana.roman(text)

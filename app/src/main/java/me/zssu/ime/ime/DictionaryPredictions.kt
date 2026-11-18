@@ -10,10 +10,13 @@ import java.util.concurrent.atomic.AtomicInteger
 /** Prefix completion for bundled names/terms and personal registrations. No English dictionary. */
 internal class DictionaryPredictions(context: Context, private val pins: () -> List<PriorityCandidateRepository.Entry>) {
     private data class Word(val reading: String, val value: String, val pinned: Boolean = false,
-        val personal: Boolean = false, val sourceLabel: String? = null)
+        val personal: Boolean = false, val sourceLabel: String? = null, val name: Boolean = false)
     private class Index(entries: List<Word>) {
         private val words = entries.sortedWith(compareBy<Word> { it.reading }.thenBy { it.value })
             .distinctBy { it.reading to it.value }
+        private val names = entries.filter { it.name }.groupBy { it.reading }
+
+        fun exactNames(reading: String): List<Word> = names[reading].orEmpty()
 
         fun find(prefix: String): List<Word> {
             var low = 0
@@ -58,11 +61,11 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
                     technology = load("ai-tech-nouns.txt", "内蔵技術用語辞書")
                     publicLoaded = true
                 }
-                val entries = UserDictionary(app).entries()
+                val entries = UserDictionary(app).conversionEntries()
                 val suppressed = entries.filter { it.pos == "抑制単語" || it.pos == "SUPPRESSION_WORD" }
                     .mapTo(hashSetOf()) { ReadingSimilarity.normalize(it.reading) to it.word }
                 val registrations = entries.filterNot { it.pos == "抑制単語" || it.pos == "SUPPRESSION_WORD" }
-                    .map { Word(ReadingSimilarity.normalize(it.reading), it.word, personal = true) }
+                    .map { Word(ReadingSimilarity.normalize(it.reading), it.word, personal = true, name = it.pos in NAME_POS) }
                 val preferred = pins().map { Word(ReadingSimilarity.normalize(it.reading), it.value, pinned = true, personal = true) }
                 val index = Index(preferred + registrations)
                 if (!closed && ticket == generation.get()) {
@@ -79,7 +82,7 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
         Index(lines.filterNot { it.startsWith("#") }.mapNotNull { line ->
             val columns = line.split('\t')
             if (columns.size < 2 || columns[0].isBlank() || columns[1].isBlank()) null
-            else Word(ReadingSimilarity.normalize(columns[0]), columns[1], sourceLabel = sourceLabel)
+            else Word(ReadingSimilarity.normalize(columns[0]), columns[1], sourceLabel = sourceLabel, name = columns.getOrNull(2) in NAME_POS)
         }.toList())
     }
 
@@ -89,7 +92,13 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
         val own = personal
         val words = own.index.find(prefix) + (if (useProper) proper.find(prefix) else emptyList()) +
             (if (useTechnology) technology.find(prefix) else emptyList())
-        return words.filterNot { it.reading to it.value in own.suppressed }
+        val honorifics = NameHonorific.match(prefix)?.let { (stem, suffix) ->
+            val names = own.index.exactNames(stem) +
+                (if (useProper) proper.exactNames(stem) else emptyList())
+            names.filterNot { (it.reading to it.value) in own.suppressed }
+                .map { it.copy(reading = prefix, value = it.value + suffix, pinned = false) }
+        }.orEmpty()
+        return (honorifics + words).filterNot { it.reading to it.value in own.suppressed }
             .distinctBy { it.reading to it.value }.sortedWith(compareBy<Word> { it.reading != prefix }
             .thenBy { !it.pinned }.thenBy { it.reading.length }).take(12).mapIndexed { index, word ->
             MozcSession.Candidate(-50_000 - index, word.value, inputReading = reading,
@@ -97,6 +106,8 @@ internal class DictionaryPredictions(context: Context, private val pins: () -> L
                 directCommit = true, dictionaryCompletion = true, personalRegistration = word.personal, sourceLabel = word.sourceLabel)
         }
     }
+
+    private companion object { val NAME_POS = setOf("人名", "姓", "名") }
 
     fun close() { closed = true; generation.incrementAndGet(); worker.shutdownNow() }
 }

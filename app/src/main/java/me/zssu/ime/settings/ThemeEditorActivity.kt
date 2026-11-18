@@ -143,14 +143,15 @@ private fun ThemeEditorScreen() {
     val cleanup = remember { arrayOfNulls<ThemePackage.Draft>(1) }
     DisposableEffect(Unit) { onDispose { cleanup[0]?.close() } }
     fun discardImport() { imported?.close(); imported = null; cleanup[0] = null }
-    var sharing by remember { mutableStateOf<Triple<KeyboardTheme, java.io.File?, Boolean>?>(null) }
+    data class ThemeExport(val theme: KeyboardTheme, val folder: java.io.File?, val media: Boolean, val layout: KeyboardLayout?)
+    var sharing by remember { mutableStateOf<ThemeExport?>(null) }
     val importTheme = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) colorScope.launch {
             try {
                 val draft = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val input = context.contentResolver.openInputStream(uri) ?: error("ファイルを開けません")
                     input.use { ThemePackage.read(context, it) }.also {
-                        try { repo.validate(it.theme) } catch (e: Exception) { it.close(); throw e }
+                        try { repo.validate(it.theme); it.layout?.let(repo::validate) } catch (e: Exception) { it.close(); throw e }
                     }
                 }
                 discardImport()
@@ -166,7 +167,7 @@ private fun ThemeEditorScreen() {
             try {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val output = context.contentResolver.openOutputStream(uri) ?: error("保存先を開けません")
-                    output.use { ThemePackage.write(it, export.first, export.second, export.third) }
+                    output.use { ThemePackage.write(context, it, export.theme, export.folder, export.media, export.layout) }
                 }
                 message = "テーマを書き出しました"
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
@@ -282,11 +283,21 @@ private fun ThemeEditorScreen() {
                 colorScope.launch {
                     try {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            draft.images.forEach { image ->
+                                val imageId = image.name.removePrefix("key_").removeSuffix(".webp")
+                                val target = requireNotNull(me.zssu.ime.theme.LocalArt.keyFile(context, imageId))
+                                target.parentFile?.mkdirs()
+                                if (!target.isFile) me.zssu.ime.theme.LocalArt.write(target, image.readBytes())
+                            }
                             draft.media?.let { bundles.save(id, it) }
+                            draft.layout?.let { importedLayout ->
+                                repo.saveLayout(importedLayout.copy(id = id, label = importedLayout.label.take(80)))
+                            }
                             repo.saveTheme(draft.theme.copy(id = id, label = draft.theme.label.take(80)))
                             settings.markCustomizationChanged()
                         }
                         baseId = id; theme = draft.theme.copy(id = id, label = draft.theme.label.take(80))
+                        if (draft.layout != null) { selectedLayoutId = id; qwerty = isQwerty(draft.layout) }
                         saveMedia = false; replaceCurrent = false; name = ""; revision++
                         discardImport()
                     } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
@@ -416,10 +427,10 @@ private fun ThemeEditorScreen() {
                                         Text("テーマ一式を読み込む")
                                     }
                                     OutlinedButton(onClick = {
-                                        sharing = Triple(theme, null, false); exportTheme.launch("komorebi-theme.zip")
+                                        sharing = ThemeExport(theme, null, false, layout); exportTheme.launch("komorebi-theme.zip")
                                     }) { Text("配色・キー設定だけを書き出す") }
                                     if (bundledMedia != null) OutlinedButton(onClick = {
-                                        sharing = Triple(theme, bundles.folder(baseId), true); exportTheme.launch("komorebi-theme-background.zip")
+                                        sharing = ThemeExport(theme, bundles.folder(baseId), true, layout); exportTheme.launch("komorebi-theme-background.zip")
                                     }) { Text("保存済みの背景も書き出す") }
                                     Text("テーマを自動で切り替える", style = MaterialTheme.typography.titleMedium)
                                     ChoiceChips(ThemeSchedule.Mode.entries.associateWith { it.title }, scheduleMode) {
@@ -552,6 +563,11 @@ private fun ThemeEditorScreen() {
                                         OutlinedButton(onClick = { theme = DressUpColors.highContrast(theme, false, photo) },
                                             modifier = Modifier.weight(1f)) { Text("白文字でくっきり") }
                                     }
+                                    ThemeToggle("写真の場所ごとに文字色を合わせる", theme.autoImageContrast) {
+                                        theme = theme.copy(autoImageContrast = it)
+                                    }
+                                    Text("写真の明るい部分は黒、暗い部分は白にします。キーごとの文字色設定は優先されます。",
+                                        style = MaterialTheme.typography.bodySmall)
                                     ThemeToggle("動く演出を減らす", settings.reducedKeyboardMotion) {
                                         settings.reducedKeyboardMotion = it; revision++
                                     }

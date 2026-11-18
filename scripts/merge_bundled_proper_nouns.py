@@ -94,6 +94,31 @@ def main():
         vtuber_keys.add(key)
         vtuber_groups[fields[2]] += 1
         vtuber_rows += 1
+    from collections import defaultdict
+    evidence = {"姓": defaultdict(set), "名": defaultdict(set)}
+    for line in (ROOT / "mozc/src/main/assets/dictionaries/name-parts.tsv").read_text().splitlines():
+        if not line or line.startswith("#"):
+            continue
+        reading_part, surface, label = line.split("\t")
+        evidence[label][surface].add(reading_part)
+    derived = set()
+    for (key, surface), label in list(words.items()):
+        if label != "人名":
+            continue
+        matches = set()
+        for i in range(1, len(surface)):
+            family, given = surface[:i], surface[i:]
+            for left in evidence["姓"].get(family, ()):
+                right = key[len(left):]
+                if key.startswith(left) and right in evidence["名"].get(given, ()):
+                    matches.add(((left, family, "姓"), (right, given, "名")))
+        if len(matches) == 1:
+            derived.update(next(iter(matches)))
+    parts_added = 0
+    for key, surface, label in sorted(derived):
+        if (key, surface) not in words:
+            words[key, surface] = label
+            parts_added += 1
     header = (
         "# Komorebi IME 同梱固有名詞辞書\n"
         "# 従来分: CC0 (Public Domain)。追加分へCC0を自動適用しません。\n"
@@ -101,6 +126,7 @@ def main():
         "# VTuber名: 公式情報等で名称・読みを確認。出典はvtuber-names.tsv参照。\n"
         "# 読み・表記で重複整理。人名・地名・組織の品詞を保持。\n"
         "# costは原本JSONLへ保持。既存の3列取り込み形式では指定できません。\n"
+        "# 読みと姓・名の両方が一意に一致する人名は、姓・名も収録。\n"
         "# 再生成: python3 scripts/merge_bundled_proper_nouns.py\n"
     )
     result = header + "".join(f"{key}\t{value}\t{label}\n" for (key, value), label in sorted(words.items()))
@@ -116,7 +142,7 @@ def main():
         "vtuberSourceSha256": hashlib.sha256(args.vtuber.read_bytes()).hexdigest(),
         "vtuberRows": vtuber_rows, "vtuberUnique": len(vtuber_keys),
         "vtuberAdded": len(vtuber_keys - before_vtuber), "vtuberGroups": dict(vtuber_groups),
-        "outputRows": len(words), "sourcePos": dict(source_pos),
+        "derivedNameParts": parts_added, "outputRows": len(words), "sourcePos": dict(source_pos),
         "outputPos": dict(collections.Counter(words.values())),
         "sourceCostMin": min(costs), "sourceCostMax": max(costs), "costApplied": False,
         "outputSha256": hashlib.sha256(result.encode()).hexdigest(),

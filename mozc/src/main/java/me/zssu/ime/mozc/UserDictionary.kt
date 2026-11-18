@@ -33,15 +33,17 @@ class UserDictionary(context: Context) {
         val comment: String = "",
     )
 
-    fun entries(): List<Entry> {
+    fun entries(): List<Entry> = parse(contents())
+
+    private fun parse(source: String): List<Entry> {
         return runCatching {
-            contents().lines().mapNotNull { line ->
+            source.lineSequence().mapNotNull { line ->
                 if (line.isBlank() || line.startsWith("#")) return@mapNotNull null
                 val f = line.split('\t')
                 if (f.size < 2 || f[0].isEmpty() || f[1].isEmpty()) return@mapNotNull null
                 Entry(f[0], f[1], f.getOrNull(2)?.ifEmpty { DEFAULT_POS } ?: DEFAULT_POS,
                     f.getOrNull(3).orEmpty())
-            }
+            }.toList()
         }.onFailure { Log.e(TAG, "cannot read $FILE_NAME", it) }.getOrDefault(emptyList())
     }
 
@@ -55,6 +57,35 @@ class UserDictionary(context: Context) {
     }
 
     fun delete(entry: Entry): List<Entry> = write(entries() - entry)
+
+    /** Includes derived names for conversion and live prediction, without storing duplicates. */
+    fun conversionEntries(): List<Entry> {
+        val source = contents()
+        val owner = file.absolutePath
+        conversionCache?.takeIf { it.owner == owner && it.source == source }?.let { return it.entries }
+        val original = parse(source)
+        val expanded = runCatching {
+            appContext.assets.open("dictionaries/name-parts.tsv").bufferedReader().use { reader ->
+                NameParts.expand(original) { wanted ->
+                    reader.lineSequence().mapNotNull { line ->
+                        val start = line.indexOf('\t')
+                        if (start < 1) return@mapNotNull null
+                        val end = line.indexOf('\t', start + 1)
+                        if (end < 0) return@mapNotNull null
+                        val word = line.substring(start + 1, end)
+                        if (word !in wanted) null else Entry(line.substring(0, start), word, line.substring(end + 1))
+                    }
+                }
+            }
+        }.getOrElse {
+            Log.w(TAG, "Name parts unavailable; using original dictionary", it)
+            return original
+        }
+        conversionCache = ConversionCache(owner, source, expanded)
+        return expanded
+    }
+
+    private data class ConversionCache(val owner: String, val source: String, val entries: List<Entry>)
 
     /** Plain Mozc-compatible TSV for an explicit SAF export. Decryption never leaves this call. */
     fun exportTsv(): String = contents()
@@ -118,7 +149,7 @@ class UserDictionary(context: Context) {
 
     /** Overload for callers that already hold the engine, e.g. its own start-up path. */
     fun sync(engine: MozcEngine) {
-        val tsv = contents()
+        val tsv = conversionEntries().joinToString("\n") { "${it.reading}\t${it.word}\t${it.pos}\t${it.comment}" }
         val output = engine.eval(
             Input.newBuilder()
                 .setType(Input.CommandType.IMPORT_USER_DICTIONARY)
@@ -144,6 +175,7 @@ class UserDictionary(context: Context) {
     }
 
     companion object {
+        @Volatile private var conversionCache: ConversionCache? = null
         private const val TAG = "UserDictionary"
         private const val FILE_NAME = "user_dictionary.enc"
         private const val MAX_IMPORT_BYTES = 5 * 1024 * 1024

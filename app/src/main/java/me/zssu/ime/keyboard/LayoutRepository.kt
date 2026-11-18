@@ -106,7 +106,7 @@ class LayoutRepository(private val context: Context) {
         return File(dir, "$id.json").isFile
     }
 
-    private fun validate(layout: KeyboardLayout) {
+    internal fun validate(layout: KeyboardLayout) {
         require(layout.rows.isNotEmpty() && layout.rows.size <= 12) { "行数は 1〜12 行にしてください" }
         require(layout.rows.all { it.keys.isNotEmpty() && it.keys.size <= 20 }) {
             "各行のキー数は 1〜20 個にしてください"

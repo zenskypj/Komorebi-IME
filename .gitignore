@@ -41,6 +41,7 @@ local.properties
 *.iml
 /mozc/src/main/assets/dictionaries/*
 !/mozc/src/main/assets/dictionaries/proper-nouns.txt
+!/mozc/src/main/assets/dictionaries/name-parts.tsv
 /.commandcode/
 
 # Kotlin compiler session files

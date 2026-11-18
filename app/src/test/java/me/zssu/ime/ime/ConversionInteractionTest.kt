@@ -4,11 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ConversionInteractionTest {
-    @Test fun firstConversionMovesClausesAndSecondConversionResizesWithArrows() {
+    @Test fun arrowsResizeImmediatelyAndContinueResizingInCandidateSelection() {
         val interaction = ConversionInteraction()
         interaction.convertPressed(composing = true, converting = false)
         interaction.observe(true)
-        assertFalse(interaction.resize(false, false))
+        assertTrue(interaction.resize(false, false))
         interaction.convertPressed(composing = true, converting = true)
         interaction.observe(true)
         assertTrue(interaction.resize(false, false))

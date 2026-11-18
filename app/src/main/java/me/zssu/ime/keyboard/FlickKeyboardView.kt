@@ -332,6 +332,8 @@ class FlickKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val radius = theme.keyCornerRadiusDp * resources.displayMetrics.density
+        val contrastPanel = if (theme.autoImageContrast)
+            generateSequence(parent) { it.parent }.filterIsInstance<KeyboardPanelView>().firstOrNull() else null
         for (placed in placedKeys) {
             val spec = placed.spec
             val look = spec.appearance
@@ -382,7 +384,8 @@ class FlickKeyboardView @JvmOverloads constructor(
             if (touch != null && theme.pressFeedback == PressFeedback.OUTLINE) {
                 canvas.drawRoundRect(bounds, corner, corner, pressOutlinePaint)
             }
-            val labelColor = look?.labelColor ?: theme.labelColor
+            val labelColor = look?.labelColor ?: if (theme.autoImageContrast)
+                contrastPanel?.contrastAt(this, bounds.centerX(), bounds.centerY()) ?: theme.labelColor else theme.labelColor
             val labelSize = spToPx(look?.labelSizeSp ?: theme.labelSizeSp)
             labelPaint.color = labelColor
             labelPaint.typeface = if (look?.labelBold ?: theme.labelBold) boldTypeface else labelTypeface

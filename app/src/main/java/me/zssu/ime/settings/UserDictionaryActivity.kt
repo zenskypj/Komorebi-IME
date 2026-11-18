@@ -211,6 +211,7 @@ private fun EntryDialog(
                     value = reading,
                     onValueChange = { reading = it },
                     label = { Text("よみ") },
+                    supportingText = { if (pos == "人名") Text("区切れない名前は、よみと単語の両方で姓と名を空白で分けられます。") },
                     placeholder = { Text("ひらがなで入力") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),

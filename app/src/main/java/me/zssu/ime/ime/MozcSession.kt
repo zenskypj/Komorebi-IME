@@ -188,7 +188,7 @@ class MozcSession(
      * Anything outside ASCII is text we resolved ourselves and mozc has no table entry for (emoji,
      * a symbol run), so it goes out as `key_string` for direct insertion.
      */
-    fun sendText(text: String): State? {
+    fun sendText(text: String, alternatives: List<Int> = emptyList()): State? {
         // In flick-only mode, finish the *previous* ordinary key immediately before starting the
         // next one. Finishing after every key breaks the table's suffix modifiers: `か` must still
         // be open when `*`, `[`, `]`, or backtick arrives so it can become が/ぱ/small kana.
@@ -206,6 +206,11 @@ class MozcSession(
             key.keyCode = text[0].code
         } else {
             key.keyString = text
+        }
+        if (typingCorrection && singleChar) {
+            alternatives.distinct().filter { it in 0x20..0x7e && it != text[0].code }.take(4).forEach {
+                key.addProbableKeyEvent(KeyEvent.ProbableKeyEvent.newBuilder().setKeyCode(it).setProbability(0.05))
+            }
         }
         return engine?.sendKey(key.build(), clientContext)?.toState()
     }

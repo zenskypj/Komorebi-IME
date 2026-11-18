@@ -45,6 +45,7 @@ data class KeyboardTheme(
     val labelFont: KeyFont = KeyFont.SYSTEM,
     val labelBold: Boolean = false,
     val labelShadow: Boolean = false,
+    val autoImageContrast: Boolean = false,
     val showLongPressHints: Boolean = true,
     val showFlickGuides: Boolean = true,
     val pressFeedback: PressFeedback = PressFeedback.FILL,

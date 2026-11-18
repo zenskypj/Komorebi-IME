@@ -23,7 +23,8 @@
     "ホロスターズ": 25,
     "その他": 40
   },
-  "outputRows": 5323,
+  "derivedNameParts": 1723,
+  "outputRows": 7046,
   "sourcePos": {
     "名詞,固有名詞,地名": 809,
     "名詞,固有名詞,人名": 1408,
@@ -34,10 +35,12 @@
     "固有名詞": 1911,
     "組織": 751,
     "地名": 809,
-    "人名": 1852
+    "人名": 1852,
+    "名": 963,
+    "姓": 760
   },
   "sourceCostMin": 2000,
   "sourceCostMax": 7000,
   "costApplied": false,
-  "outputSha256": "87f29d7991b982faab5db78b5fe8359061bf8c7ff3b22c364de09485ceab97a1"
+  "outputSha256": "8eac73d11e9f2efba9403c010538e7a555a55e8909090a29ee8eeb483dbd8012"
 }
